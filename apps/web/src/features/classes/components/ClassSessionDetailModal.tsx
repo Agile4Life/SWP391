@@ -32,6 +32,7 @@ export function ClassSessionDetailModal({
   const [students, setStudents] = useState<ClassEnrolledStudent[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [studentsError, setStudentsError] = useState<string | null>(null);
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -142,36 +143,56 @@ export function ClassSessionDetailModal({
             <strong>{session.cancelReason}</strong>
           </div>
         )}
+        <div className="kv-row">
+          <span>{t('Học viên đã ghi danh', 'Enrolled members')}</span>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            data-testid="session-detail-students-trigger"
+            disabled={loadingStudents}
+            onClick={() => setShowStudentsModal(true)}
+          >
+            {loadingStudents
+              ? t('Đang tải…', 'Loading…')
+              : studentsError
+                ? t('Lỗi tải · Thử lại', 'Load failed')
+                : t(`Xem danh sách (${students.length})`, `View list (${students.length})`)}
+          </button>
+        </div>
       </div>
 
-      <div style={{ marginTop: 18 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700 }}>
-          {t('Học viên đã ghi danh', 'Enrolled members')}
-          {!loadingStudents && !studentsError ? ` (${students.length})` : ''}
-        </h3>
-        {loadingStudents ? (
-          <p className="mcal__note" role="status">{t('Đang tải danh sách học viên...', 'Loading enrolled members...')}</p>
-        ) : studentsError ? (
-          <p className="mcal__note" role="alert">{studentsError}</p>
-        ) : students.length === 0 ? (
-          <p className="mcal__note">{t('Chưa có học viên nào đăng ký buổi học này.', 'No members enrolled in this session yet.')}</p>
-        ) : (
-          <div className="mcal__overflow-list mcal__students-scroll" data-testid="session-detail-students">
-            {students.map((st) => {
-              const levelText = fitnessLevelLabel(st.fitnessLevel);
-              return (
-                <div key={st.id} className="mcal__overflow-row mcal__student-row" style={{ cursor: 'default' }}>
-                  <span className="mcal__overflow-main">
-                    <strong>{st.fullName}</strong>
-                    <small>{[st.membershipCode, st.phone, st.email].filter(Boolean).join(' · ')}</small>
-                  </span>
-                  {levelText && <span className="mcal__overflow-badge">{levelText}</span>}
-                </div>
-              );
-            })}
+      {showStudentsModal && (
+        <Modal
+          title={t(`Học viên đã ghi danh (${students.length})`, `Enrolled members (${students.length})`)}
+          onClose={() => setShowStudentsModal(false)}
+        >
+          {studentsError ? (
+            <p className="mcal__note" role="alert">{studentsError}</p>
+          ) : students.length === 0 ? (
+            <p className="mcal__note">{t('Chưa có học viên nào đăng ký buổi học này.', 'No members enrolled in this session yet.')}</p>
+          ) : (
+            <div className="mcal__overflow-list mcal__students-scroll" data-testid="session-detail-students">
+              {students.map((st) => {
+                const levelText = fitnessLevelLabel(st.fitnessLevel);
+                return (
+                  <div key={st.id} className="mcal__overflow-row mcal__student-row" style={{ cursor: 'default' }}>
+                    <span className="mcal__overflow-main">
+                      <strong>{st.fullName}</strong>
+                      <small>{[st.membershipCode, st.phone, st.email].filter(Boolean).join(' · ')}</small>
+                    </span>
+                    {levelText && <span className="mcal__overflow-badge">{levelText}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mcal__dialog-actions" style={{ marginTop: 16 }}>
+            <button type="button" className="btn-secondary" onClick={() => setShowStudentsModal(false)}>
+              {t('Đóng', 'Close')}
+            </button>
           </div>
-        )}
-      </div>
+        </Modal>
+      )}
 
       {hasActions && (
         <div className="mcal__dialog-actions" style={{ marginTop: 18 }}>

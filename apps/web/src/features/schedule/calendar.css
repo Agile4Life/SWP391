@@ -285,7 +285,7 @@
   gap: 8px;
 }
 .mcal__students-scroll {
-  max-height: 220px;
+  max-height: 55vh;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-gutter: stable;

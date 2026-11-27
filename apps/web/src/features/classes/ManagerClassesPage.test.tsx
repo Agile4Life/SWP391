@@ -902,11 +902,12 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(detail.textContent).toContain('Zen Garden Studio');
     expect(detail.textContent).toContain('HLV Lan');
     expect(detail.textContent).toContain('8/16');
-    expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Nguyễn Minh Anh');
     const dialogButtons = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].map((b) => b.textContent);
     expect(dialogButtons).toContain('Sửa khóa học');
     expect(dialogButtons).toContain('Dời lịch');
     expect(dialogButtons).toContain('Hủy buổi');
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="session-detail-students-trigger"]')!.click());
+    expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Nguyễn Minh Anh');
   });
 
   it('filters the schedule by a coach picked from a searchable dropdown, in week and month views', async () => {
@@ -1480,10 +1481,11 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     // Open session detail modal while students are loading -> should NOT flash "(0)"
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="timetable-summary-cell"]')!.click());
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button')!.click());
-    expect(document.querySelector('dialog h3')?.textContent?.trim()).toBe('Học viên đã ghi danh');
-    expect(document.querySelector('dialog h3')?.textContent).not.toContain('(0)');
+    const studentsTrigger = () => document.querySelector<HTMLButtonElement>('[data-testid="session-detail-students-trigger"]')!;
+    expect(studentsTrigger().disabled).toBe(true);
+    expect(studentsTrigger().textContent).not.toContain('(0)');
 
-    // Resolve students with raw fitnessLevel enum -> must map to localized label, not raw enum
+    // Resolve students with raw fitnessLevel enum -> must map to localized label inside nested modal, not raw enum
     await act(async () => {
       resolveStudents!([
         {
@@ -1497,9 +1499,13 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
       ]);
       await Promise.resolve();
     });
-    expect(document.querySelector('dialog h3')?.textContent).toContain('(1)');
+    expect(studentsTrigger().disabled).toBe(false);
+    expect(studentsTrigger().textContent).toContain('(1)');
+    await act(async () => studentsTrigger().click());
     expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Trung cấp');
     expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).not.toContain('intermediate');
+    const closeButtons = [...document.querySelectorAll<HTMLButtonElement>('dialog .portal-dialog__close')];
+    await act(async () => closeButtons.at(-1)!.click());
     await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
 
     // Switch to Tab 3, show All -> archived row must not have "Xem lịch", active row jumps weekStart to Monday of 2099-03-11 (2099-03-09)
