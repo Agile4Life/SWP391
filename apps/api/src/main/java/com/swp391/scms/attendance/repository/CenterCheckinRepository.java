@@ -73,19 +73,20 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
     List<CenterCheckin> findByMemberUserIdAndCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(
             Long memberId, LocalDateTime start, LocalDateTime end);
 
-    /**
-     * Tìm các bản ghi có memberUserId = tham số và status = tham số và checkOutTime đang trống (null) và
-     * checkInTime < tham số (Spring Data tự sinh truy vấn từ tên hàm).
-     */
-    List<CenterCheckin> findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
-            Long memberId, String status, LocalDateTime cutoff);
+    /** Chỉ lấy ID để lần đọc dưới khóa không dùng entity cũ trong persistence context; bao gồm đúng 8 giờ. */
+    @Query("select c.id from CenterCheckin c where c.member.userId = :memberId and c.status = 'GRANTED' "
+            + "and c.checkOutTime is null and c.checkInTime <= :cutoff order by c.id")
+    List<Long> findStaleVisitIdsForMember(@Param("memberId") Long memberId, @Param("cutoff") LocalDateTime cutoff);
 
-    /**
-     * Tìm các bản ghi có status = tham số và checkOutTime đang trống (null) và checkInTime < tham số (Spring
-     * Data tự sinh truy vấn từ tên hàm).
-     */
-    List<CenterCheckin> findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
-            String status, LocalDateTime cutoff);
+    /** Lấy phiên quá hạn từ mọi ngày, nên lần chạy sau vẫn xử lý được tồn đọng sau gián đoạn/restart. */
+    @Query("select c.id from CenterCheckin c where c.status = 'GRANTED' "
+            + "and c.checkOutTime is null and c.checkInTime <= :cutoff order by c.id")
+    List<Long> findStaleVisitIds(@Param("cutoff") LocalDateTime cutoff);
+
+    /** Self-checkout cũng đọc ID trước khi khóa để không nạp entity cũ trong lúc auto-close đang xử lý. */
+    @Query("select c.id from CenterCheckin c where c.member.userId = :memberId and c.status = 'GRANTED' "
+            + "and c.checkOutTime is null order by c.checkInTime desc, c.id desc")
+    List<Long> findOpenVisitIdsForMember(@Param("memberId") Long memberId);
 
     /**
      * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và checkInTime ≥ tham số (Spring Data tự sinh truy

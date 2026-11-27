@@ -175,13 +175,33 @@ class CenterCheckinServiceTest {
         open.setMember(member);
         open.setCheckInTime(LocalDateTime.now(clock).minusHours(1));
         open.setStatus("GRANTED");
-        when(checkins.findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(10L))
-                .thenReturn(Optional.of(open), Optional.empty());
+        when(checkins.findOpenVisitIdsForMember(10L)).thenReturn(List.of(1L), List.of());
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(open));
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
         var request = new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode());
         assertNotNull(selfService.selfCheckout(memberPrincipal, request).checkOutTime());
+        verify(checkins).findByIdForUpdate(any());
         assertThrows(BadRequestException.class, () -> selfService.selfCheckout(memberPrincipal, request));
         assertThrows(ForbiddenException.class, () -> selfService.selfCheckout(receptionist, request));
+    }
+
+    @Test
+    void selfCheckoutDoesNotOverwriteAutomaticEndObservedAfterLocking() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Member");
+        CenterCheckin closed = new CenterCheckin();
+        closed.setMember(member);
+        closed.setCheckInTime(LocalDateTime.now(clock).minusHours(9));
+        closed.setCheckOutTime(closed.getCheckInTime().plusHours(8));
+        closed.setNotes("SYSTEM_AUTO_CHECKOUT");
+        when(checkins.findOpenVisitIdsForMember(10L)).thenReturn(List.of(1L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(closed));
+        assertThrows(BadRequestException.class, () -> selfService.selfCheckout(memberPrincipal,
+                new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode())));
+        assertEquals(closed.getCheckInTime().plusHours(8), closed.getCheckOutTime());
+        assertEquals("SYSTEM_AUTO_CHECKOUT", closed.getNotes());
+        verify(checkins, never()).saveAndFlush(any());
     }
 
     /** Kiểm thử: lịch sử từ chối khoảng thời gian dài hơn một tháng hoặc ngày bắt đầu sau ngày kết thúc. */
@@ -560,8 +580,7 @@ class CenterCheckinServiceTest {
 
         service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
-        verify(checkins).findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
-                eq(10L), eq("GRANTED"), eq(now.minusHours(8)));
+        verify(checkins).findStaleVisitIdsForMember(10L, now.minusHours(8));
     }
 
     /**
@@ -579,27 +598,27 @@ class CenterCheckinServiceTest {
         CenterCheckin staleCheckin = new CenterCheckin();
         staleCheckin.setMember(member);
         staleCheckin.setStatus("GRANTED");
-        staleCheckin.setCheckInTime(now.minusHours(9));
+        staleCheckin.setCheckInTime(now.minusHours(8));
         staleCheckin.setCheckOutTime(null);
 
         registerQr("QR-VALID", sub);
-        when(checkins.findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
-                eq(10L), eq("GRANTED"), any(LocalDateTime.class)))
-                .thenReturn(List.of(staleCheckin));
-        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.findStaleVisitIdsForMember(eq(10L), any())).thenReturn(List.of(1L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(staleCheckin));
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED"))
+                .thenAnswer(inv -> staleCheckin.getCheckOutTime() == null);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         assertEquals("GRANTED", result.status());
-        assertNotNull(staleCheckin.getCheckOutTime());
+        assertEquals(staleCheckin.getCheckInTime().plusHours(8), staleCheckin.getCheckOutTime());
         assertEquals("SYSTEM_AUTO_CHECKOUT", staleCheckin.getNotes());
         verify(checkins).save(staleCheckin);
     }
 
-    /** Kiểm thử: Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 8 tiếng */
+    /** Kiểm thử: đóng nhiều phiên quá hạn và giữ đúng giờ kết thúc theo quy tắc. */
     @Test
-    @DisplayName("Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 8 tiếng")
+    @DisplayName("Tự động đóng nhiều phiên GRANTED đủ 8 tiếng")
     void autoCheckoutStaleVisitsCronJob_closesAllVisitsOlderThan8Hours() {
         Member member = new Member();
         member.setUserId(10L);
@@ -615,17 +634,92 @@ class CenterCheckinServiceTest {
         stale2.setStatus("GRANTED");
         stale2.setCheckInTime(now.minusHours(20));
 
-        when(checkins.findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(eq("GRANTED"), any(LocalDateTime.class)))
-                .thenReturn(List.of(stale1, stale2));
+        when(checkins.findStaleVisitIds(any())).thenReturn(List.of(1L, 2L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(stale1));
+        when(checkins.findByIdForUpdate(2L)).thenReturn(Optional.of(stale2));
 
         int closedCount = service.autoCheckoutStaleVisits();
 
         assertEquals(2, closedCount);
-        assertNotNull(stale1.getCheckOutTime());
+        assertEquals(stale1.getCheckInTime().plusHours(8), stale1.getCheckOutTime());
         assertEquals("SYSTEM_AUTO_CHECKOUT", stale1.getNotes());
-        assertNotNull(stale2.getCheckOutTime());
+        assertEquals(stale2.getCheckInTime().plusHours(8), stale2.getCheckOutTime());
         assertEquals("SYSTEM_AUTO_CHECKOUT", stale2.getNotes());
         verify(checkins, times(2)).save(any(CenterCheckin.class));
+    }
+
+    @Test
+    void autoCheckoutUsesEightHourEndEvenWhenSchedulerRunsLate() {
+        LocalDateTime entered = LocalDateTime.now(clock).minusHours(15);
+        CenterCheckin visit = new CenterCheckin();
+        visit.setCheckInTime(entered);
+        when(checkins.findStaleVisitIds(any())).thenReturn(List.of(1L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(visit));
+
+        assertEquals(1, service.autoCheckoutStaleVisits());
+        assertEquals(entered.plusHours(8), visit.getCheckOutTime());
+    }
+
+    @Test
+    void autoCheckoutScheduleChecksEveryMinuteInCenterTimezone() throws Exception {
+        var scheduled = CenterCheckinService.class.getMethod("autoCheckoutStaleVisits")
+                .getAnnotation(org.springframework.scheduling.annotation.Scheduled.class);
+        assertEquals("${app.attendance.auto-checkout.cron:0 * * * * ?}", scheduled.cron());
+        assertEquals("Asia/Ho_Chi_Minh", scheduled.zone());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"479, 0", "480, 1", "481, 1"})
+    void checksEightHourBoundaryAgainAfterLocking(int minutes, int expectedClosed) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        CenterCheckin visit = new CenterCheckin();
+        visit.setCheckInTime(now.minusMinutes(minutes));
+        // Danh sách ID có thể đã cũ: kiểm tra lại cả thời gian sau khi lấy khóa.
+        when(checkins.findStaleVisitIds(now.minusHours(8))).thenReturn(List.of(1L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(visit));
+        assertEquals(expectedClosed, service.autoCheckoutStaleVisits());
+        if (expectedClosed == 0) {
+            assertNull(visit.getCheckOutTime());
+            verify(checkins, never()).save(any());
+        } else {
+            assertEquals(visit.getCheckInTime().plusHours(8), visit.getCheckOutTime());
+            assertEquals("SYSTEM_AUTO_CHECKOUT", visit.getNotes());
+        }
+    }
+
+    @Test
+    void repeatedRunsAndAnotherServiceInstanceDoNotCloseTwice() {
+        CenterCheckin visit = new CenterCheckin();
+        visit.setCheckInTime(LocalDateTime.now(clock).minusDays(3));
+        when(checkins.findStaleVisitIds(any())).thenReturn(List.of(1L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(visit));
+        var restarted = new CenterCheckinService(checkins, subscriptions, users, members, clock);
+        assertEquals(1, restarted.autoCheckoutStaleVisits());
+        LocalDateTime ended = visit.getCheckOutTime();
+        assertEquals(0, service.autoCheckoutStaleVisits());
+        assertEquals(ended, visit.getCheckOutTime());
+        verify(checkins, times(1)).save(visit);
+    }
+
+    @Test
+    void skipsDeletedDeniedAndAlreadyClosedVisitsAfterLocking() {
+        LocalDateTime entered = LocalDateTime.now(clock).minusHours(9);
+        CenterCheckin denied = new CenterCheckin();
+        denied.setCheckInTime(entered);
+        denied.setStatus("DENIED");
+        CenterCheckin manual = new CenterCheckin();
+        manual.setCheckInTime(entered);
+        manual.setCheckOutTime(entered.plusHours(2));
+        manual.setNotes("Existing history");
+        when(checkins.findStaleVisitIds(any())).thenReturn(List.of(1L, 2L, 3L));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.empty());
+        when(checkins.findByIdForUpdate(2L)).thenReturn(Optional.of(denied));
+        when(checkins.findByIdForUpdate(3L)).thenReturn(Optional.of(manual));
+        assertEquals(0, service.autoCheckoutStaleVisits());
+        assertNull(denied.getCheckOutTime());
+        assertEquals(entered.plusHours(2), manual.getCheckOutTime());
+        assertEquals("Existing history", manual.getNotes());
+        verify(checkins, never()).save(any());
     }
 
     /** Kiểm thử: Dynamic QR HMAC-SHA256 hợp lệ -> GRANTED */

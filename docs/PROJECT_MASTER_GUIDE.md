@@ -442,7 +442,7 @@ Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 bi�
 - `[*] -> [Đến trung tâm] -> [Xuất trình mã QR]`: Hội viên mở App quét mã tại cổng kiểm soát.
 - `[Xuất trình mã QR] -> [Check-in hợp lệ]`: Trigger kiểm tra gói tập còn active và còn hạn -> Cho phép qua cổng, lưu `check_in_time`.
 - `[Xuất trình mã QR] -> [Bị từ chối vào]`: Gói tập hết hạn / không hợp lệ -> Cổng báo đỏ, lễ tân nhắc gia hạn.
-- `[Check-in hợp lệ] -> [Đang tập luyện] -> [Đã Check-out]`: Hội viên tập xong quét thẻ ra về, hệ thống cập nhật `check_out_time`.
+- `[Check-in hợp lệ] -> [Đang tập luyện] -> [Đã Check-out]`: Hội viên chỉ cần check-in. Scheduler kiểm tra mỗi phút và tự đóng phiên đủ 8 giờ, ghi `check_out_time = check_in_time + 8 giờ`, marker `SYSTEM_AUTO_CHECKOUT`; đây không phải bằng chứng giờ rời thực tế. Lần check-in tiếp theo cũng đóng phiên quá hạn theo cùng quy tắc. UI/endpoint thủ công được giữ trong giai đoạn chuyển tiếp; không sửa lịch sử đã có giờ ra.
 
 #### 9. Điểm danh buổi học (`session_attendance.status`)
 - `[*] -> [Chưa điểm danh]`: Lớp học bắt đầu, danh sách học viên ở trạng thái chờ (`unmarked`).
