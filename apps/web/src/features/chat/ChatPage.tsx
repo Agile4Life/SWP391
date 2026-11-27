@@ -244,7 +244,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
         </nav>}
         </>}
       </aside>
-      {supportOpen && support ? <SupportThread audience={support} active={support === 'staff' ? visible && mobileThread : mobileThread} onBack={backToList} />
+      {supportOpen && support ? <SupportThread audience={support} active={support === 'staff' ? visible && mobileThread : support === 'manager' ? visible : mobileThread} onBack={backToList} />
         : aiOpen && ai ? <AiChatThread audience={ai} active={mobileThread} onBack={backToList} />
         : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} likedIds={likedIds} onToggleLike={toggleLike} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}

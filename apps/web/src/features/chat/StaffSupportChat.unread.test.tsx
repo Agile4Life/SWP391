@@ -109,11 +109,16 @@ it('preserves latest-activity ordering from the paginated backend rather than ti
   expect([...host.querySelectorAll('[data-support-ticket]')].map(node => node.getAttribute('data-support-ticket'))).toEqual(['2', '6']);
 });
 
-it('keeps manager inbox/read behavior unchanged', async () => {
-  await render({ manager: true }); await open();
-  expect(api.getSupportInbox).toHaveBeenCalledWith(0, '');
-  expect(api.markSupportRead).not.toHaveBeenCalled();
-  expect(button('Chưa đọc')).toBeUndefined();
+it('enables unread filter, latest message preview, and mark-read for manager escalated inbox', async () => {
+  await render({ manager: true });
+  expect(api.getSupportInbox).toHaveBeenCalledWith(0, '', false);
+  expect(row().querySelector('.direct-chat__unread')?.textContent).toBe('2');
+  expect(row().querySelector('.direct-chat__preview.is-unread')?.textContent).toBe(ticket.lastMessage);
+  await act(async () => button('Chưa đọc').click());
+  expect(api.getSupportInbox).toHaveBeenLastCalledWith(0, '', true);
+  await open();
+  expect(api.markSupportRead).toHaveBeenCalledWith(2, 20);
+  expect(button('Quay lại hộp thư')).toBeDefined();
 });
 
 it('shows unread again when realtime reports a new incoming member message', async () => {

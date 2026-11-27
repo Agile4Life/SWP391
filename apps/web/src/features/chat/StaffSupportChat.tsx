@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useI18n } from '../../shared/i18n';
@@ -73,7 +73,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     const current = () => alive.current && generation === listGeneration.current;
     if (!background) setLoading(true);
     try {
-      const fetchPage = (value: number) => manager ? getSupportInbox(value, status) : getSupportInbox(value, status, unread);
+      const fetchPage = (value: number) => getSupportInbox(value, status, unread);
       let result = await fetchPage(target);
       if (!current()) return;
       const last = Math.max(0, result.totalPages - 1);
@@ -86,7 +86,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
       setTickets(result.content); setPages(result.totalPages); setListError(null);
     } catch (cause) { if (current()) setListError(supportError(cause)); }
     finally { if (current()) setLoading(false); }
-  }, [manager]);
+  }, []);
   useEffect(() => { void loadList(); }, [loadList]);
 
   // Tải chi tiết phiếu và các tin nhắn (silent thì không hiện trạng thái tải).
@@ -107,7 +107,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
           setTicket(result); setMessages(uniqueMessages(history)); setDetailLoading(false); setDetailError(null); setAccessDenied(false);
           // Chỉ đọc đến ảnh chụp dữ liệu vừa tải thành công; tin đến sau vẫn còn chưa đọc trên server.
           const cursor = history.reduce((last, message) => Math.max(last, message.id), 0);
-          if (!manager && activeRef.current && document.visibilityState !== 'hidden' && (readCursors.current.get(id) ?? -1) < cursor) {
+          if (activeRef.current && document.visibilityState !== 'hidden' && (readCursors.current.get(id) ?? -1) < cursor) {
             try {
               await markSupportRead(id, cursor);
               readCursors.current.set(id, cursor);
@@ -119,11 +119,11 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
         } catch (cause) {
           if (current()) { setDetailError(supportError(cause)); setAccessDenied(isAccessDenied(cause)); if (!silent || isAccessDenied(cause)) { setTicket(null); setMessages([]); } }
         } finally { if (current()) setDetailLoading(false); }
-      } while (detailDirty.current.has(id) && alive.current && selection.current === id && (manager || activeRef.current));
+      } while (detailDirty.current.has(id) && alive.current && selection.current === id && activeRef.current);
     })();
     detailInFlight.current.set(id, request);
     try { await request; } finally { detailInFlight.current.delete(id); }
-  }, [manager, loadList]);
+  }, [loadList]);
 
   // Realtime: danh sách phiếu (phiếu mới, đổi trạng thái) và phiếu đang mở (tin nhắn mới của hội viên).
   useEffect(() => {
@@ -139,7 +139,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     return () => { disposed = true; stop(); clearTimeout(timer); };
   }, [loadList]);
   useEffect(() => {
-    if (selected === null || (!manager && !active)) return;
+    if (selected === null || !active) return;
     const id = selected;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false, running = false, dirty = false;
@@ -262,9 +262,9 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
           <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
         </HeaderAction>
       </SupportHeader>
-      {!manager && <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
+      <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
         {[false, true].map(value => <button key={String(value)} type="button" role="radio" aria-checked={unreadOnly === value} className={`support-chat__chip${unreadOnly === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, value)}>{value ? t('Chưa đọc', 'Unread') : t('Tất cả', 'All')}</button>)}
-      </div>}
+      </div>
       <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
         {(['', ...STATUSES] as const).map(value => <button key={value || 'all'} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, value)}>
           {value ? t(...SUPPORT_STATUS_LABEL[value]) : manager ? t('Tất cả', 'All') : t('Mọi trạng thái', 'Any status')}</button>)}
@@ -275,18 +275,13 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
             : tickets.length === 0 ? <p className="direct-chat__empty">{manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
               : <ul className="support-chat__ticket-list">{tickets.map(item => {
                 const pair = SUPPORT_STATUS_LABEL[item.status];
-                const unread = !manager && !!item.unreadCount;
+                const unread = !!item.unreadCount;
                 return <li key={item.id}><button type="button" data-support-ticket={item.id} className={`direct-chat__person${unread ? ' has-unread' : ''}`} onClick={() => open(item)}>
                   <span className="direct-chat__person-info">
-                    {manager ? <>
-                      <strong data-i18n-managed>#{item.id} · {localizedSubject(item.subject, t)}</strong>
-                      <span className="direct-chat__person-sub"><small data-i18n-managed className="direct-chat__preview">{memberName(item)} · {formatCenterDate(item.createdAt)}{item.assignedToName ? ` · ${item.assignedToName}` : ''}</small></span>
-                    </> : <>
-                      <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
-                      <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>
-                      <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{item.lastMessage ?? item.description ?? localizedSubject(item.subject, t)}</span>
-                      <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>
-                    </>}
+                    <strong data-i18n-managed className="support-chat__member">{memberName(item)}{manager && item.assignedToName ? ` · ${item.assignedToName}` : ''}</strong>
+                    <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>
+                    <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{item.lastMessage ?? item.description ?? localizedSubject(item.subject, t)}</span>
+                    <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>
                   </span>
                   <span className="support-chat__badges">
                     {unread && <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>{item.unreadCount! > 99 ? '99+' : item.unreadCount}</span>}
@@ -306,7 +301,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const pair = ticket ? SUPPORT_STATUS_LABEL[ticket.status] : null;
   const closed = ticket?.status === 'closed';
   return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
-    <SupportHeader onBack={close} active={active} inboxBackLabel={!manager ? t('Quay lại hộp thư', 'Back to inbox') : undefined} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
+    <SupportHeader onBack={close} active={active} inboxBackLabel={t('Quay lại hộp thư', 'Back to inbox')} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
       {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setEscalationError(null); setEscalating(true); }}>
         <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
       </HeaderAction>}
