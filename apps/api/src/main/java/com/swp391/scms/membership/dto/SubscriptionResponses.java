@@ -107,8 +107,8 @@ public final class SubscriptionResponses {
 
     /**
      * Một yêu cầu gói tập quầy đã xử lý xong: {@code type} gồm REGISTER, RENEW hoặc UPGRADE; {@code outcome}
-     * gồm APPROVED (đã thanh toán và kích hoạt) hoặc CANCELLED (đã rút trước khi thanh toán), kèm hội viên, gói
-     * mới/cũ, số tiền, phương thức, thời điểm và người xử lý.
+     * gồm APPROVED (dòng khoản thu đã settle, có thể đã hoàn) hoặc CANCELLED (chưa từng thanh toán).
+     * amount là bí danh paidAmount; giá báo và các khoản hoàn tách riêng, không suy nguồn từ online_wallet.
      */
     public record RequestHistoryDto(
             Long subscriptionId,
@@ -122,7 +122,14 @@ public final class SubscriptionResponses {
             java.math.BigDecimal amount,
             String paymentMethod,
             LocalDateTime processedAt,
-            String processedByName
+            String processedByName,
+            Long paymentId,
+            String paymentStatus,
+            String actualPaymentMethod,
+            java.math.BigDecimal paidAmount,
+            java.math.BigDecimal quotedAmount,
+            java.math.BigDecimal refundedAmount,
+            java.math.BigDecimal lateGatewayRefundedAmount
     ) {}
 
     /**

@@ -15,14 +15,17 @@ const TYPE_LABELS: Record<RequestHistoryItem['type'], StaffMessage> = {
   UPGRADE: staffMessage('Nâng cấp', 'Upgrade'),
 };
 const OUTCOME_LABELS: Record<RequestHistoryItem['outcome'], StaffMessage> = {
-  APPROVED: staffMessage('Đã thu tiền & kích hoạt', 'Paid & activated'),
+  APPROVED: staffMessage('Đã thu tiền', 'Paid'),
   CANCELLED: staffMessage('Đã hủy', 'Cancelled'),
 };
 const METHOD_LABELS: Record<string, StaffMessage> = {
-  cash: staffMessage('Tiền mặt', 'Cash'),
-  pos: staffMessage('Thẻ (POS)', 'Card (POS)'),
-  bank_transfer: staffMessage('Chuyển khoản', 'Bank transfer'),
-  online_wallet: staffMessage('VNPay / Ví SÖL', 'VNPay / SÖL Wallet'),
+  CASH: staffMessage('Tiền mặt', 'Cash'),
+  POS: staffMessage('Thẻ (POS)', 'Card (POS)'),
+  BANK_TRANSFER: staffMessage('Chuyển khoản', 'Bank transfer'),
+  VNPAY: staffMessage('VNPay', 'VNPay'),
+  WALLET: staffMessage('VíSỒL', 'SÖL Wallet'),
+  UNKNOWN: staffMessage('Chưa xác định', 'Unknown'),
+  UNPAID: staffMessage('Chưa thanh toán', 'Unpaid'),
 };
 /** Định dạng số tiền VND (rỗng là "—"). */
 const vnd = (amount: number | null) => (amount == null ? '—' : formatPrice(Number(amount)));
@@ -121,8 +124,15 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
                   <td style={{ fontVariantNumeric: 'tabular-nums' }}>#{item.subscriptionId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
                   <td>{t(TYPE_LABELS[item.type])}</td>
                   <td>{item.previousPackageName && item.type === 'UPGRADE' ? `${item.previousPackageName} → ${item.packageName ?? ''}` : item.packageName ?? '—'}</td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{vnd(item.amount)}{item.paymentMethod ? <span className="muted"> · {t(METHOD_LABELS[item.paymentMethod] ?? item.paymentMethod)}</span> : null}</td>
-                  <td>{t(OUTCOME_LABELS[item.outcome])}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {/* Giá báo không phải tiền đã thu; không suy nguồn từ online_wallet khi thiếu DTO mới. */}
+                    <div data-testid="history-paid">{t('Đã thu', 'Collected')}: {vnd(item.outcome === 'CANCELLED' ? 0 : item.paidAmount === undefined ? item.amount : item.paidAmount)}</div>
+                    <div className="muted">{t(METHOD_LABELS[item.outcome === 'CANCELLED' ? 'UNPAID' : item.actualPaymentMethod ?? 'UNKNOWN'] ?? METHOD_LABELS.UNKNOWN)}</div>
+                    {item.quotedAmount != null && <div className="muted">{t('Giá báo', 'Quoted')}: {vnd(item.quotedAmount)}</div>}
+                    {((item.refundedAmount ?? 0) > 0 || item.paymentStatus === 'refunded') && <div className="muted">{t('Đã hoàn', 'Refunded')}: {item.refundedAmount == null ? t('Chưa xác định', 'Unknown') : vnd(item.refundedAmount)}</div>}
+                    {((item.lateGatewayRefundedAmount ?? 0) > 0 || item.lateGatewayRefundedAmount === null) && <div className="muted">{t('Hoàn VNPay đến muộn', 'Late VNPay return')}: {item.lateGatewayRefundedAmount == null ? t('Chưa xác định', 'Unknown') : vnd(item.lateGatewayRefundedAmount)}</div>}
+                  </td>
+                  <td>{item.paymentStatus === 'refunded' ? t('Đã hoàn tiền', 'Refunded') : t(OUTCOME_LABELS[item.outcome])}</td>
                   <td>{item.processedByName ?? (item.outcome === 'APPROVED' ? t('Hội viên tự thanh toán') : '—')}</td>
                 </tr>
               ))}
