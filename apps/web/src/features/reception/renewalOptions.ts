@@ -13,6 +13,60 @@ function dateValue(value: string): number | null {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value ? time : null;
 }
 
+/** Chỉ đưa cuối chuỗi đã xác minh vào dropdown; không gộp các lần mua độc lập cùng gói. */
+export function eligibleRenewalOptions(
+  candidates: readonly RenewalCandidate[],
+  packages: readonly { id: number; durationDays: number }[],
+  today: string,
+): { options: RenewalCandidate[]; error: StaffMessage | null } {
+  const byId = new Map<number, RenewalCandidate>();
+  const duplicates = new Set<number>();
+  const childCounts = new Map<number, number>();
+  for (const item of candidates) {
+    if (byId.has(item.id)) duplicates.add(item.id);
+    byId.set(item.id, item);
+    if (item.previousSubscriptionId != null) {
+      childCounts.set(item.previousSubscriptionId, (childCounts.get(item.previousSubscriptionId) ?? 0) + 1);
+    }
+  }
+  const options: RenewalCandidate[] = [];
+  let error: StaffMessage | null = null;
+  for (const candidate of candidates) {
+    const visited = new Set<number>();
+    let current: RenewalCandidate | undefined = candidate;
+    let valid = true;
+    // Đọc ngược tới gốc để phát hiện cả nhánh lỗi phía trước kỳ cuối, vòng lặp và liên kết thiếu.
+    while (current) {
+      if (visited.has(current.id) || duplicates.has(current.id)
+        || (childCounts.get(current.id) ?? 0) > 1
+        || !['active', 'expired'].includes(current.status.toLowerCase())
+        || dateValue(current.startDate) === null || dateValue(current.endDate) === null
+        || current.startDate > current.endDate || current.previousSubscriptionId === undefined) {
+        valid = false; break;
+      }
+      visited.add(current.id);
+      if (current.previousSubscriptionId === null) break;
+      const parent = byId.get(current.previousSubscriptionId);
+      if (!parent || parent.memberId !== current.memberId
+        || current.startDate < parent.endDate
+        || (parent.packageId === current.packageId && current.startDate === parent.endDate)) {
+        valid = false; break;
+      }
+      current = parent;
+    }
+    if (!valid) { error ??= reviewPeriod(); continue; }
+    if (childCounts.has(candidate.id)) continue;
+    const duration = packages.find(pkg => pkg.id === candidate.packageId)?.durationDays;
+    if (!duration || !Number.isInteger(duration) || duration < 1 || dateValue(today) === null) {
+      error ??= reviewPeriod(); continue;
+    }
+    const reason = renewalOptionError(candidate, candidates, packages, today);
+    if (reason) { error ??= reason; continue; }
+    options.push(candidate);
+  }
+  return { options, error };
+}
+
 /** Chỉ chặn lỗi chứng minh được từ DTO thật; backend vẫn kiểm tra toàn bộ lịch sử và quyền gia hạn. */
 export function renewalOptionError(
   candidate: RenewalCandidate,

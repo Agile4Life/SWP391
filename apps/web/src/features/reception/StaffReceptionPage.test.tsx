@@ -393,7 +393,7 @@ it('blocks payment for the previous member while another member lookup is pendin
 });
 
 it('creates a linked renewal before collecting payment', async () => {
-  const previous = { id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-09-01', endDate: '2026-09-30', status: 'expired', createdAt: '2026-09-01' };
+  const previous = { previousSubscriptionId: null, id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-09-01', endDate: '2026-09-30', status: 'expired', createdAt: '2026-09-01' };
   api.getRenewalCandidates.mockResolvedValue([previous]);
   api.createRenewal.mockResolvedValue({ ...previous, id: 6, status: 'pending_payment' });
   await selectMember();
@@ -419,7 +419,7 @@ it('keeps an existing pending order fixed to its selected package', async () => 
 });
 
 it('keeps the created renewal pending when payment fails', async () => {
-  const previous = { id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-09-01', endDate: '2026-09-30', status: 'expired', createdAt: '2026-09-01' };
+  const previous = { previousSubscriptionId: null, id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-09-01', endDate: '2026-09-30', status: 'expired', createdAt: '2026-09-01' };
   api.getRenewalCandidates.mockResolvedValue([previous]);
   api.createRenewal.mockResolvedValue({ ...previous, id: 6, status: 'pending_payment' });
   api.processPayment.mockRejectedValue(new Error('payment failed'));
@@ -584,7 +584,7 @@ it('resends the same request id when the receptionist retries a top-up after a n
 });
 
 it('offers only renewal, not a second new package, while the member still has a running paid period', async () => {
-  const running = { id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-01-01', endDate: '2099-12-31', status: 'active', createdAt: '2026-01-01' };
+  const running = { previousSubscriptionId: null, id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-01-01', endDate: '2099-12-31', status: 'active', createdAt: '2026-01-01' };
   api.getRenewalCandidates.mockResolvedValue([running]);
   await selectMember();
   const packageSelect = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
@@ -665,10 +665,11 @@ function useConflictHistory() {
   api.getRenewalCandidates.mockResolvedValue([runningGold, oldSilver]);
 }
 afterEach(() => vi.useRealTimers());
-it('disables conflicting history but keeps Gold renewable and blocks a forced Silver submission', async () => {
+it('hides conflicting history but keeps Gold renewable and blocks a forced Silver submission', async () => {
   useConflictHistory(); await selectMember();
   const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
-  expect(select.querySelector<HTMLOptionElement>('[value="renew:40"]')!.disabled).toBe(true);
+  expect(select.querySelector('[value="renew:40"]')).toBeNull();
+  const stale = document.createElement('option'); stale.value = 'renew:40'; select.add(stale);
   expect(select.querySelector<HTMLOptionElement>('[value="renew:50"]')!.disabled).toBe(false);
   await chooseAndPay('renew:40');
   expect(host.textContent).toContain('Không thể gia hạn gói SILVER 9 THÁNG vì trùng thời hạn với gói GOLD 9 THÁNG hiện tại. Vui lòng chọn gói hợp lệ.');
@@ -713,22 +714,18 @@ it('does not turn a missing renewal id into a new purchase when its number match
   expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
 });
 
-it('keeps replaced renewals disabled and explains them in the visible dropdown', async () => {
+it('hides replaced periods and keeps the current upgrade tail', async () => {
   api.getRenewalCandidates.mockResolvedValue([
-    { id: 1, memberId: 10, packageId: 2, packageName: 'Trial', startDate: '2026-10-01', endDate: '2026-10-03', status: 'expired', createdAt: '2026-10-01' },
-    { id: 2, memberId: 10, packageId: 3, packageName: 'GOLD 3 THÁNG', previousSubscriptionId: 1, startDate: '2026-10-02', endDate: '2026-12-31', status: 'active', createdAt: '2026-10-02' },
+    { ...runningGold, id: 1, packageId: 3, previousSubscriptionId: null, status: 'expired', startDate: '2026-10-01', endDate: '2026-11-21' },
+    { ...runningGold, previousSubscriptionId: 1, endDate: '2099-12-31' },
   ]);
-  api.getActivePackages.mockResolvedValue([pkg, { ...pkg, id: 3, name: 'GOLD 3 THÁNG' }]);
+  api.getActivePackages.mockResolvedValue([pkg, { ...pkg, id: 3 }]);
   await selectMember();
-  const trigger = host.querySelector<HTMLButtonElement>('#pos-package')!;
-  await act(async () => trigger.click());
-  const disabled = host.querySelector<HTMLElement>('.ui-select__option.is-disabled');
-  expect(disabled?.getAttribute('aria-disabled')).toBe('true');
-  expect(disabled?.textContent).toContain('GOLD 3 THÁNG');
-  await act(async () => disabled?.click());
-  expect(api.processPayment).not.toHaveBeenCalled();
-  expect(api.createRenewal).not.toHaveBeenCalled();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  expect(select.querySelector('[value="renew:1"]')).toBeNull();
+  expect(select.querySelector('[value="renew:50"]')).not.toBeNull();
 });
+
 it.each([null, 'PENDING', 'REJECTED'])('blocks new purchase when KYC is %s after refreshing member', async (kycStatus) => {
   api.lookupMembers.mockResolvedValue([{ ...member, identityVerified: false, kycStatus }]);
   await selectMember(); await chooseAndPay('buy:2');
@@ -901,4 +898,47 @@ it('P2-FE-67 & P2-FE-68: shows "Chưa cấp thẻ" instead of fabricated code, o
   } finally {
     await act(async () => { setLanguage('vi'); });
   }
+});
+
+const renewalChain = [
+  { ...runningGold, id: 100, previousSubscriptionId: null, startDate: '2026-11-26', endDate: '2027-02-23' },
+  { ...runningGold, id: 101, previousSubscriptionId: 100, startDate: '2027-02-24', endDate: '2027-05-24' },
+  { ...runningGold, id: 102, previousSubscriptionId: 101, startDate: '2027-05-25', endDate: '2027-08-22' },
+];
+it('shows one linked tail and pays the renewal created from exactly that displayed ID', async () => {
+  api.getActivePackages.mockResolvedValue([{ ...pkg, durationDays: 90 }]);
+  api.getRenewalCandidates.mockResolvedValue([renewalChain[1], renewalChain[2], renewalChain[0]]);
+  api.createRenewal.mockResolvedValue({ ...renewalChain[2], id: 103, previousSubscriptionId: 102, status: 'pending_payment' });
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  expect([...select.options].filter(option => option.value.startsWith('renew:')).map(option => option.value)).toEqual(['renew:102']);
+  await chooseAndPay('renew:102');
+  expect(api.createRenewal).toHaveBeenCalledWith(10, 102);
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: 103, packageId: 2, amount: 200 }));
+});
+it('rejects a forced old period even though it still exists in the raw API history', async () => {
+  api.getActivePackages.mockResolvedValue([{ ...pkg, durationDays: 90 }]);
+  api.getRenewalCandidates.mockResolvedValue(renewalChain);
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  const stale = document.createElement('option'); stale.value = 'renew:100'; select.add(stale);
+  await chooseAndPay('renew:100');
+  expect(api.createRenewal).not.toHaveBeenCalled();
+  expect(api.processPayment).not.toHaveBeenCalled();
+});
+it.each([
+  [{ ...runningGold, previousSubscriptionId: undefined }],
+  [{ ...runningGold, previousSubscriptionId: 999 }],
+  [renewalChain[0], renewalChain[1], { ...renewalChain[1], id: 104 }],
+  [{ ...runningGold, previousSubscriptionId: 50 }],
+])('shows safe feedback for an incomplete or broken chain', async (...history) => {
+  api.getRenewalCandidates.mockResolvedValue(history);
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  expect([...select.options].some(option => option.value.startsWith('renew:'))).toBe(false);
+  expect(host.querySelector('[data-testid="renewal-options-warning"]')?.textContent).toBeTruthy();
+  const stale = document.createElement('option'); stale.value = 'renew:50'; select.add(stale);
+  await chooseAndPay('renew:50');
+  expect(api.createRenewal).not.toHaveBeenCalled();
+  expect(api.processPayment).not.toHaveBeenCalled();
 });
