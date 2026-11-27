@@ -25,7 +25,7 @@ export interface CoachAssignmentStudent {
   status: string;
   /** Id giáo án, id buổi PT kế tiếp (PT_1_1) hoặc id lớp. */
   referenceId: number;
-  /** Số buổi PT sắp tới được gộp vào dòng PT_1_1. */
+  /** Số buổi sắp tới: buổi PT gộp vào dòng PT_1_1, hoặc buổi còn lại của lớp ghi danh cả khóa. */
   sessionCount?: number | null;
 }
 
@@ -62,13 +62,14 @@ export interface CoachAssignmentData {
   stats: CoachAssignmentSummaryStats;
 }
 
-/** Yêu cầu điều chuyển: hội viên, HLV cũ/mới, id giáo án hoặc buổi PT, loại và lý do. */
+/** Yêu cầu điều chuyển giáo án: hội viên, HLV cũ/mới, id giáo án, loại và lý do. */
 export interface ReassignStudentRequest {
   memberId: number;
   fromCoachId: number;
   toCoachId: number;
   referenceId: number;
-  assignmentType: 'TRAINING_PLAN' | 'PT_1_1';
+  /** Chỉ giáo án được điều chuyển; PT 1:1 gắn cố định với HLV hội viên đã đặt. */
+  assignmentType: 'TRAINING_PLAN';
   reason?: string;
 }
 
@@ -86,7 +87,7 @@ export const coachAssignmentsApi = {
     return apiFetch<CoachAssignmentData>(`/manager/coach-assignments${qs ? `?${qs}` : ''}`);
   },
 
-  // Điều chuyển học viên sang HLV khác.
+  // Điều chuyển giáo án sang HLV khác.
   reassignStudent: (body: ReassignStudentRequest) =>
     apiFetch<void>('/manager/coach-assignments/reassign', {
       method: 'POST',

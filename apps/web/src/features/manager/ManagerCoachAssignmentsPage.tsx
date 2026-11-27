@@ -38,7 +38,25 @@ function assignmentSchedule(student: CoachAssignmentStudent, compact = false): s
   }
   const next = student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), '') || null : null;
   const count = student.sessionCount ?? 0;
-  return next && !compact && count > 1 ? staffText(`${next} · ${count} buổi sắp tới`, `${next} · ${count} upcoming sessions`) : next;
+  if (!next || count <= 1) return next;
+  return compact ? staffText(`${next} (+${count - 1})`, `${next} (+${count - 1})`) : staffText(`${next} · ${count} buổi sắp tới`, `${next} · ${count} upcoming sessions`);
+}
+
+/** Lý do không thể điều chuyển do gói tập (backend cũng chặn); null nếu được chuyển. */
+function transferBlockedHint(student: CoachAssignmentStudent): string | null {
+  if (student.membershipIssue === 'FROZEN') return staffText('Gói đang bảo lưu nên chưa thể điều chuyển.', 'The plan is on hold, so it cannot be transferred yet.');
+  if (student.membershipIssue === 'NO_ACTIVE') return staffText('Hội viên không còn gói tập hiệu lực nên chưa thể điều chuyển.', 'The member has no valid plan, so it cannot be transferred.');
+  return null;
+}
+
+/** Nhãn trạng thái làm việc của HLV không còn hoạt động; null khi đang làm. */
+function coachStatusLabel(status: string | null | undefined): string | null {
+  switch ((status ?? '').toLowerCase()) {
+    case 'active': case '': return null;
+    case 'on_leave': return staffText('Đang nghỉ phép', 'On leave');
+    case 'terminated': return staffText('Đã nghỉ việc', 'No longer employed');
+    default: return staffText('Ngừng hoạt động', 'Inactive');
+  }
 }
 
 /** Phân công của một hội viên (gom mọi phân công của hội viên đó). */
@@ -80,6 +98,8 @@ export function ManagerCoachAssignmentsPage() {
   const [data, setData] = useState<CoachAssignmentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<StaffMessage | null>(null);
+  // Lỗi của thao tác (kết thúc phân công) hiện riêng, không ẩn danh sách như lỗi tải trang.
+  const [actionError, setActionError] = useState<StaffMessage | null>(null);
   const [search, setSearch] = useState('');
   const [coachFilter, setCoachFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
@@ -126,39 +146,15 @@ export function ManagerCoachAssignmentsPage() {
         sortDir,
       });
       if (generation === loadGeneration.current) {
-        const query = search.trim().toLocaleLowerCase('vi');
-        const coachMatches = (coach: CoachAssignmentOverview) => coach.coachName.toLocaleLowerCase('vi').includes(query);
-        const hasCoachMatch = Boolean(query) && res.coaches.some(coachMatches);
-        const coaches = res.coaches.filter((coach) => !query || (hasCoachMatch ? coachMatches(coach) : coach.students.length > 0)).map((coach) => {
-          const students = coach.students;
-          const count = (type?: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => !type || student.assignmentType === type).map((student) => student.memberId)).size;
-          return {
-            ...coach,
-            students,
-            totalStudentsCount: count(),
-            ptStudentsCount: count('PT_1_1'),
-            planStudentsCount: count('TRAINING_PLAN'),
-            classStudentsCount: count('CLASS'),
-          };
-        });
+        // Backend đã lọc và đếm; chỉ sắp lại tên theo đối chiếu tiếng Việt (backend so sánh không dấu-aware).
+        const coaches = [...res.coaches];
         coaches.sort((a, b) => {
           const nameOrder = a.coachName.localeCompare(b.coachName, 'vi');
           const countOrder = sortOption === 'students_desc' ? b.totalStudentsCount - a.totalStudentsCount
             : sortOption === 'students_asc' ? a.totalStudentsCount - b.totalStudentsCount : 0;
           return countOrder || (sortOption === 'name_desc' ? -nameOrder : nameOrder) || a.coachId - b.coachId;
         });
-        const students = coaches.flatMap((coach) => coach.students);
-        const count = (type: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => student.assignmentType === type).map((student) => student.memberId)).size;
-        setData({
-          ...res,
-          coaches,
-          stats: {
-            ...res.stats,
-            totalPtStudents: count('PT_1_1'),
-            totalPlanStudents: count('TRAINING_PLAN'),
-            totalClassStudents: count('CLASS'),
-          },
-        });
+        setData({ ...res, coaches });
       }
     } catch (err) {
       if (generation === loadGeneration.current) setError(safeMessage(err, 'Không thể tải danh sách HLV & học viên phụ trách'));
@@ -181,17 +177,10 @@ export function ManagerCoachAssignmentsPage() {
     return data?.availableCoaches || [];
   }, [data]);
 
-  const isConflictingCoachSearch = (value: string, selectedId: string) => {
-    const query = value.trim().toLocaleLowerCase('vi');
-    if (!query || !selectedId) return false;
-    const matches = allCoachesList.filter(coach => coach.coachName.toLocaleLowerCase('vi').includes(query));
-    return matches.length > 0 && !matches.some(coach => String(coach.coachId) === selectedId);
-  };
-
   // Điều chuyển: bắt buộc chọn HLV mới và nhập lý do, lớp học chỉ xem, không điều chuyển.
   const handleReassignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy || !reassignStudent || !targetCoachId || reassignStudent.student.assignmentType === 'CLASS') return;
+    if (busy || !reassignStudent || !targetCoachId || reassignStudent.student.assignmentType !== 'TRAINING_PLAN') return;
     const reason = reassignReason.trim();
     if (!reason) {
       setFormError(staffMessage('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.', staffTranslation('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.')));
@@ -206,7 +195,7 @@ export function ManagerCoachAssignmentsPage() {
         fromCoachId: reassignStudent.currentCoachId,
         toCoachId: Number(targetCoachId),
         referenceId: reassignStudent.student.referenceId,
-        assignmentType: reassignStudent.student.assignmentType,
+        assignmentType: 'TRAINING_PLAN',
         reason,
       });
       setReassignStudent(null);
@@ -223,17 +212,17 @@ export function ManagerCoachAssignmentsPage() {
 
   // Kết thúc phân công giáo án (theo id tham chiếu) sau khi xác nhận.
   const handleRemoveAssignment = async (student: CoachAssignmentStudent) => {
-    if (busy || !(await confirm({ title: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), message: staffMessage(`Hủy phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, `Cancel the training plan assignment for ${student.fullName}? Training plan history will be retained.`), confirmLabel: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), danger: true }))) {
+    if (busy || !(await confirm({ title: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), message: staffMessage(`Kết thúc phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, `End the training plan assignment for ${student.fullName}? Training plan history will be retained.`), confirmLabel: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), danger: true }))) {
       return;
     }
     setBusy(true);
-    setError(null);
+    setActionError(null);
     try {
       await coachAssignmentsApi.removeAssignment(student.referenceId);
       notify('Đã kết thúc phân công học viên!', 'success');
       await load();
     } catch (err) {
-      setError(safeMessage(err, 'Lỗi khi kết thúc phân công'));
+      setActionError(safeMessage(err, 'Lỗi khi kết thúc phân công'));
     } finally {
       setBusy(false);
     }
@@ -255,10 +244,26 @@ export function ManagerCoachAssignmentsPage() {
     [t],
   );
 
-  // Nhãn nút điều chuyển nói rõ phạm vi: giáo án đã chọn, hoặc mọi buổi PT sắp tới kèm giáo án.
-  const transferLabel = (student: CoachAssignmentStudent) => student.assignmentType === 'PT_1_1'
-    ? t('Chuyển toàn bộ PT', 'Transfer all PT')
-    : t('Chuyển giáo án', 'Transfer plan');
+  const openTransfer = (student: CoachAssignmentStudent, coachId: number, coachName: string) => {
+    setFormError(null); setTargetCoachId(''); setReassignReason('');
+    setReassignStudent({ student, currentCoachId: coachId, currentCoachName: coachName });
+  };
+
+  // Chỉ giáo án được điều chuyển: PT 1:1 luôn ở với HLV hội viên đã đặt, lớp nhóm chỉ xem. Gói chặn thì khóa nút kèm lý do.
+  const transferButton = (student: CoachAssignmentStudent, coachId: number, coachName: string) => {
+    if (student.assignmentType !== 'TRAINING_PLAN') return null;
+    const blocked = transferBlockedHint(student);
+    return (
+      <button
+        type="button"
+        className="btn-secondary btn-sm coach-action-btn"
+        disabled={busy || Boolean(blocked)}
+        title={blocked ?? undefined}
+        onClick={() => openTransfer(student, coachId, coachName)}
+      >
+        {t('Chuyển giáo án', 'Transfer plan')}</button>
+    );
+  };
 
   // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
@@ -287,11 +292,18 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       )}
 
+      {actionError && (
+        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <span>{t(actionError)}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setActionError(null)}>{t('Đóng', 'Dismiss')}</button>
+        </div>
+      )}
+
       {/* Các thẻ KPI tổng quan */}
-      {!loading && !error && data && <section className="metrics-grid coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
+      {!error && data && <section className="metrics-grid coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
         <div className="metric-card coach-stat-card">
-          <span className="metric-label">{t('HLV đang hoạt động (toàn trung tâm)', 'Active coaches (entire center)')}</span>
-          <span className="metric-value">{data?.stats.activeCoaches ?? 0}</span>
+          <span className="metric-label">{t('Học viên đang phụ trách', 'Members in charge')}</span>
+          <span className="metric-value">{data?.stats.totalAssignedStudents ?? 0}</span>
         </div>
         <div className="metric-card coach-stat-card">
           <span className="metric-label">{t("Học viên tập 1:1 (PT)")}</span>
@@ -315,25 +327,17 @@ export function ManagerCoachAssignmentsPage() {
             className="portal-input coach-search-input"
             placeholder={t("Tìm theo tên HLV, học viên, mã thẻ, SĐT...")}
             value={search}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (isConflictingCoachSearch(value, coachFilter)) setCoachFilter('');
-              setSearch(value);
-            }}
+            onChange={(e) => setSearch(e.target.value)}
             aria-label={t("Tìm kiếm")}
           />
 
           <Select
             className="coach-filter-select"
             value={coachFilter}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (isConflictingCoachSearch(search, value)) setSearch('');
-              setCoachFilter(value);
-            }}
+            onChange={(e) => setCoachFilter(e.target.value)}
             aria-label={t("Lọc theo Huấn luyện viên")}
           >
-            <option value="">{t("Tất cả Huấn luyện viên")}</option>
+            <option value="">{data ? t(`Tất cả HLV (${data.stats.activeCoaches} đang hoạt động)`, `All coaches (${data.stats.activeCoaches} active)`) : t("Tất cả Huấn luyện viên")}</option>
             {allCoachesList.map((c) => (
               <option data-i18n-managed key={c.coachId} value={c.coachId}>
                 {c.coachName}
@@ -384,7 +388,7 @@ export function ManagerCoachAssignmentsPage() {
       </section>
 
       {/* Khu vực hiển thị chính */}
-      {loading ? (
+      {loading && !data ? (
         <LoadingSkeleton label={t("Đang tải dữ liệu HLV và học viên...")} count={4} />
       ) : error ? null : !data || data.coaches.length === 0 ? (
         <div data-i18n-managed className="portal-empty">
@@ -402,8 +406,9 @@ export function ManagerCoachAssignmentsPage() {
                     {coach.coachName.charAt(0).toUpperCase()}
                   </div>
                   <div className="coach-text-details">
-                    <h3>{coach.coachName}</h3>
+                    <h3>{coach.coachName}{coachStatusLabel(coach.employmentStatus) && <> <span className="badge badge-warning">{coachStatusLabel(coach.employmentStatus)}</span></>}</h3>
                     <div className="coach-meta-row">
+                      {coach.specialization && <span>{coach.specialization}</span>}
                       {coach.coachPhone && <span>{coach.coachPhone}</span>}
                       {coach.coachEmail && <span>{coach.coachEmail}</span>}
                     </div>
@@ -474,18 +479,7 @@ export function ManagerCoachAssignmentsPage() {
                             </div>
 
                             <div className="coach-student-actions">
-                              {student.assignmentType !== 'CLASS' && <button
-                                type="button"
-                                className="btn-secondary btn-sm coach-action-btn"
-                                disabled={busy}
-                                onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
-                                  setReassignStudent({
-                                    student,
-                                    currentCoachId: coach.coachId,
-                                    currentCoachName: coach.coachName,
-                                  }); }}
-                              >
-                                {transferLabel(student)}</button>}
+                              {transferButton(student, coach.coachId, coach.coachName)}
                               {student.assignmentType === 'TRAINING_PLAN' && (
                                 <button data-i18n-managed
                                   type="button"
@@ -516,7 +510,7 @@ export function ManagerCoachAssignmentsPage() {
                 <th>{t("HLV phụ trách")}</th>
                 <th>{t("Hình thức")}</th>
                 <th>{t("Chi tiết & Mục tiêu")}</th>
-                <th>{t('Ngày kết thúc / Giờ bắt đầu PT', 'Plan end date / PT start time')}</th>
+                <th>{t('Hết hạn giáo án / Buổi kế tiếp', 'Plan end / Next session')}</th>
                 <th>{t("Thao tác")}</th>
               </tr>
             </thead>
@@ -552,21 +546,10 @@ export function ManagerCoachAssignmentsPage() {
                       <button
                         type="button"
                         className="btn-secondary btn-sm coach-action-btn"
-                        onClick={() => setDetail({ student: item, assignments: [item] })}
+                        onClick={() => setDetail({ student: item, assignments: flattenedStudents.filter((s) => s.memberId === item.memberId && s.coachId === item.coachId) })}
                       >
                         {t("Chi tiết")}</button>
-                      {item.assignmentType !== 'CLASS' && <button
-                        type="button"
-                        className="btn-secondary btn-sm coach-action-btn"
-                        disabled={busy}
-                        onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
-                          setReassignStudent({
-                            student: item,
-                            currentCoachId: item.coachId,
-                            currentCoachName: item.coachName,
-                          }); }}
-                      >
-                        {transferLabel(item)}</button>}
+                      {transferButton(item, item.coachId, item.coachName)}
                       {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="btn-danger btn-sm coach-action-btn" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
                     </div>
                   </td>
@@ -580,16 +563,14 @@ export function ManagerCoachAssignmentsPage() {
       {/* Hộp thoại 2: Điều chuyển HLV cho học viên */}
       {reassignStudent && (
         <Modal
-          title={t(`Điều chuyển HLV cho học viên: ${reassignStudent.student.fullName}`, `Transfer coach for member: ${reassignStudent.student.fullName}`)}
+          title={t(`Chuyển giáo án của học viên: ${reassignStudent.student.fullName}`, `Transfer training plan for member: ${reassignStudent.student.fullName}`)}
           busy={busy}
           onClose={() => setReassignStudent(null)}
         >
           <form className="coach-modal-form" onSubmit={(e) => void handleReassignSubmit(e)}>
             <fieldset disabled={busy}>
             {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
-            <p>{reassignStudent.student.assignmentType === 'PT_1_1'
-              ? t('Mọi buổi PT sắp tới cùng các giáo án đang áp dụng, bản nháp hoặc thay thế của học viên với HLV hiện tại sẽ được chuyển sang HLV mới. Nếu HLV mới không nhận được bất kỳ buổi nào thì không buổi nào bị chuyển.', 'All upcoming PT sessions and the member’s active, draft and superseded training plans with the current coach transfer to the new coach. If the new coach cannot take any one session, nothing transfers.')
-              : t('Chỉ chuyển giáo án được chọn. Các buổi PT và phân công khác được giữ nguyên.', 'Only the selected training plan will transfer. PT sessions and other assignments stay unchanged.')}</p>
+            <p>{t('Chỉ chuyển giáo án được chọn. Buổi PT 1:1 luôn do HLV hội viên đã đặt phụ trách và không thay đổi.', 'Only the selected training plan transfers. 1:1 PT sessions always stay with the coach the member booked.')}</p>
             <div className="coach-form-group">
               <label>{t("Học viên")}</label>
               <input
@@ -624,7 +605,7 @@ export function ManagerCoachAssignmentsPage() {
                   .filter((c) => c.coachId !== reassignStudent.currentCoachId)
                   .map((c) => (
                     <option data-i18n-managed key={c.coachId} value={c.coachId}>
-                      {c.coachName}
+                      {c.specialization ? `${c.coachName} — ${c.specialization}` : c.coachName}
                     </option>
                   ))}
               </Select>

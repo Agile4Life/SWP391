@@ -42,12 +42,6 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
             @org.springframework.data.repository.query.Param("exceptId") Long exceptId);
 
     /**
-     * Tìm các bản ghi có memberUserId = tham số và coachUserId = tham số và status thuộc danh sách tham số
-     * (Spring Data tự sinh truy vấn từ tên hàm).
-     */
-    List<TrainingPlan> findByMemberUserIdAndCoachUserIdAndStatusIn(Long memberId, Long coachId, java.util.Collection<String> statuses);
-
-    /**
      * Tìm các bản ghi có memberUserId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn
      * từ tên hàm).
      */

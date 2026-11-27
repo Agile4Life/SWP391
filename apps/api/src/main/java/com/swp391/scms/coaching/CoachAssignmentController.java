@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/** API cho quản lý trung tâm xem và điều chỉnh phân công HLV (giáo án, buổi PT) cho hội viên. */
+/** API cho quản lý trung tâm xem phân công HLV (giáo án, PT 1:1, lớp) và điều chuyển giáo án cho hội viên. */
 @Tag(name = "Manager Coach Assignments", description = "Quản lý và theo dõi học viên đang được các HLV phụ trách (SCRUM Manager)")
 @RestController
 @RequestMapping("/api/v1/manager/coach-assignments")
@@ -56,8 +56,8 @@ public class CoachAssignmentController {
         ));
     }
 
-    /** POST /reassign: chuyển giáo án hoặc buổi PT đã chọn sang HLV khác. */
-    @Operation(summary = "Điều chuyển đúng giáo án hoặc buổi PT đã chọn; lớp học chỉ đọc")
+    /** POST /reassign: chuyển giáo án đã chọn sang HLV khác (PT 1:1 không điều chuyển). */
+    @Operation(summary = "Điều chuyển giáo án đã chọn; PT 1:1 và lớp học chỉ đọc")
     @PostMapping("/reassign")
     public ResponseEntity<ApiResponse<Void>> reassign(
             @Valid @RequestBody CoachAssignmentReassignDto dto
