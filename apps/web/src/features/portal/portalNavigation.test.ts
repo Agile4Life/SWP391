@@ -100,7 +100,6 @@ it('keeps group-class navigation for Member, Coach and Manager while keeping Sta
   expect(staff.flatMap(portalNavRoutes)).toEqual([
     '/staff/reception',
     '/staff/check-in',
-    '/staff/check-out',
     '/staff/kyc',
     '/staff/holds',
     '/staff/reception-history',

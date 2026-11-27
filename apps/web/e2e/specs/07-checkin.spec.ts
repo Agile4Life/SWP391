@@ -10,7 +10,7 @@ async function dynamicQr(role: 'binh' | 'an' | 'chi' | 'hieu'): Promise<string> 
   return res.data.qrCode;
 }
 
-test.describe('Check-in / check-out tại quầy lễ tân', () => {
+test.describe('Check-in tại quầy lễ tân', () => {
   test.use({ storageState: authFile('staff') });
   test.describe.configure({ mode: 'serial' });
 
@@ -61,15 +61,13 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
     await expect(page.getByRole('button', { name: 'Check-in', exact: true })).toBeDisabled();
   });
 
-  test('check-out đưa hội viên ra khỏi danh sách đang trong trung tâm', async ({ page }) => {
+  test('route Check-out cũ chuyển về Check-in và không còn thao tác ra về', async ({ page }) => {
     await page.goto('/staff/check-out');
     await settled(page);
-    await page.getByRole('button', { name: /Đang trong trung tâm/ }).click();
-    const buttons = page.getByRole('button', { name: /Checkout/ });
-    const before = await buttons.count();
-    expect(before).toBeGreaterThan(0);
-    await buttons.first().click();
-    await expect(buttons).toHaveCount(before - 1);
+    await expect(page).toHaveURL(/\/staff\/check-in$/);
+    await expect(field(page, /Nhập mã QR thẻ hội viên/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Check-out', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Ra về|Checkout/ })).toHaveCount(0);
   });
 
   test('nhật ký 10 lượt gần nhất ghi cả lượt bị từ chối', async ({ page }) => {
@@ -110,8 +108,8 @@ test.describe('Hội viên tự check-in', () => {
 
 test.describe('Mã QR cổng ở quầy', () => {
   test.use({ storageState: authFile('staff') });
-  test('mã cổng hiển thị thời hạn hiệu lực và tự làm mới ở tab Check-in và Check-out', async ({ page }) => {
-    for (const path of ['/staff/check-in', '/staff/check-out']) {
+  test('mã cổng hiển thị thời hạn hiệu lực và tự làm mới ở tab Check-in', async ({ page }) => {
+    for (const path of ['/staff/check-in']) {
       await page.goto(path);
       await settled(page);
       await expect(page.getByText(/Mã còn hiệu lực/)).toBeVisible();

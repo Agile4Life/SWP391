@@ -60,16 +60,7 @@ export const checkinApi = {
   },
 
   /**
-   * Ghi nhận hội viên ra về / checkout (POST /api/v1/check-in/{id}/checkout)
-   */
-  checkout: async (checkinId: number): Promise<CheckinDto> => {
-    return apiFetch<CheckinDto>(`/check-in/${checkinId}/checkout`, {
-      method: 'POST',
-    });
-  },
-
-  /**
-   * Lấy toàn bộ lịch sử hôm nay; UI tự giới hạn nhật ký, giữ đủ các lượt chưa checkout.
+   * Lấy toàn bộ lịch sử hôm nay; UI tự giới hạn nhật ký hiển thị.
    */
   getHistory: async (filter?: CheckinHistoryFilter): Promise<CheckinDto[]> => {
     const params = new URLSearchParams();
