@@ -77,6 +77,7 @@ export function ManagerReportsPage() {
 
   const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
   const [cancellationSearch, setCancellationSearch] = useState('');
+  const [cancellationsExpanded, setCancellationsExpanded] = useState(true);
   const [loadingCancellations, setLoadingCancellations] = useState(false);
   const [cancellationError, setCancellationError] = useState(false);
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
@@ -646,24 +647,29 @@ export function ManagerReportsPage() {
       {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h2 className="portal-card-title">
-              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})
-            </h2>
+          <h2 className="portal-card-title" style={{ margin: 0, flex: '1 1 340px', minWidth: 0 }}>
+            <button type="button" aria-expanded={cancellationsExpanded} aria-controls="cancellation-requests-content"
+              onClick={() => setCancellationsExpanded(expanded => !expanded)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: 0, border: 0, background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+              <span>{t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})</span>
+              <span aria-hidden="true">{cancellationsExpanded ? '▴' : '▾'}</span>
+            </button>
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '0 1 440px', minWidth: 0 }}>
+            <input
+              className="portal-input"
+              type="search"
+              aria-label={t('Tìm hội viên theo tên', 'Search members by name')}
+              placeholder={t('Tìm hội viên theo tên', 'Search members by name')}
+              value={cancellationSearch}
+              onChange={event => setCancellationSearch(event.target.value)}
+              style={{ flex: '1 1 auto', minWidth: 0 }}
+            />
+            <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
           </div>
-          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
         </div>
 
-        <input
-          className="portal-input"
-          type="search"
-          aria-label={t('Tìm hội viên theo tên', 'Search members by name')}
-          placeholder={t('Tìm hội viên theo tên', 'Search members by name')}
-          value={cancellationSearch}
-          onChange={event => setCancellationSearch(event.target.value)}
-          style={{ width: '100%', maxWidth: 400, marginTop: 12 }}
-        />
-
+        <div id="cancellation-requests-content" hidden={!cancellationsExpanded}>
         {loadingCancellations ? (
           <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
         ) : cancellationError ? (
@@ -756,6 +762,7 @@ export function ManagerReportsPage() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Bảng danh sách giao dịch gần nhất */}

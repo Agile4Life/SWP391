@@ -63,6 +63,24 @@ it('filters cancellation requests by member name without changing the pending co
   expect(host.textContent).toContain('Trần Thị Bình');
   expect(host.textContent).toContain('Hội viên #3');
 });
+it('collapses cancellation requests from the heading while search and refresh remain independent', async () => {
+  api.getCancellationRequests.mockResolvedValue([{ id: 4, memberId: 1, memberName: 'Nguyễn Văn An', packageName: 'Gold', status: 'PENDING', reason: 'Chuyển nơi ở' }]);
+  await act(async () => root.render(<ManagerReportsPage />));
+  const toggle = host.querySelector<HTMLButtonElement>('button[aria-controls="cancellation-requests-content"]')!;
+  const content = host.querySelector<HTMLElement>('#cancellation-requests-content')!;
+  const search = host.querySelector<HTMLInputElement>('input[aria-label="Tìm hội viên theo tên"]')!;
+  const refresh = host.querySelector<HTMLButtonElement>('button[aria-label="Làm mới yêu cầu hủy"]')!;
+  expect(search.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  await act(async () => toggle.click());
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(content.hidden).toBe(true);
+  await act(async () => refresh.click());
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  await act(async () => toggle.click());
+  expect(content.hidden).toBe(false);
+  expect(content.textContent).toContain('Nguyễn Văn An');
+});
 it('scrolls a long daily chart with the mouse wheel and lets the page scroll at the ends', async () => {
   api.getSummary.mockResolvedValueOnce({ periodRevenue: 100, todayRevenue: 0, packagesSoldCount: 0, renewalRate: null,
     dailyRevenue: Array.from({ length: 40 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10), revenue: i + 1, transactionCount: 1 })),

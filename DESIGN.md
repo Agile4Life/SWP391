@@ -1,6 +1,6 @@
 # Quy chuẩn thiết kế chính — SÖL
 
-Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên; số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
+Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên bên trái nút làm mới; bấm tiêu đề để thu gọn hoặc mở rộng danh sách. Số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
 
 Quyết định Manager: tại HLV & học viên phụ trách, mỗi học viên theo HLV hiển thị tóm tắt số khóa nhóm, giáo án và buổi PT sắp tới; chi tiết được phân trang trong hồ sơ, giữ cảnh báo gói trên danh sách.
 
