@@ -63,6 +63,8 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
   ];
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-31T03:00:00Z'));
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -72,6 +74,7 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await act(async () => root.unmount());
     host.remove();
     vi.unstubAllGlobals();
@@ -95,6 +98,26 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Phê duyệt đơn');
     expect(host.textContent).toContain('Từ chối đơn');
+  });
+
+  it('blocks overdue approval but keeps rejection available', async () => {
+    vi.setSystemTime(new Date('2026-11-05T00:00:00Z'));
+    await render();
+    expect(host.textContent).toContain('Quá hạn duyệt');
+    const approve = [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Phê duyệt đơn'))!;
+    expect(approve.disabled).toBe(true);
+    expect([...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Từ chối đơn'))?.disabled).toBe(false);
+  });
+
+  it('rechecks the Vietnam date when an approval dialog crosses midnight', async () => {
+    vi.setSystemTime(new Date('2026-11-04T16:59:00Z'));
+    await render();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Phê duyệt đơn'))!.click());
+    vi.setSystemTime(new Date('2026-11-04T17:00:00Z'));
+    vi.mocked(staffRequestApi.reviewStaffRequest).mockClear();
+    await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(staffRequestApi.reviewStaffRequest).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Quá hạn duyệt');
   });
 
   it('opens approve modal and confirms approval', async () => {

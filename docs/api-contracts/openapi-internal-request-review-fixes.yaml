@@ -9,15 +9,15 @@ paths:
   /operations/requests:
     post:
       summary: Submit an internal staff request
-      description: Staff/coach can submit a request. If both dates are supplied, endDate must be on or after startDate. A LEAVE request needs startDate (a missing endDate means a single day). replacementUserId must be another active, non-deleted coach or receptionist. Notifications target active, non-deleted managers only.
+      description: Staff/coach can submit a request. If both dates are supplied, endDate must be on or after startDate. A LEAVE request requires both dates and must start tomorrow or later in Asia/Ho_Chi_Minh. Other request types retain their existing date rules. An overdue pending request does not block a new non-overlapping request. replacementUserId must be another active, non-deleted coach or receptionist. Notifications target active, non-deleted managers only.
       responses:
         '201': {description: Request created}
-        '400': {description: Invalid request type, INVALID_DATE_RANGE, LEAVE_DATES_REQUIRED or INVALID_REPLACEMENT}
+        '400': {description: Invalid request type, INVALID_DATE_RANGE, LEAVE_DATES_REQUIRED, LEAVE_START_MUST_BE_FUTURE or INVALID_REPLACEMENT}
         '409': {description: "LEAVE_OVERLAP: a LEAVE shares a day with the user's PENDING or APPROVED leave. The localized message names that leave's dates; resend with confirmOverlap: true to submit anyway."}
   /operations/requests/{id}/cancel:
     put:
       summary: Owner cancels a pending request
-      description: Review and cancellation acquire a database write lock on the same request. Only one transition from PENDING can succeed; the later operation receives the existing invalid-state error.
+      description: Review and cancellation acquire a database write lock on the same request. Only one transition from PENDING can succeed; the later operation receives the existing invalid-state error. The owner can still cancel an overdue PENDING leave.
       parameters:
         - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
       responses:
@@ -27,9 +27,9 @@ paths:
   /operations/requests/{id}/review:
     put:
       summary: Manager approves or rejects a pending request
-      description: Serialized with cancellation and other review attempts. Rejection requires managerNotes. Notifications use localized system messages. An approved LEAVE blocks new 1:1 bookings with that coach on the leave days (409 COACH_ON_LEAVE, available-slots reason coach_on_leave); if class sessions or 1:1 sessions are already scheduled in the period, the approving manager is notified with their counts so cover can be arranged.
+      description: Review locks the owner before the request, serializing overlapping approvals even for different requests of the same employee. LEAVE can only be approved before startDate in Asia/Ho_Chi_Minh; the deadline is checked inside the transaction under locks immediately before status changes. A PENDING leave on or past its start date does not grant leave; the employee works their normal schedule. No new stored status or scheduler is introduced. Rejection remains available with managerNotes. Notifications use localized system messages. An approved LEAVE blocks new 1:1 bookings with that coach on the leave days (409 COACH_ON_LEAVE, available-slots reason coach_on_leave); existing scheduled class/PT impacts retain their existing review and notification flow.
       parameters:
         - {in: path, name: id, required: true, schema: {type: integer, format: int64}}
       responses:
         '200': {description: Reviewed request}
-        '400': {description: ALREADY_REVIEWED, INVALID_STATUS or REJECTION_REASON_REQUIRED}
+        '400': {description: ALREADY_REVIEWED, INVALID_STATUS, REJECTION_REASON_REQUIRED or LEAVE_APPROVAL_DEADLINE_PASSED}
