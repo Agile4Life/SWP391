@@ -61,6 +61,21 @@ class PaymentServiceTest {
     @Mock
     private PaymentMapper paymentMapper;
 
+    @Test
+    void rejectsPosOnBothCreationPathsBeforePersistence() {
+        for (String method : List.of("pos", " POS ")) {
+            PaymentCreateDto create = new PaymentCreateDto();
+            create.setMethod(method);
+            assertEquals("PAYMENT_POS_DISABLED", assertThrows(BadRequestException.class,
+                    () -> paymentService.createPayment(create)).getErrorCode());
+            PaymentProcessDto process = new PaymentProcessDto();
+            process.setMethod(method);
+            assertEquals("PAYMENT_POS_DISABLED", assertThrows(BadRequestException.class,
+                    () -> paymentService.processPayment(process)).getErrorCode());
+        }
+        verifyNoInteractions(paymentRepository, memberRepository, membershipSubscriptionRepository, classEnrollmentRepository);
+    }
+
     private Clock clock;
     private PaymentService paymentService;
 
@@ -112,7 +127,7 @@ class PaymentServiceTest {
         dto.setMemberId(2L);
         dto.setReceivedById(1L);
         dto.setAmount(new BigDecimal("1500000.00"));
-        dto.setMethod("POS");
+        dto.setMethod("CASH");
         dto.setStatus("SUCCESS");
 
         Member member = new Member();
@@ -131,7 +146,7 @@ class PaymentServiceTest {
 
         assertNotNull(result);
         assertEquals(10L, result.getId());
-        assertEquals("pos", payment.getMethod());
+        assertEquals("cash", payment.getMethod());
         assertEquals("success", payment.getStatus());
         assertEquals(LocalDateTime.now(clock), payment.getPaidAt());
         verify(paymentRepository).save(payment);
@@ -288,7 +303,7 @@ class PaymentServiceTest {
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
 
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, new BigDecimal("1500000.00"), "pos", null, "Ghi chú");
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, new BigDecimal("1500000.00"), "cash", null, "Ghi chú");
         PaymentDto result = paymentService.processPayment(dto);
 
         assertNotNull(result);
@@ -308,7 +323,7 @@ class PaymentServiceTest {
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(cancelled));
         PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null,
-                new BigDecimal("500000"), "pos", null, null);
+                new BigDecimal("500000"), "cash", null, null);
         assertThrows(ConflictException.class, () -> paymentService.processPayment(dto));
         verify(paymentRepository, never()).save(any());
         assertEquals("cancelled", cancelled.getStatus());
@@ -330,8 +345,8 @@ class PaymentServiceTest {
         when(paymentRepository.save(pending)).thenReturn(pending);
         when(paymentMapper.toDto(pending)).thenReturn(new PaymentDto());
         paymentService.processPayment(new PaymentProcessDto(2L, 10L, null,
-                new BigDecimal("500000"), "pos", null, "Paid at desk"));
-        assertEquals("pos", pending.getMethod());
+                new BigDecimal("500000"), "cash", null, "Paid at desk"));
+        assertEquals("cash", pending.getMethod());
         assertEquals("Paid at desk", pending.getNote());
         assertEquals("success", pending.getStatus());
         assertEquals("active", sub.getStatus());
@@ -349,7 +364,7 @@ class PaymentServiceTest {
         Payment pending = new Payment(); pending.setId(90L); pending.setMember(member);
         pending.setSubscriptionId(10L); pending.setStatus("pending"); pending.setAmount(pkg.getPrice());
         ClassEnrollment enrollment = new ClassEnrollment(); enrollment.setMember(member); enrollment.setStatus("cancelled");
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, 20L, pkg.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, 20L, pkg.getPrice(), "cash", null, null);
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
         assertEquals("PAYMENT_MULTIPLE_TARGETS", ex.getErrorCode());
@@ -392,7 +407,7 @@ class PaymentServiceTest {
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
 
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, new BigDecimal("1000000.00"), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, new BigDecimal("1000000.00"), "cash", null, null);
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
     }
 
@@ -400,7 +415,7 @@ class PaymentServiceTest {
     @Test
     @DisplayName("Should reject payment processing when target subscription and enrollment are both null")
     void shouldRejectPaymentWhenTargetIsMissing() {
-        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, new BigDecimal("1000000.00"), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, new BigDecimal("1000000.00"), "cash", null, null);
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
     }
 
@@ -529,7 +544,7 @@ class PaymentServiceTest {
         MembershipSubscription renewal = new MembershipSubscription();
         renewal.setId(10L); renewal.setMember(member); renewal.setMembershipPackage(pack);
         renewal.setPreviousSubscription(previous); renewal.setStatus("pending_payment");
-        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "cash", null, null);
         dto.setPackageId(5L);
         var packageRepository = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", packageRepository);
@@ -550,7 +565,7 @@ class PaymentServiceTest {
         MembershipPackage other = new MembershipPackage(); other.setId(6L);
         MembershipSubscription pending = new MembershipSubscription();
         pending.setId(10L); pending.setMember(member); pending.setMembershipPackage(other); pending.setStatus("pending_payment");
-        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "cash", null, null);
         dto.setPackageId(5L);
         var packageRepository = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", packageRepository);
@@ -593,7 +608,7 @@ class PaymentServiceTest {
         Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
         pack.setPrice(new BigDecimal("1500000.00")); pack.setDurationDays(30);
-        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "cash", null, null);
         dto.setPackageId(5L);
         var packageRepository = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", packageRepository);
@@ -637,7 +652,7 @@ class PaymentServiceTest {
             return null;
         }).when(entityManager).refresh(any());
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(cashier));
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, pack.getPrice(), "pos", 1L, "Paid at desk");
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, pack.getPrice(), "cash", 1L, "Paid at desk");
         dto.setPackageId(5L);
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(renewal));
@@ -645,7 +660,7 @@ class PaymentServiceTest {
         when(paymentRepository.save(pendingPayment)).thenReturn(pendingPayment);
         when(paymentMapper.toDto(pendingPayment)).thenReturn(new PaymentDto());
         paymentService.processPayment(dto);
-        assertEquals("pos", pendingPayment.getMethod());
+        assertEquals("cash", pendingPayment.getMethod());
         assertSame(cashier, pendingPayment.getReceivedBy());
         assertEquals("Paid at desk", pendingPayment.getNote());
         assertEquals("success", pendingPayment.getStatus());
@@ -664,7 +679,7 @@ class PaymentServiceTest {
         future.setId(10L); future.setMember(member); future.setMembershipPackage(pack);
         future.setStatus("active"); future.setStartDate(java.time.LocalDate.of(2026, 11, 1));
         future.setEndDate(java.time.LocalDate.of(2026, 11, 30));
-        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "cash", null, null);
         dto.setPackageId(5L);
         var packageRepository = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", packageRepository);
@@ -687,7 +702,7 @@ class PaymentServiceTest {
         pending.setId(10L); pending.setMember(member); pending.setMembershipPackage(pack);
         pending.setStatus("pending_payment");
         PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null,
-                new BigDecimal("1500000.00"), "pos", null, null);
+                new BigDecimal("1500000.00"), "cash", null, null);
         dto.setPackageId(6L);
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(pending));
@@ -719,13 +734,13 @@ class PaymentServiceTest {
         // Báo giá đang chờ thanh toán không bị tính lại giá: giá mới tăng trong danh mục bị từ chối tại quầy.
         basic.setPrice(new BigDecimal("249000"));
         vip.setPrice(new BigDecimal("399000"));
-        PaymentProcessDto repriced = new PaymentProcessDto(2L, 12L, null, new BigDecimal("399000"), "pos", null, null);
+        PaymentProcessDto repriced = new PaymentProcessDto(2L, 12L, null, new BigDecimal("399000"), "cash", null, null);
         repriced.setPackageId(2L);
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(repriced));
         assertEquals("pending_payment", upgrade.getStatus());
 
         // Hội viên thanh toán đúng số tiền đã báo giá vào ngày 01/10.
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, new BigDecimal("187000"), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, new BigDecimal("187000"), "cash", null, null);
         dto.setPackageId(2L);
         paymentService.processPayment(dto);
 
@@ -761,7 +776,7 @@ class PaymentServiceTest {
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(12L)).thenReturn(Optional.of(upgrade));
         when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(current, future, upgrade));
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, vip.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, vip.getPrice(), "cash", null, null);
         dto.setPackageId(2L);
 
         assertThrows(ConflictException.class, () -> paymentService.processPayment(dto));
@@ -786,7 +801,7 @@ class PaymentServiceTest {
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(11L)).thenReturn(Optional.of(renewal));
         when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(source, renewal));
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 11L, null, pack.getPrice(), "pos", null, null);
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 11L, null, pack.getPrice(), "cash", null, null);
         dto.setPackageId(1L);
 
         assertThrows(ConflictException.class, () -> paymentService.processPayment(dto));

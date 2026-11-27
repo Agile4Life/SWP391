@@ -779,8 +779,8 @@ public class EnrollmentService {
         }
 
         var pkg = currentSub.getMembershipPackage();
-        String tier = pkg.getTier() != null ? pkg.getTier() : pkg.getName();
-        Integer creditLimit = pkg.getClassCreditLimit();
+        String tier = com.swp391.scms.facilities.PackageBenefits.packageTier(currentSub);
+        Integer creditLimit = com.swp391.scms.facilities.PackageBenefits.classCreditLimit(currentSub);
         boolean unlimited = (creditLimit == null);
 
         LocalDate windowStart = creditWindowStart(currentSub);
@@ -797,7 +797,7 @@ public class EnrollmentService {
         int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
 
         return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited, blockedUntil,
-                com.swp391.scms.facilities.PackageBenefits.discountPercent(pkg));
+                com.swp391.scms.facilities.PackageBenefits.discountPercent(currentSub));
     }
 
     /**

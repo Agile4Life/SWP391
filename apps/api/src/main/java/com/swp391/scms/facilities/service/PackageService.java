@@ -54,28 +54,15 @@ public class PackageService {
     }
 
     /**
-     * Sửa gói: thời hạn mới phải hợp lệ; gói đã bán không được đổi tên, thời hạn, hạng hoặc hạn mức lượt học
-     * (sẽ làm sai lịch sử mua và tước quyền lợi hội viên hiện hữu) mà phải tạo gói mới.
+     * Sửa gói: thời hạn mới phải hợp lệ. Các kỳ gói đã bán đã snapshot tên, hạng và quyền lợi lúc mua nên quản
+     * lý được phép chỉnh sửa mọi thông tin gói cho khách mua mới mà không làm sai lịch sử hội viên hiện hữu.
      */
     @Transactional
     @Audited(action = "PACKAGE_UPDATE", entity = "membership_packages")
     public PackageDto update(Long id, PackageRequest request) {
         MembershipPackage pkg = find(id);
-        boolean durationChanged = request.durationDays() != pkg.getDurationDays();
-        boolean nameChanged = !request.name().trim().equals(pkg.getName());
-        String currentTier = PackageDto.inferTier(pkg.getName(), pkg.getTier());
-        String requestedTier = PackageDto.inferTier(request.name(), request.tier());
-        boolean tierChanged = !java.util.Objects.equals(currentTier, requestedTier);
-        boolean creditLimitChanged = !java.util.Objects.equals(pkg.getClassCreditLimit(), request.classCreditLimit());
-        if (durationChanged) {
+        if (request.durationDays() != pkg.getDurationDays()) {
             requireValidDuration(request.durationDays());
-        }
-        // Các kỳ gói trỏ tới dòng gói tập này, nên đổi tên, thời hạn, hạng hoặc hạn mức lượt học của gói đã bán
-        // sẽ làm sai lệch lịch sử và thay đổi quyền lợi hội viên đang giữ gói. Hãy tạo gói mới thay thế.
-        if ((durationChanged || nameChanged || tierChanged || creditLimitChanged)
-                && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
-            throw new com.swp391.scms.common.exception.ConflictException(
-                    "PACKAGE_IDENTITY_LOCKED", "catalog.package.identity_locked", null, null);
         }
         apply(pkg, request);
         return PackageDto.of(pkg);
@@ -120,6 +107,27 @@ public class PackageService {
             pkg.setStatus(request.status());
         }
         pkg.setTier(PackageDto.inferTier(request.name(), request.tier()));
+        if (request.ptSessionsPerCycle() != null) {
+            pkg.setPtSessionsPerCycle(request.ptSessionsPerCycle());
+        }
+        if (request.holdMaxDays() != null) {
+            pkg.setHoldMaxDays(request.holdMaxDays());
+        }
+        if (request.discountPercent() != null) {
+            pkg.setDiscountPercent(request.discountPercent());
+        }
+        if (request.vipRoomAccess() != null) {
+            pkg.setVipRoomAccess(request.vipRoomAccess());
+        }
+        if (request.canViewWorkoutPlan() != null) {
+            pkg.setCanViewWorkoutPlan(request.canViewWorkoutPlan());
+        }
+        if (request.allowsPeriodicAssessment() != null) {
+            pkg.setAllowsPeriodicAssessment(request.allowsPeriodicAssessment());
+        }
+        if (request.allowsDeepAssessment() != null) {
+            pkg.setAllowsDeepAssessment(request.allowsDeepAssessment());
+        }
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)

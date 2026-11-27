@@ -103,6 +103,16 @@ class AccountProvisioningSecurityTest {
 
     /** Hàm trợ giúp của test: tạo body JSON để cấp tài khoản nhân viên. */
     private String staffBody(String role) {
-        return "{\"fullName\":\"Staff\",\"email\":\"staff@gmail.com\",\"password\":\"Secret123\",\"gender\":\"other\",\"roleCode\":\"" + role + "\"}";
+        return "{\"fullName\":\"Staff\",\"email\":\"staff@gmail.com\",\"phone\":\"0912345678\",\"password\":\"Secret123\",\"gender\":\"other\",\"roleCode\":\"" + role + "\"}";
+    }
+
+    @Test
+    void staffProvisioningRequiresPhone() throws Exception {
+        for (String phone : List.of("null", "\"\"", "\"   \"")) {
+            String body = staffBody("COACH").replace("\"0912345678\"", phone);
+            mvc.perform(post("/api/v1/staff-accounts").with(authentication(actor("CENTER_MANAGER")))
+                    .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(service);
     }
 }

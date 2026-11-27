@@ -164,10 +164,10 @@ export function CreateClassOrSessionModal({
   const [name, setName] = useState(draft?.name ?? '');
   const normalizedName = name.trim().toLocaleLowerCase('vi-VN');
   const duplicateName = normalizedName !== '' && classes.some(
-    (course) => course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName,
+    (course) => String(course.disciplineId) === disciplineId && course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName,
   );
   const displayedNameError = duplicateName
-    ? t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')
+    ? t('Tên khóa học đã tồn tại trong bộ môn này. Vui lòng chọn tên khác.', 'Course name already exists in this discipline. Please choose another name.')
     : nameError;
   const [level, setLevel] = useState(draft?.level ?? 'all');
   const [price, setPrice] = useState(draft?.price ?? '150000');
@@ -728,6 +728,7 @@ export function CreateClassOrSessionModal({
                   setAvailabilityState(null);
                   setAvailabilityError(null);
                   setError(null);
+                  setNameError(null);
                 }}
               >
                 {disciplines.map((d) => {
@@ -1443,10 +1444,13 @@ export function EditClassModal({ gymClass, classes, disciplines, rooms, coaches,
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const normalizedName = name.trim().toLocaleLowerCase('vi-VN');
-  const duplicateName = normalizedName !== '' && normalizedName !== gymClass.name.trim().toLocaleLowerCase('vi-VN')
-    && classes.some((course) => course.id !== gymClass.id && course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName);
+  const unchangedNameAndDiscipline = normalizedName === gymClass.name.trim().toLocaleLowerCase('vi-VN')
+    && disciplineId === String(gymClass.disciplineId);
+  const duplicateName = normalizedName !== '' && !unchangedNameAndDiscipline
+    && classes.some((course) => course.id !== gymClass.id && String(course.disciplineId) === disciplineId
+      && course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName);
   const displayedNameError = duplicateName
-    ? t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')
+    ? t('Tên khóa học đã tồn tại trong bộ môn này. Vui lòng chọn tên khác.', 'Course name already exists in this discipline. Please choose another name.')
     : nameError;
 
   const currentRoomMissing = useMemo(
@@ -1602,7 +1606,7 @@ export function EditClassModal({ gymClass, classes, disciplines, rooms, coaches,
         <div className="portal-form-grid-2">
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="edit-cls-disc">{t('Bộ môn', 'Discipline')}</label>
-            <Select id="edit-cls-disc" value={disciplineId} onChange={(e) => setDisciplineId(e.target.value)}>
+            <Select id="edit-cls-disc" value={disciplineId} onChange={(e) => { setDisciplineId(e.target.value); setNameError(null); setError(null); }}>
               {disciplines.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
             </Select>
           </div>

@@ -17,7 +17,7 @@ export interface Room {
   tier?: 'STANDARD' | 'PLATINUM' | string | null;
 }
 
-/** Gói tập: giá, thời hạn, giới hạn credit lớp, trạng thái và hạng. */
+/** Gói tập: giá, thời hạn, giới hạn credit lớp, trạng thái, hạng và quyền lợi nghiệp vụ. */
 export interface MembershipPackage {
   id: number;
   name: string;
@@ -27,6 +27,13 @@ export interface MembershipPackage {
   classCreditLimit: number | null;
   status: 'active' | 'inactive';
   tier?: 'SILVER' | 'GOLD' | 'PLATINUM' | string | null;
+  ptSessionsPerCycle?: number;
+  holdMaxDays?: number;
+  discountPercent?: number;
+  vipRoomAccess?: boolean;
+  canViewWorkoutPlan?: boolean;
+  allowsPeriodicAssessment?: boolean;
+  allowsDeepAssessment?: boolean;
 }
 
 /** Dữ liệu gửi lên khi lưu: bản ghi bỏ id. */

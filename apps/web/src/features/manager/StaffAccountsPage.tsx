@@ -44,10 +44,10 @@ function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string 
   return undefined;
 }
 
-/** Kiểm tra số điện thoại nhân sự (không bắt buộc): đúng 10 số và không trùng tài khoản khác. */
+/** Kiểm tra số điện thoại nhân sự: bắt buộc, hợp lệ và không trùng tài khoản khác. */
 function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string | undefined {
   const clean = (raw ?? '').trim();
-  if (!clean) return undefined;
+  if (!clean) return 'Vui lòng nhập số điện thoại.';
   if (!isValidPhoneNumber(clean)) return 'Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).';
   const target = normalizePhoneNumber(clean);
   if (accounts.some(acc => acc.phone && normalizePhoneNumber(acc.phone) === target)) {
@@ -136,7 +136,7 @@ export function StaffAccountsPage() {
     setError('');
     setSaving(true);
     try {
-      const normalizedPhone = normalizePhoneNumber(form.phone) || undefined;
+      const normalizedPhone = normalizePhoneNumber(form.phone);
       const created = await createStaffAccount({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phone: normalizedPhone });
       setAccounts(current => [...current, created]);
       setForm(initialForm);
@@ -227,11 +227,12 @@ export function StaffAccountsPage() {
               {fieldErrors.email && <p id="staff-email-error" role="alert" className="form-error">{t(fieldErrors.email)}</p>}
             </div>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="staff-phone">{t("Số điện thoại")}</label>
+              <label className="portal-label" htmlFor="staff-phone">{t("Số điện thoại *")}</label>
               <input
                 id="staff-phone"
                 className="portal-input"
                 type="tel"
+                required
                 maxLength={20}
                 autoComplete="tel"
                 aria-invalid={!!fieldErrors.phone}

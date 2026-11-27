@@ -12,6 +12,7 @@ public record StaffAccountCreateDto(
         @NotBlank(message = "{validation.users.email.not_blank}")
         @Email(message = "{validation.users.email.invalid}")
         @Size(max = 150, message = "{validation.users.email.size}") String email,
+        @NotBlank(message = "{validation.users.phone.not_blank}")
         @Pattern(regexp = "^\\s*$|^(0|\\+84)(3|5|7|8|9)[0-9]{8}$", message = "{validation.users.phone.invalid}")
         @Size(max = 20, message = "{validation.users.phone.size}") String phone,
         @NotBlank(message = "{validation.users.password.not_blank}")

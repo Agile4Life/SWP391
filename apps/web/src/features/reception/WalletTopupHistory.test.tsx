@@ -36,6 +36,15 @@ describe('WalletTopupHistory', () => {
     expect(text).toContain('1.000.000');
   });
 
+  it('offers supported filters without POS while retaining historical POS labels', async () => {
+    mocks.history.mockResolvedValue([]);
+    await act(async () => root.render(<WalletTopupHistory />));
+    await act(async () => host.querySelectorAll<HTMLButtonElement>('[role="combobox"]')[1]!.click());
+    const options = [...host.querySelectorAll('[role="option"]')].map(option => option.textContent);
+    expect(options).toHaveLength(3);
+    expect(options.some(label => label?.includes('POS'))).toBe(false);
+  });
+
   it('shows an empty state when nothing was topped up', async () => {
     mocks.history.mockResolvedValue([]);
     await act(async () => root.render(<WalletTopupHistory />));

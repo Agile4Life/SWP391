@@ -331,7 +331,7 @@ public class TrainingPlanService {
                         && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
                 .toList();
         return current.isEmpty() || current.stream()
-                .anyMatch(s -> com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
+                .anyMatch(com.swp391.scms.facilities.PackageBenefits::canViewWorkoutPlan);
     }
 
     /** Các giáo án đang áp dụng của hội viên (rỗng nếu hội viên không được xem). */
@@ -537,7 +537,7 @@ public class TrainingPlanService {
             boolean eligible = subscriptionRepository.findByMemberUserIdAndStatus(memberId, "active").stream()
                     .anyMatch(sub -> sub.getStartDate() != null && sub.getEndDate() != null
                             && !sub.getStartDate().isAfter(today) && !sub.getEndDate().isBefore(today)
-                            && com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(sub.getMembershipPackage()));
+                            && com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(sub));
             if (!eligible) throw new ForbiddenException("PLAN_TIER_REQUIRED", "coaching.plan.tier_required_author", null,
                     "Personal plans need a Gold or Platinum package");
         }
