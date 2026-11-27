@@ -874,25 +874,6 @@ export function ManagerCatalogsPage() {
           className={`portal-alert ${result.type === 'success' ? 'portal-alert--success' : 'portal-alert--error'}`}
           style={{ justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: 0 }}
         >
-          {result.type === 'error' && <span
-            aria-hidden="true"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'color-mix(in srgb, var(--portal-danger) 16%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--portal-danger) 36%, transparent)',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="7" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </span>}
           <p id="catalog-result-message" style={{ margin: '4px 0 0', fontWeight: 500, lineHeight: 1.5, color: 'inherit' }}>
             {t(result.message)}
           </p>

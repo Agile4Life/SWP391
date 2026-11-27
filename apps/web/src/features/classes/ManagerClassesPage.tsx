@@ -711,7 +711,7 @@ export function ManagerClassesPage() {
         <RescheduleSessionModal
           session={reschedulingSession}
           onClose={() => setReschedulingSession(null)}
-          onSuccess={handleMutationSuccess}
+          onSuccess={(message) => handleMutationSuccess(message, t('Thành công', 'Success'))}
         />
       )}
 

@@ -438,7 +438,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(host.querySelector('table')).not.toBeNull();
     expect(getFirstDeleteBtn().disabled).toBe(false);
     expect(host.querySelector('dialog[open]')?.textContent).toContain('Bộ môn đang được sử dụng bởi lớp học hoạt động');
-    expect(host.querySelector('dialog[open] .portal-alert--error svg')).not.toBeNull();
+    expect(host.querySelector('dialog[open] .portal-alert--error svg')).toBeNull();
   });
 
   it('Disciplines tab: validates blank/overlong names, clears error on input, and isolates save errors inside modal', async () => {

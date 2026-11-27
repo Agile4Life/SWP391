@@ -1,9 +1,10 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: mỗi ngày và slot chỉ được có tối đa hai bộ môn lớp nhóm; wizard báo rõ khi đã đủ hai bộ môn.
+
 Quyết định Manager: tab Khiếu nại chuyển lên có ô tìm theo tên hội viên hoặc chủ đề trước bộ lọc trạng thái; danh sách dùng các hàng liền nhau và khung trao đổi rõ ràng, đồng bộ theme portal. Tab Đơn từ nội bộ có ô tìm theo nhân sự hoặc tiêu đề trước bộ lọc trạng thái, kết hợp với lọc loại đơn.
 
 Quyết định Receptionist (27/11/2026): nhóm Quầy lễ tân chỉ còn hai tab Quầy lễ tân và Check-in. Bỏ UI Check-out thủ công, QR hướng dẫn ra về và các nút Ra về; route cũ `/staff/check-out` redirect có `replace` về `/staff/check-in` dưới RoleGuard hiện có, kể cả link notification cũ. Giữ lịch sử và giờ vào/ra Backend trả về. Thay đổi Frontend độc lập; chỉ triển khai sau Backend Auto Check-out 8 giờ của PR #232 được merge/deploy và xác minh trên VPS.
-
 Quyết định Manager: khi tạo khóa học thành công, hiển thị kết quả trong hộp thoại giữa màn hình; hộp thoại đóng bằng nút × hoặc Esc.
 
 Quyết định Hộp thoại / Popup toàn portal (27/11/2026 — **ghi đè** ngoại lệ giữ nút “Đóng” đơn lẻ ngày 14/11/2026 bên dưới): mọi popup/hộp thoại đã có nút `×` ở góc trên bên phải (như `<Modal>` với `.portal-dialog__close`) **không được đặt thêm nút “Đóng” / “Close” ở phía dưới**, kể cả khi hộp thoại chỉ có một nút ở chân (thông báo kết quả, cảnh báo không thể thực hiện, hồ sơ chi tiết, trạng thái đã thanh toán, kết quả sau khi hoàn tất thao tác). Nút `×` góc phải (cùng phím `Esc` / bấm nền mờ) là lối thoát duy nhất; hộp thoại biểu mẫu hoặc xác nhận có hành động chính vẫn giữ nút `Hủy` / nhãn phủ định cạnh nút xác nhận.
@@ -12,11 +13,11 @@ Quyết định Đơn từ nội bộ (27/11/2026): hai DatePicker ngày bắt �
 
 Quyết định Receptionist — lịch sử bảo lưu (27/11/2026): `/staff/reception-history` có ba tab `membership`, `wallet`, `holds`; tab bảo lưu chỉ dành cho Receptionist theo quyền API hiện có. Thanh tab là tiêu đề chính, bỏ heading trang và heading lặp trong từng panel; giữ nhãn accessibility, bộ lọc và trạng thái tải/lỗi. Giữ các panel mounted để bảo toàn bộ lọc và Back/Forward. Tab bảo lưu chỉ đọc APPROVED/REJECTED/COMPLETED, loại PENDING; dùng thông tin gần nhất Backend trả về, không dựng reviewer/completedAt hay audit log. Không thay đổi logic giao dịch của các panel khác. Quyết định này thay mô tả hai tab lịch sử ở phần điều hướng bên dưới.
 
-Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
+Quyết định Manager: kết quả thao tác thành công hoặc lỗi ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình, không có biểu tượng hình elip; lỗi trong biểu mẫu giữ tại biểu mẫu. Nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
 
-Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình; thông báo thành công không có biểu tượng dấu tích, lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
+Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình, không có biểu tượng hình elip; lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
 
-Quyết định Manager: hủy buổi học thành công hiển thị hộp thoại giữa màn hình với tiêu đề “Thành công” và nội dung trong khung xanh không có biểu tượng; có thể đóng bằng nút × hoặc Esc. Kết quả tạo khóa học dùng cùng kiểu khung xanh.
+Quyết định Manager: hủy hoặc dời buổi học thành công hiển thị hộp thoại giữa màn hình với tiêu đề “Thành công” và nội dung trong khung xanh không có biểu tượng; có thể đóng bằng nút × hoặc Esc. Kết quả tạo khóa học dùng cùng kiểu khung xanh.
 
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.

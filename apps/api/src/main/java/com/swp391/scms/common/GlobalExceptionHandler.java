@@ -273,6 +273,12 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.scheduling.member_class_overlap", "error.scheduling.member_class_overlap"))
                 );
             }
+            if (normalizedRootMsg.contains("trg_sessions_slot_discipline_limit")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULING_SLOT_DISCIPLINE_LIMIT",
+                                resolveMessage("error.scheduling.slot_discipline_limit_trigger", "error.scheduling.slot_discipline_limit_trigger"))
+                );
+            }
             if (normalizedRootMsg.contains("trg_sessions_check_discipline_conflict")
                     || normalizedRootMsg.contains("bộ môn này đã có lớp học khác trùng khung giờ.")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(

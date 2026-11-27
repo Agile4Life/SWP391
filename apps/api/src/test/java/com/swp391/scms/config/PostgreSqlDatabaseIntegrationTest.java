@@ -444,22 +444,38 @@ class PostgreSqlDatabaseIntegrationTest {
      */
     @Test
     void disciplineConflictTriggerAllowsMultipleActiveClassesNonOverlappingAndRejectsSameDateSlotOverlap() {
+        // Các test khác dùng ngày hiện tại và để lại dữ liệu trong cùng schema; tách ngày để không chạm giới hạn 2 bộ môn.
+        int dayOffset = 730;
         long sharedDiscipline = discipline();
         long firstClass = gymClass(10, coach(), room(), sharedDiscipline);
         long secondClass = gymClass(10, coach(), room(), sharedDiscipline);
         long otherDisciplineClass = gymClass(10, coach(), room(), discipline());
 
-        session(firstClass, "07:00", "09:30", "scheduled");
-        session(secondClass, "09:45", "12:15", "scheduled");
+        session(firstClass, dayOffset, "07:00", "09:30", "scheduled");
+        session(secondClass, dayOffset, "09:45", "12:15", "scheduled");
 
         var conflict = assertThrows(DataIntegrityViolationException.class,
-                () -> session(secondClass, "07:00", "09:30", "scheduled"));
+                () -> session(secondClass, dayOffset, "07:00", "09:30", "scheduled"));
         assertConstraintViolation(conflict, "23P01", "trg_sessions_check_discipline_conflict");
         assertTrue(conflict.getMostSpecificCause().getMessage()
                 .contains("Bộ môn này đã có lớp học khác trùng khung giờ."));
 
         // Lớp thuộc bộ môn khác vẫn mở song song được trong cùng ngày và cùng slot với phòng/HLV riêng.
-        session(otherDisciplineClass, "07:00", "09:30", "scheduled");
+        session(otherDisciplineClass, dayOffset, "07:00", "09:30", "scheduled");
+    }
+
+    @Test
+    void slotDisciplineLimitRejectsThirdSportAndReleasesCancelledSlot() {
+        long first = gymClass(10, coach(), room(), discipline());
+        long second = gymClass(10, coach(), room(), discipline());
+        long third = gymClass(10, coach(), room(), discipline());
+        session(first, 53, "07:00", "09:30", "scheduled");
+        session(second, 53, "07:00", "09:30", "scheduled");
+        var conflict = assertThrows(DataIntegrityViolationException.class, () -> session(third, 53, "07:00", "09:30", "scheduled"));
+        assertConstraintViolation(conflict, "23P01", "trg_sessions_slot_discipline_limit");
+        session(third, 53, "09:45", "12:15", "scheduled");
+        jdbc.update("update class_sessions set status = 'cancelled' where class_id = ?", second);
+        session(third, 53, "07:00", "09:30", "scheduled");
     }
 
     /** Kiểm thử: trigger chồng lịch hội viên từ chối ghi danh hai lớp nhóm khác bộ môn trùng ngày và slot. */

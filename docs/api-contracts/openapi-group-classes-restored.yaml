@@ -10,6 +10,9 @@ info:
     Mỗi bộ môn được mở **nhiều lớp nhóm định kỳ đang hoạt động (`active`)** miễn là không có hai lớp cùng bộ môn
     trùng ngày và cùng slot (`409 SCHEDULING_DISCIPLINE_CONFLICT`, kiểm tra đồng thời tại `ClassService` và
     trigger PostgreSQL `trg_sessions_check_discipline_conflict` bên trong `scms_check_session_conflict`).
+    Mỗi ngày và slot chỉ có tối đa 2 bộ môn khác nhau có buổi `scheduled` thuộc lớp `active`;
+    tạo, dời lịch hoặc kích hoạt lớp vượt giới hạn trả `409 SCHEDULING_SLOT_DISCIPLINE_LIMIT`.
+    Buổi đã hủy và lớp không hoạt động không tính vào giới hạn; PT 1:1 không tính.
     Toàn bộ lớp nhóm định kỳ và PT 1:1 phải khớp đúng 1 trong 5 slot chuẩn (nghỉ 15 phút giữa hai slot kế tiếp):
     `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 12:15`), `Slot 3` (`12:30 – 15:00`),
     `Slot 4` (`15:15 – 17:45`), `Slot 5` (`18:00 – 20:30`).
@@ -466,6 +469,7 @@ paths:
         (`1. Thông tin khóa học` -> `2. Lịch học & Slot` -> `3. Phòng & HLV` -> `4. Xác nhận`).
         Trả về số buổi dự kiến (`sessionCount`, `firstSessionDate`, `lastSessionDate`),
         khả dụng của cả 5 Slot cố định đối với bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+        bao gồm giới hạn hai bộ môn mỗi ngày và slot (`SCHEDULING_SLOT_DISCIPLINE_LIMIT`),
         khả dụng từng phòng kèm trần sức chứa (`capacity`), và khả dụng từng HLV
         (kiểm tra lớp nhóm khác, buổi PT 1:1 `confirmed` và lịch nghỉ phép đã duyệt).
         Không tạo hay cập nhật bản ghi nào trong CSDL.

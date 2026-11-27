@@ -585,6 +585,9 @@ export function CreateClassOrSessionModal({
         unavailable: true,
       };
     }
+    if (info.conflictCode === 'SCHEDULING_SLOT_DISCIPLINE_LIMIT') {
+      return { text: t('Đã đủ 2 bộ môn', '2 disciplines already scheduled'), unavailable: true };
+    }
     if (info.disciplineConflict) {
       return {
         text: selectedDiscipline

@@ -973,6 +973,10 @@ public class ClassService {
             String disciplineConflictReason = findDisciplineConflictReason(
                     discipline, sessionDates, sessionsByDate, slot);
             boolean disciplineConflict = disciplineConflictReason != null;
+            LocalDate slotLimitDate = sessionDates.stream()
+                    .filter(date -> exceedsSlotDisciplineLimit(discipline.getId(), slot.startTime(), slot.endTime(),
+                            sessionsByDate.getOrDefault(date, List.of()), null, null))
+                    .findFirst().orElse(null);
 
             List<RoomAvailabilityDto> slotRooms = evaluateRoomsForSlot(
                     availableRooms, sessionDates, sessionsByDate, slot);
@@ -994,6 +998,11 @@ public class ClassService {
                 slotAvailable = false;
                 slotConflictCode = "SCHEDULING_DISCIPLINE_CONFLICT";
                 slotConflictReason = disciplineConflictReason;
+            } else if (slotLimitDate != null) {
+                slotAvailable = false;
+                slotConflictCode = "SCHEDULING_SLOT_DISCIPLINE_LIMIT";
+                slotConflictReason = msg("error.scheduling.slot_discipline_limit", slotLimitDate.format(CONFLICT_DATE_FORMAT),
+                        formatTime(slot.startTime()), formatTime(slot.endTime()));
             } else if (availableRoomCount == 0) {
                 slotAvailable = false;
                 slotConflictCode = "SCHEDULING_NO_AVAILABLE_ROOM";
@@ -1752,6 +1761,31 @@ public class ClassService {
                             + " (" + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
                             + " " + conflictDate + ")");
         }
+        if (exceedsSlotDisciplineLimit(disciplineId, startTime, endTime, existingOnDate, excludeSessionId, idempotentClassId)) {
+            String date = sessionDate.format(CONFLICT_DATE_FORMAT);
+            throw new ConflictException("SCHEDULING_SLOT_DISCIPLINE_LIMIT", "error.scheduling.slot_discipline_limit",
+                    new Object[]{date, formatTime(startTime), formatTime(endTime)},
+                    "This slot already contains two disciplines on " + date + ".");
+        }
+    }
+
+    /** Một ngày và slot chỉ có tối đa hai bộ môn đang hoạt động. */
+    private boolean exceedsSlotDisciplineLimit(Long disciplineId, LocalTime start, LocalTime end,
+                                                List<ClassSession> existing, Long excludeSessionId, Long excludeClassId) {
+        if (disciplineId == null || existing == null) return false;
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        ids.add(disciplineId);
+        for (ClassSession session : existing) {
+            if (session == null || !SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())
+                    || session.getStartTime() == null || session.getEndTime() == null
+                    || !start.isBefore(session.getEndTime()) || !end.isAfter(session.getStartTime())
+                    || (excludeSessionId != null && Objects.equals(excludeSessionId, session.getId()))) continue;
+            GymClass c = session.getGymClass();
+            if (c == null || (excludeClassId != null && Objects.equals(excludeClassId, c.getId()))
+                    || (c.getStatus() != null && !CLASS_ACTIVE.equalsIgnoreCase(c.getStatus())) || c.getDiscipline() == null) continue;
+            if (c.getDiscipline().getId() != null) ids.add(c.getDiscipline().getId());
+        }
+        return ids.size() > 2;
     }
 
     /**
