@@ -76,6 +76,17 @@ class ClassServiceTest {
         gymClass.setStatus("active");
     }
 
+    @Test
+    void updateRejectsAnotherCoursesNameBeforeCheckingSchedule() {
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(gymClasses.existsByNormalizedNameAndIdNot("Yoga nâng cao", 1L)).thenReturn(true);
+        var request = new UpdateClassRequest(" Yoga nâng cao ", 1L, 2L, 3L, 20, "all", null, "active");
+        assertThatThrownBy(() -> service.updateClass(1L, request))
+                .isInstanceOf(ConflictException.class)
+                .extracting(e -> ((ConflictException) e).getErrorCode())
+                .isEqualTo("SCHEDULING_DUPLICATE_CLASS_NAME");
+    }
+
     /** Tạo HLV đang làm việc gắn tài khoản User active chưa bị xóa mềm. */
     private static Coach activeCoach(Long userId) {
         var user = new com.swp391.scms.users.entity.User();

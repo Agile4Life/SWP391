@@ -226,6 +226,11 @@ public class ClassService {
     @Transactional
     @Audited(action = "CLASS_CREATE_RECURRING", entity = "classes")
     public GymClassDto createRecurringClass(CreateRecurringClassRequest request) {
+        String name = request.name().trim();
+        if (gymClasses.existsByNormalizedName(name)) {
+            throw new ConflictException("SCHEDULING_DUPLICATE_CLASS_NAME", "error.scheduling.duplicate_class_name",
+                    null, "Course name already exists. Please choose another name.");
+        }
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
 
@@ -303,7 +308,7 @@ public class ClassService {
                 request.endTime());
 
         GymClass gymClass = new GymClass();
-        gymClass.setName(request.name());
+        gymClass.setName(name);
         gymClass.setDiscipline(discipline);
         gymClass.setCoach(coach);
         gymClass.setRoom(room);
@@ -349,6 +354,13 @@ public class ClassService {
     public GymClassDto updateClass(Long classId, UpdateClassRequest request) {
         GymClass gymClass = gymClasses.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        String name = request.name().trim();
+        if (!name.equalsIgnoreCase(gymClass.getName().trim())
+                && gymClasses.existsByNormalizedNameAndIdNot(name, classId)) {
+            throw new ConflictException("SCHEDULING_DUPLICATE_CLASS_NAME", "error.scheduling.duplicate_class_name",
+                    null, "Course name already exists. Please choose another name.");
+        }
 
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
