@@ -79,8 +79,22 @@ class ClassServiceTest {
     @Test
     void updateRejectsAnotherCoursesNameBeforeCheckingSchedule() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
-        when(gymClasses.existsByNormalizedNameAndIdNot("Yoga nâng cao", 1L)).thenReturn(true);
+        when(gymClasses.existsByNormalizedNameAndDisciplineAndIdNot("Yoga nâng cao", 1L, 1L)).thenReturn(true);
         var request = new UpdateClassRequest(" Yoga nâng cao ", 1L, 2L, 3L, 20, "all", null, "active");
+        assertThatThrownBy(() -> service.updateClass(1L, request))
+                .isInstanceOf(ConflictException.class)
+                .extracting(e -> ((ConflictException) e).getErrorCode())
+                .isEqualTo("SCHEDULING_DUPLICATE_CLASS_NAME");
+    }
+
+    @Test
+    void updateRejectsSameNameWhenChangingToADisciplineWithThatName() {
+        Discipline originalDiscipline = org.mockito.Mockito.mock(Discipline.class);
+        when(originalDiscipline.getId()).thenReturn(1L);
+        gymClass.setDiscipline(originalDiscipline);
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(gymClasses.existsByNormalizedNameAndDisciplineAndIdNot("Yoga Flow", 2L, 1L)).thenReturn(true);
+        var request = new UpdateClassRequest("Yoga Flow", 2L, 2L, 3L, 20, "all", null, "active");
         assertThatThrownBy(() -> service.updateClass(1L, request))
                 .isInstanceOf(ConflictException.class)
                 .extracting(e -> ((ConflictException) e).getErrorCode())

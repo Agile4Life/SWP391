@@ -327,7 +327,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                         "active", old, receptionist, "bank_transfer");
             }
             case "ACTIVE_MID" -> subscribe(member, pkg, today.minusDays(12), today.minusDays(12).plusDays(days - 1L),
-                    "active", null, receptionist, "pos");
+                    "active", null, receptionist, "cash");
             case "ACTIVE_NEW" -> subscribe(member, pkg, today.minusDays(5), today.minusDays(5).plusDays(days - 1L),
                     "active", null, receptionist, "online_wallet");
             case "EXPIRED" -> subscribe(member, pkg, today.minusDays(52), today.minusDays(52).plusDays(days - 1L),
@@ -358,7 +358,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 MembershipSubscription old = subscribe(member, first, today.minusDays(50), today.minusDays(21),
                         "expired", null, receptionist, "cash");
                 yield subscribe(member, pkg, today.minusDays(20), today.minusDays(20).plusDays(days - 1L),
-                        "active", old, receptionist, "pos");
+                        "active", old, receptionist, "cash");
             }
             case "EXPIRING" -> subscribe(member, pkg, today.minusDays(27), today.plusDays(3),
                     "active", null, receptionist, "bank_transfer");

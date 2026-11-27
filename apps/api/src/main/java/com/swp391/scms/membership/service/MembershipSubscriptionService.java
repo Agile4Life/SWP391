@@ -202,6 +202,7 @@ public class MembershipSubscriptionService {
         subscription.setEndDate(today.plusDays(durationDays - 1L));
         // Giá chốt lúc tạo yêu cầu, giống báo giá nâng cấp: Quản lý đổi giá sau đó không làm đổi số tiền phải thu.
         subscription.setQuotedPrice(membershipPackage.getPrice());
+        com.swp391.scms.facilities.PackageBenefits.snapshotTo(subscription, membershipPackage);
         subscription.setStatus(STATUS_PENDING_PAYMENT);
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -242,7 +243,7 @@ public class MembershipSubscriptionService {
         }
         return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
                 .filter(this::isPaidPeriod)
-                .filter(sub -> !isTrialSubscription(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
+                .filter(sub -> !isRenewalTrial(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
                 .map(this::toDto).toList();
     }
 
@@ -280,7 +281,7 @@ public class MembershipSubscriptionService {
      * trùng kỳ đã trả tiền nào.
      */
     private SubscriptionDto renewForOwner(MembershipSubscription requested, Long memberId, Long previousId) {
-        if (!isPaidPeriod(requested) || isTrialSubscription(requested)
+        if (!isPaidPeriod(requested) || isRenewalTrial(requested)
                 || isNonPurchasableTrialOrFree(requested.getMembershipPackage())) {
             throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
                     "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
@@ -381,6 +382,7 @@ public class MembershipSubscriptionService {
         renewal.setStartDate(startDate);
         renewal.setEndDate(endDate);
         renewal.setQuotedPrice(membershipPackage.getPrice());
+        com.swp391.scms.facilities.PackageBenefits.snapshotTo(renewal, membershipPackage);
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
@@ -410,6 +412,13 @@ public class MembershipSubscriptionService {
     private boolean isPaidPeriod(MembershipSubscription subscription) {
         return subscription != null && (STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
                 || "expired".equalsIgnoreCase(subscription.getStatus()));
+    }
+
+    /** Kỳ ngắn vẫn là kỳ trả phí nếu có giao dịch thanh toán thành công lớn hơn 0. */
+    private boolean isRenewalTrial(MembershipSubscription subscription) {
+        return isTrialSubscription(subscription) && (paymentRepository == null || subscription.getId() == null
+                || !paymentRepository.existsBySubscriptionIdAndStatusAndAmountGreaterThan(
+                        subscription.getId(), "success", java.math.BigDecimal.ZERO));
     }
 
     /** Kỳ gói có ngày bắt đầu, ngày kết thúc và kết thúc không trước bắt đầu. */
@@ -532,6 +541,7 @@ public class MembershipSubscriptionService {
         upgradeSub.setEndDate(today.plusDays(durationDays - 1L));
         upgradeSub.setCreditApplied(credit);
         upgradeSub.setUpgradeCharge(charge);
+        com.swp391.scms.facilities.PackageBenefits.snapshotTo(upgradeSub, targetPackage);
         upgradeSub.setStatus(STATUS_PENDING_PAYMENT);
         upgradeSub.setCreatedAt(LocalDateTime.now(clock));
         upgradeSub.setUpdatedAt(LocalDateTime.now(clock));
@@ -764,7 +774,7 @@ public class MembershipSubscriptionService {
      */
     private void validateHoldWindow(MembershipSubscription subscription, SubscriptionRequests.HoldRequest request,
                                     List<HoldDocumentUpload> documents, LocalDateTime now) {
-        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription.getMembershipPackage());
+        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription);
         if (maxDays <= 0) {
             throw new BadRequestException("MEMBERSHIP_HOLD_NOT_ALLOWED", "error.membership.hold_not_allowed", null,
                     "This package cannot be put on hold");
@@ -1152,7 +1162,7 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
         ensureOwner(subscription, principal);
-        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription.getMembershipPackage());
+        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription);
         return new com.swp391.scms.membership.dto.SubscriptionResponses.HoldPolicyDto(
                 maxDays > 0, subscription.isHoldUsed(), MIN_HOLD_DAYS, maxDays, HOLD_NOTICE_HOURS,
                 MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES);
@@ -1563,7 +1573,7 @@ public class MembershipSubscriptionService {
         if (isTrialSubscription(s)) {
             pkgName = CatalogSeeder.TRIAL_PACKAGE_NAME;
         } else {
-            pkgName = s.getMembershipPackage() != null ? s.getMembershipPackage().getName() : null;
+            pkgName = com.swp391.scms.facilities.PackageBenefits.packageName(s);
         }
         return new SubscriptionDto(
                 s.getId(),

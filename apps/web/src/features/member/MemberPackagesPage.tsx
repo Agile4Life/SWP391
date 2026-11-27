@@ -405,6 +405,12 @@ export function MemberPackagesPage() {
   const relatedPayments = pending && paymentsState.status === 'success'
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
+  const latestApprovedCancellation = cancellationsState.status === 'success'
+    ? Math.max(0, ...cancellationsState.data
+      .filter((item) => item.status === 'APPROVED')
+      .map((item) => Date.parse(item.resolvedAt ?? item.requestedAt))
+      .filter(Number.isFinite))
+    : 0;
 
   // Số lần gia hạn đang chiếm chỗ của một kỳ (chỉ pending_payment hoặc active chặn gia hạn, khớp MembershipSubscriptionService.renew()).
   function renewalCount(subscriptionId: number): number {
@@ -616,7 +622,7 @@ export function MemberPackagesPage() {
   ) {
     if (
       packagesState.status !== 'success' || currentState.status !== 'success' ||
-      historyState.status !== 'success' || paymentsState.status !== 'success' ||
+      historyState.status !== 'success' || paymentsState.status !== 'success' || cancellationsState.status !== 'success' ||
       syncError || returnSyncing || hasPendingHold || frozenSubscription || pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
     ) {
       return;
@@ -1222,6 +1228,7 @@ export function MemberPackagesPage() {
               ? historyState.data.filter((item) =>
                   item.packageId === membershipPackage.id &&
                   (item.status === 'active' || item.status === 'expired') &&
+                  (!latestApprovedCancellation || Date.parse(item.createdAt) > latestApprovedCancellation) &&
                   item.endDate < todayKey(),
                 ).sort((a, b) => b.endDate.localeCompare(a.endDate))
               : [];
@@ -1254,7 +1261,7 @@ export function MemberPackagesPage() {
               syncError || returnSyncing || hasPendingHold || frozenSubscription !== null ||
               submittingPackageId !== null ||
               packagesState.status !== 'success' || currentState.status !== 'success' ||
-              historyState.status !== 'success' || paymentsState.status !== 'success' ||
+              historyState.status !== 'success' || paymentsState.status !== 'success' || cancellationsState.status !== 'success' ||
               pendingItems.length > 0 ||
               nextRenewals > 0 ||
               hasPaidFutureUpgrade ||
@@ -1266,7 +1273,7 @@ export function MemberPackagesPage() {
             const blockedReason: SourceMessage | null = syncError ? memberMessage("Chờ đồng bộ trạng thái mới nhất.")
               : hasPendingHold ? memberMessage("Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.")
               : isStatusSyncing ? memberMessage("Đang kiểm tra gói và thanh toán.")
-              : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error'
+              : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error' || cancellationsState.status === 'error'
                 ? memberMessage("Không thể xác minh trạng thái. Vui lòng thử tải lại.")
               : pendingItems.length > 0 ? current ? memberMessage("Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.") : memberMessage("Yêu cầu đang chờ thanh toán.")
               : hasPaidFutureUpgrade ? memberMessage("Kỳ tiếp theo đã thanh toán. Liên hệ nhân viên để nâng cấp.")

@@ -191,11 +191,6 @@ export function ClassSessionDetailModal({
               })}
             </div>
           )}
-          <div className="mcal__dialog-actions" style={{ marginTop: 16 }}>
-            <button type="button" className="btn-secondary" onClick={() => setShowStudentsModal(false)}>
-              {t('Đóng', 'Close')}
-            </button>
-          </div>
         </Modal>
       )}
 

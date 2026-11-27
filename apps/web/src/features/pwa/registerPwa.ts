@@ -66,8 +66,8 @@ export function applyPwaUpdate() {
 }
 
 /**
- * Đăng ký service worker (chỉ ở bản production): lưu thêm các file /assets đã tải vào cache, báo khi có bản mới
- * đang chờ và kiểm tra cập nhật khi online; không bao giờ tự kích hoạt bản mới.
+ * Đăng ký service worker (chỉ ở bản production): lưu thêm các file /assets đã tải vào cache và để trình duyệt tự
+ * xử lý cập nhật âm thầm khi tải lại trang (không gọi registration.update() liên tục khi chuyển tab).
  */
 export async function registerPwa() {
   // Bắt sự kiện cài đặt ngay cả trên trang công khai, trước khi portal sau đăng nhập được mount.
@@ -121,11 +121,6 @@ export async function registerPwa() {
     announceUpdate();
     registration.addEventListener('updatefound', () => {
       watchWorker(registration.installing);
-    });
-    // Kiểm tra cập nhật khi quay lại ứng dụng; không bao giờ tự kích hoạt bản thay thế.
-    window.addEventListener('online', () => { void registration.update().catch(() => {}); });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void registration.update().catch(() => {});
     });
   } catch {
     // Cài đặt PWA là tùy chọn; service worker bị chặn không được ngăn người dùng truy cập portal.

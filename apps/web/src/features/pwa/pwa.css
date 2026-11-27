@@ -1,4 +1,4 @@
-/* Mục đích: Kiểu cho hộp thoại trạng thái PWA (cài đặt, ngoại tuyến, cập nhật). */
+/* Mục đích: Kiểu cho hộp thoại trạng thái PWA (cài đặt, ngoại tuyến). */
 .pwa-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 .pwa-status:empty { display: none; }
 .portal-dialog.pwa-status__dialog {
@@ -13,11 +13,6 @@
   font-weight: 500;
   line-height: 1.55;
   color: inherit;
-}
-.form-actions.pwa-status__actions {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
 }
 .pwa-install-button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--portal-border-strong, rgba(255, 255, 255, 0.19)); border-radius: 100px; background: transparent; color: var(--portal-paper, #faf9f6); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
 .pwa-install-button:hover { border-color: var(--sol-accent); }

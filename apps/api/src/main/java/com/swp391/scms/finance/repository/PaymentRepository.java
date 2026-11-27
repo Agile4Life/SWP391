@@ -82,6 +82,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * từ tên hàm).
      */
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
+    boolean existsBySubscriptionIdAndStatusAndAmountGreaterThan(Long subscriptionId, String status, java.math.BigDecimal amount);
 
     @Query("""
             select (count(p) > 0) from Payment p join p.classEnrollment e

@@ -6,7 +6,6 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
-import { Select } from '../../shared/ui/Select';
 import {
   getMyStaffRequests,
   createStaffRequest,
@@ -15,7 +14,7 @@ import {
   type RequestType,
 } from './staffRequestApi';
 import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
-import { ApiError } from '../../shared/api/client';
+import { ApiError, getCurrentUser } from '../../shared/api/client';
 import { isOverdueLeave } from './staffRequestDates';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -60,6 +59,8 @@ export function StaffInternalRequestsPage() {
 
   // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  const isCoach = getCurrentUser()?.role === 'COACH';
 
   const todayDate = centerNowParts().date;
   const tomorrowDate = useMemo(() => {
@@ -205,10 +206,10 @@ export function StaffInternalRequestsPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        title={t("Đơn từ nội bộ")}
+        title={isCoach ? t("Đơn xin nghỉ phép", "Leave requests") : t("Đơn từ nội bộ")}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <RefreshButton label={t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
+            <RefreshButton label={isCoach ? t('Làm mới danh sách đơn xin nghỉ phép', 'Refresh leave requests') : t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
             <button
               type="button"
               className="btn-primary"
@@ -217,7 +218,7 @@ export function StaffInternalRequestsPage() {
                 setShowCreateModal(true);
               }}
             >
-              {t("Tạo đơn từ mới")}
+              {isCoach ? t("Tạo đơn xin nghỉ phép", "Create leave request") : t("Tạo đơn từ mới")}
             </button>
           </div>
         }
@@ -418,7 +419,7 @@ export function StaffInternalRequestsPage() {
 
       {/* Modal tạo đơn từ mới */}
       {showCreateModal && (
-        <Modal title={t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)} busy={submitting}>
+        <Modal title={isCoach ? t("Tạo đơn xin nghỉ phép mới", "Create new leave request") : t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)} busy={submitting}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gap: 16 }}>
             {formError && (
               <div data-i18n-managed className="portal-alert" role="alert">
@@ -426,27 +427,26 @@ export function StaffInternalRequestsPage() {
               </div>
             )}
 
-            <div>
-              <label htmlFor="internal-request-type" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                {t("Loại đơn từ:")}</label>
-              <Select
-                id="internal-request-type"
-                value={createType}
-                onChange={(e) => {
-                  const nextType = e.target.value as RequestType;
-                  setCreateType(nextType);
-                  if (nextType !== 'SHIFT_EXCHANGE' && nextType !== 'SCHEDULE_CHANGE') {
-                    setCreateTargetShift('');
-                  }
-                }}
-                style={{ width: '100%' }}
-              >
-                <option value="LEAVE">{t("Xin nghỉ phép", "Leave request")}</option>
-                <option value="SHIFT_EXCHANGE">{t("Đổi ca làm việc", "Shift exchange")}</option>
-                <option value="SCHEDULE_CHANGE">{t("Đổi lịch đứng lớp", "Class schedule change")}</option>
-                <option value="OTHER">{t("Đề xuất công việc khác", "Other request")}</option>
-              </Select>
-            </div>
+            {!isCoach && (
+              <div>
+                <span style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                  {t("Loại đơn từ:")}
+                </span>
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    background: 'var(--portal-raised, #f5f5f5)',
+                    border: '1px solid var(--portal-border, rgba(0, 0, 0, 0.12))',
+                    fontWeight: 600,
+                    fontSize: 14,
+                    color: 'var(--portal-paper, #202020)',
+                  }}
+                >
+                  {t("Xin nghỉ phép", "Leave request")}
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="internal-request-title" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>

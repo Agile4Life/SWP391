@@ -1,6 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { sourceMessage } from '../../shared/i18n';
-import { renewalOptionError } from './renewalOptions';
+import { renewalOptionError, eligibleRenewalOptions } from './renewalOptions';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
@@ -689,8 +689,9 @@ export function StaffReceptionPage() {
   }
 
   const [offerKind, offerId] = selectedOffer.split(':');
-  const selectedCandidate = offerKind === 'renew' ? renewalCandidates.find((item) => item.id === Number(offerId)) : undefined;
-  const selectedPackage = packages.find((item) => item.id === (selectedCandidate?.packageId ?? Number(offerId)));
+  const renewalOptions = eligibleRenewalOptions(renewalCandidates, packages, centerNowParts().date);
+  const selectedCandidate = offerKind === 'renew' ? renewalOptions.options.find((item) => item.id === Number(offerId)) : undefined;
+  const selectedPackage = packages.find((item) => item.id === (selectedCandidate?.packageId ?? (offerKind === 'buy' ? Number(offerId) : NaN)));
   const currentPrice = selectedPending ? selectedPending.packagePrice : selectedPackage?.price ?? 0;
   const renewalError = !selectedPending && selectedCandidate
     ? renewalOptionError(selectedCandidate, renewalCandidates, packages, centerNowParts().date) : null;
@@ -1585,8 +1586,7 @@ export function StaffReceptionPage() {
                   onChange={(event) => { setSelectedOffer(event.target.value); setPaymentError(null); }}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
                   <option value="">{t("Chọn gói tập")}</option>
-                  {renewalCandidates
-                    .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
+                  {renewalOptions.options
                     .map((candidate) => {
                       const reason = renewalOptionError(candidate, renewalCandidates, packages, centerNowParts().date);
                       return <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`} disabled={!!reason}>
@@ -1599,6 +1599,9 @@ export function StaffReceptionPage() {
                     </option>
                   ))}
                 </Select>
+              )}
+              {!selectedPending && !loadingOffers && renewalOptions.error && (
+                <p role="status" className="form-error" data-testid="renewal-options-warning">{t(renewalOptions.error)}</p>
               )}
               {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
                 <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--portal-muted)' }}>

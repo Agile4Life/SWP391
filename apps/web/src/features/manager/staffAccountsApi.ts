@@ -15,7 +15,7 @@ export interface StaffAccount {
 export interface StaffAccountInput {
   fullName: string;
   email: string;
-  phone?: string;
+  phone: string;
   password: string;
   gender: 'male' | 'female' | 'other';
   roleCode: StaffRole;

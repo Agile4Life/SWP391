@@ -1,7 +1,7 @@
 import { useSourceLanguage, sourceText } from "../../shared/i18n/sourceText";
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Modal } from '../../shared/ui/Modal';
-import { applyPwaUpdate, capturePwaInstall, clearInstallPrompt, getInstallPrompt, getWaitingRegistration, subscribePwaInstall, subscribePwaUpdate } from './registerPwa';
+import { capturePwaInstall, clearInstallPrompt, getInstallPrompt, subscribePwaInstall } from './registerPwa';
 import './pwa.css';
 
 /** Cho biết ứng dụng đang chạy ở chế độ đã cài (standalone) trên trình duyệt thường hoặc iOS. */
@@ -10,8 +10,8 @@ function standalone() {
 }
 
 /**
- * Hiển thị trạng thái PWA trong hộp thoại giữa màn hình (lỗi cài đặt, cập nhật bản mới, mất mạng) cùng nút cài
- * ứng dụng và hướng dẫn cài đặt; mode chọn hiện phần trạng thái, phần cài đặt hoặc cả hai.
+ * Hiển thị trạng thái PWA trong hộp thoại giữa màn hình (lỗi cài đặt, mất mạng) cùng nút cài
+ * ứng dụng và hướng dẫn cài đặt; không hiện popup nhắc cập nhật phiên bản trên web.
  */
 export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all' }) {
   useSourceLanguage();
@@ -22,15 +22,8 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
   const [help, setHelp] = useState(false);
   const [busy, setBusy] = useState(false);
   const [installError, setInstallError] = useState(false);
-  const waiting = useSyncExternalStore(subscribePwaUpdate, getWaitingRegistration, () => null);
-  const waitingKey = waiting?.waiting ?? waiting;
-  const [dismissedWaiting, setDismissedWaiting] = useState<ServiceWorker | ServiceWorkerRegistration | null>(null);
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const android = !ios && /Android/i.test(navigator.userAgent);
-
-  useEffect(() => {
-    if (!waitingKey) setDismissedWaiting(null);
-  }, [waitingKey]);
 
   useEffect(() => {
     capturePwaInstall();
@@ -68,25 +61,20 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
     finally { clearInstallPrompt(); setBusy(false); }
   };
 
-  const activeNotice: 'installError' | 'waiting' | 'offline' | null = help
+  const activeNotice: 'installError' | 'offline' | null = help
     ? null
     : installError
       ? 'installError'
-      : mode !== 'install' && waitingKey && dismissedWaiting !== waitingKey
-        ? 'waiting'
-        : mode !== 'install' && offline && !dismissedOffline
-          ? 'offline'
-          : null;
+      : mode !== 'install' && offline && !dismissedOffline
+        ? 'offline'
+        : null;
 
   const noticeTitle = activeNotice === 'installError'
     ? sourceText({ vi: 'Không thể thực hiện', en: 'Unable to complete' })
-    : activeNotice === 'waiting'
-      ? sourceText({ vi: 'Đã có phiên bản mới', en: 'New version available' })
-      : sourceText({ vi: 'Đang ngoại tuyến', en: 'You are offline' });
+    : sourceText({ vi: 'Đang ngoại tuyến', en: 'You are offline' });
 
   const closeNotice = () => {
     if (activeNotice === 'installError') setInstallError(false);
-    else if (activeNotice === 'waiting') setDismissedWaiting(waitingKey);
     else if (activeNotice === 'offline') setDismissedOffline(true);
   };
 
@@ -112,25 +100,6 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
                 {sourceText("Chưa thể mở cài đặt. Hãy thử thêm ứng dụng từ menu trình duyệt.")}
               </p>
             </div>
-          )}
-          {activeNotice === 'waiting' && (
-            <>
-              <div className="portal-alert portal-alert--info pwa-status__alert" role="status">
-                <p id="pwa-status-message" className="pwa-status__message">
-                  {sourceText("Đã có phiên bản mới. Hoàn tất thao tác đang làm trước khi cập nhật.")}
-                </p>
-              </div>
-              <div className="form-actions pwa-status__actions">
-                <button
-                  className="btn-primary"
-                  type="button"
-                  disabled={offline || busy}
-                  onClick={() => { if (applyPwaUpdate()) setBusy(true); }}
-                >
-                  {sourceText("Cập nhật")}
-                </button>
-              </div>
-            </>
           )}
           {activeNotice === 'offline' && (
             <div className="portal-alert portal-alert--warning pwa-status__alert" role="status">

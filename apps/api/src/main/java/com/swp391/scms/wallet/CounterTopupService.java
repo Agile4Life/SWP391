@@ -34,7 +34,7 @@ public class CounterTopupService {
     public static final int TODAY_DAYS = 1;
     public static final int DEFAULT_DAYS = 30;
     public static final int MAX_DAYS = 180;
-    private static final List<String> COUNTER_METHODS = List.of("cash", "pos", "bank_transfer");
+    private static final List<String> COUNTER_METHODS = List.of("cash", "bank_transfer");
 
     /**
      * Một lần nạp Ví tại quầy trong lịch sử: khoản thanh toán, hội viên (id, mã, tên), số tiền, phương thức,
@@ -81,14 +81,17 @@ public class CounterTopupService {
     }
 
     /**
-     * Đổi mã phương thức của quầy sang giá trị bảng thanh toán cho phép (cash, pos, bank_transfer); giá trị lạ
+     * Đổi mã phương thức của quầy sang cash hoặc bank_transfer; POS bị từ chối, giá trị lạ khác
      * coi là tiền mặt.
      *
-     * Ánh xạ mã phương thức của quầy sang các phương thức thanh toán mà bảng cho phép; cái nào lạ thì là tiền
-     * mặt.
+     * Giữ tương thích mặc định tiền mặt cho caller cũ; tuyệt đối không đổi POS thành tiền mặt.
      */
     static String normalizeMethod(String method) {
         String value = method == null ? "cash" : method.trim().toLowerCase(Locale.ROOT);
+        if ("pos".equals(value)) {
+            throw new com.swp391.scms.common.exception.BadRequestException(
+                    "PAYMENT_POS_DISABLED", "finance.payment.pos_disabled", null, null);
+        }
         return COUNTER_METHODS.contains(value) ? value : "cash";
     }
 
@@ -99,12 +102,14 @@ public class CounterTopupService {
      */
     @Transactional
     public void record(Long memberId, BigDecimal amount, String paymentMethod, Long staffUserId) {
+        // Kiểm tra trước khi ghi khoản thu; lịch sử POS cũ vẫn được đọc nguyên trạng.
+        String method = normalizeMethod(paymentMethod);
         Member member = members.findById(memberId).orElse(null);
         if (member == null) return;
         Payment payment = new Payment();
         payment.setMember(member);
         payment.setAmount(amount);
-        payment.setMethod(normalizeMethod(paymentMethod));
+        payment.setMethod(method);
         payment.setStatus("success");
         payment.setNote(COUNTER_NOTE);
         payment.setPaidAt(LocalDateTime.now(clock));

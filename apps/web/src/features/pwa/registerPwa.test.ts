@@ -126,3 +126,19 @@ it('clears waitingRegistration and notifies listeners on controllerchange or wor
   expect(onUpdate).toHaveBeenCalledTimes(4);
   unsubscribe();
 });
+
+it('does not poll registration.update() on tab visibilitychange or online events', async () => {
+  vi.stubEnv('PROD', true);
+  const update = vi.fn().mockResolvedValue(undefined);
+  const registration = Object.assign(new EventTarget(), { waiting: null, installing: null, update });
+  const container = Object.assign(new EventTarget(), {
+    controller: { postMessage: vi.fn() },
+    register: vi.fn().mockResolvedValue(registration),
+  });
+  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: container });
+  const { registerPwa } = await import('./registerPwa');
+  await registerPwa();
+  document.dispatchEvent(new Event('visibilitychange'));
+  window.dispatchEvent(new Event('online'));
+  expect(update).not.toHaveBeenCalled();
+});

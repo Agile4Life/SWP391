@@ -248,38 +248,24 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     await act(async () => retryBtn.click());
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
 
-    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tạo đơn từ mới'))?.click(); });
-    const typeSelect = host.querySelector('#internal-request-type')!.parentElement!.querySelector('select') as HTMLSelectElement;
-    await act(async () => {
-      typeSelect.value = 'SHIFT_EXCHANGE';
-      typeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    const shiftInput = host.querySelector('#internal-request-shift') as HTMLInputElement;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(shiftInput, 'Ca tối');
-      shiftInput.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await act(async () => {
-      typeSelect.value = 'OTHER';
-      typeSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await act(async () => { { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tạo đơn từ mới'))?.click(); } });
     const fill = (selector: string, value: string, proto: typeof HTMLInputElement | typeof HTMLTextAreaElement = HTMLInputElement) => {
       const el = host.querySelector(selector) as HTMLInputElement;
       Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set?.call(el, value);
       el.dispatchEvent(new Event('input', { bubbles: true }));
     };
     await act(async () => {
-      fill('#internal-request-title', 'Đề xuất mới');
-      fill('#internal-request-reason', 'Chi tiết đề xuất', HTMLTextAreaElement);
+      fill('#internal-request-title', 'Đề xuất nghỉ phép');
+      fill('#internal-request-reason', 'Chi tiết nghỉ phép', HTMLTextAreaElement);
       fill('#internal-request-end', '2026-11-30');
     });
     await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Gửi đơn tới Quản Lý'))?.click(); });
-    expect(host.textContent).toContain('Vui lòng chọn Ngày bắt đầu khi đã nhập Ngày kết thúc.');
+    expect(host.textContent).toContain('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.');
     expect(staffRequestApi.createStaffRequest).not.toHaveBeenCalled();
 
     await act(async () => { fill('#internal-request-start', '2026-11-28'); });
-    vi.mocked(staffRequestApi.createStaffRequest).mockResolvedValueOnce({ ...mockRequests[0], id: 22, requestType: 'OTHER', targetShift: null });
+    vi.mocked(staffRequestApi.createStaffRequest).mockResolvedValueOnce({ ...mockRequests[0], id: 22, requestType: 'LEAVE', targetShift: null });
     await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Gửi đơn tới Quản Lý'))?.click(); });
-    expect(staffRequestApi.createStaffRequest).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'OTHER', targetShift: null }));
+    expect(staffRequestApi.createStaffRequest).toHaveBeenCalledWith(expect.objectContaining({ requestType: 'LEAVE', targetShift: null }));
   });
 });

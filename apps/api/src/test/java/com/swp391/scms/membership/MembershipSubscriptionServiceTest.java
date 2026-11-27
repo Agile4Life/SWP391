@@ -450,6 +450,55 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
+    @Test
+    void renew_allowsShortExpiredPeriodWithSuccessfulPayment() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+        pack.setPrice(new BigDecimal("299000"));
+        MembershipSubscription previous = new MembershipSubscription();
+        previous.setId(100L);
+        previous.setMember(member);
+        previous.setMembershipPackage(pack);
+        previous.setStatus("expired");
+        previous.setStartDate(LocalDate.now(clock).minusDays(5));
+        previous.setEndDate(LocalDate.now(clock).minusDays(4));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(previous));
+        when(paymentRepository.existsBySubscriptionIdAndStatusAndAmountGreaterThan(100L, "success", BigDecimal.ZERO)).thenReturn(true);
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(previous));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.renew(principal, 100L).startDate()).isEqualTo(LocalDate.now(clock));
+    }
+
+    @Test
+    void renew_rejectsShortTrialWithoutSuccessfulPayment() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+        pack.setDurationDays(30);
+        pack.setPrice(new BigDecimal("299000"));
+        MembershipSubscription trial = new MembershipSubscription();
+        trial.setId(100L);
+        trial.setMember(member);
+        trial.setMembershipPackage(pack);
+        trial.setStatus("expired");
+        trial.setStartDate(LocalDate.now(clock).minusDays(5));
+        trial.setEndDate(LocalDate.now(clock).minusDays(4));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(trial));
+        assertThatThrownBy(() -> service.renew(principal, 100L)).isInstanceOf(BadRequestException.class);
+        verify(subscriptions, never()).saveAndFlush(any());
+    }
+
     /** Kiểm thử: gia hạn thất bại khi không phải chủ sở hữu. */
     @Test
     void renew_failsWhenNotOwner() {

@@ -57,10 +57,12 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày: Platinum 6, Gold 3, gói trải nghiệm 1, Silver 0.
+     * Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày: ưu tiên cấu hình riêng trên gói nếu có; mặc định theo hạng
+     * Platinum 6, Gold 3, gói trải nghiệm 1, Silver 0.
      */
     public static int ptSessionsPerCycle(MembershipPackage pkg) {
         if (pkg == null) return 0;
+        if (pkg.getPtSessionsPerCycle() != null) return Math.max(0, pkg.getPtSessionsPerCycle());
         if (isTrial(pkg)) return 1;
         return switch (tierOf(pkg)) {
             case "PLATINUM" -> 6;
@@ -69,11 +71,20 @@ public final class PackageBenefits {
         };
     }
 
+    /** Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày của một kỳ gói (ưu tiên snapshot lúc mua). */
+    public static int ptSessionsPerCycle(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return 0;
+        if (sub.getSnapshotPtSessionsPerCycle() != null) return Math.max(0, sub.getSnapshotPtSessionsPerCycle());
+        return ptSessionsPerCycle(sub.getMembershipPackage());
+    }
+
     /**
-     * Số ngày bảo lưu tối đa; 0 nghĩa là gói không được bảo lưu (Silver/Gold 1 tháng, gói trải nghiệm). Với gói dài
-     * hạn (từ 60 ngày): Platinum 30, Gold 15, Silver 7; gói ngắn chỉ Platinum được 7 ngày.
+     * Số ngày bảo lưu tối đa; 0 nghĩa là gói không được bảo lưu. Ưu tiên cấu hình riêng trên gói nếu có; mặc định
+     * gói dài hạn (>= 60 ngày): Platinum 30, Gold 15, Silver 7; gói ngắn chỉ Platinum 7 ngày.
      */
     public static int holdMaxDays(MembershipPackage pkg) {
+        if (pkg == null) return 0;
+        if (pkg.getHoldMaxDays() != null) return Math.max(0, pkg.getHoldMaxDays());
         String tier = paidTier(pkg);
         if (tier == null) return 0;
         boolean longTerm = pkg.getDurationDays() >= LONG_TERM_MIN_DAYS;
@@ -85,11 +96,20 @@ public final class PackageBenefits {
         };
     }
 
+    /** Số ngày bảo lưu tối đa của một kỳ gói (ưu tiên snapshot lúc mua). */
+    public static int holdMaxDays(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return 0;
+        if (sub.getSnapshotHoldMaxDays() != null) return Math.max(0, sub.getSnapshotHoldMaxDays());
+        return holdMaxDays(sub.getMembershipPackage());
+    }
+
     /**
-     * Phần trăm giảm giá cho buổi PT thêm, học phí khóa học trả phí và sản phẩm cửa hàng: Gold 10, Platinum 20, còn
-     * lại 0.
+     * Phần trăm giảm giá cho buổi PT thêm, học phí khóa học trả phí: ưu tiên cấu hình riêng trên gói nếu có; mặc
+     * định Gold 10, Platinum 20, còn lại 0.
      */
     public static int discountPercent(MembershipPackage pkg) {
+        if (pkg == null) return 0;
+        if (pkg.getDiscountPercent() != null) return Math.max(0, Math.min(100, pkg.getDiscountPercent()));
         String tier = paidTier(pkg);
         if (tier == null) return 0;
         return switch (tier) {
@@ -99,32 +119,114 @@ public final class PackageBenefits {
         };
     }
 
-    /** Có quyền vào phòng VIP không (chỉ Platinum trả tiền). */
+    /** Phần trăm giảm giá của một kỳ gói (ưu tiên snapshot lúc mua). */
+    public static int discountPercent(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return 0;
+        if (sub.getSnapshotDiscountPercent() != null) return Math.max(0, Math.min(100, sub.getSnapshotDiscountPercent()));
+        return discountPercent(sub.getMembershipPackage());
+    }
+
+    /** Có quyền vào phòng VIP không (ưu tiên cấu hình riêng trên gói; mặc định chỉ Platinum trả tiền). */
     public static boolean hasVipRoomAccess(MembershipPackage pkg) {
+        if (pkg == null) return false;
+        if (pkg.getVipRoomAccess() != null) return pkg.getVipRoomAccess();
         return "PLATINUM".equals(paidTier(pkg));
     }
 
+    /** Có quyền vào phòng VIP cho kỳ gói không (ưu tiên snapshot lúc mua). */
+    public static boolean hasVipRoomAccess(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getSnapshotVipRoomAccess() != null) return sub.getSnapshotVipRoomAccess();
+        return hasVipRoomAccess(sub.getMembershipPackage());
+    }
+
     /**
-     * Có được đánh giá chuyên sâu (tỷ lệ mỡ, khối lượng cơ) không: chỉ dành cho hạng Platinum (gói trải nghiệm không
-     * phải Platinum).
+     * Có được đánh giá chuyên sâu (tỷ lệ mỡ, khối lượng cơ) không: ưu tiên cấu hình riêng trên gói; mặc định chỉ
+     * dành cho hạng Platinum trả tiền.
      */
     public static boolean allowsDeepAssessment(MembershipPackage pkg) {
-        return hasVipRoomAccess(pkg);
+        if (pkg == null) return false;
+        if (pkg.getAllowsDeepAssessment() != null) return pkg.getAllowsDeepAssessment();
+        return "PLATINUM".equals(paidTier(pkg));
+    }
+
+    /** Có được đánh giá chuyên sâu cho kỳ gói không (ưu tiên snapshot lúc mua). */
+    public static boolean allowsDeepAssessment(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getSnapshotAllowsDeepAssessment() != null) return sub.getSnapshotAllowsDeepAssessment();
+        return allowsDeepAssessment(sub.getMembershipPackage());
     }
 
     /**
-     * Có được đánh giá định kỳ hằng tháng không: bắt đầu từ Gold (Silver chỉ có lần đánh giá đầu tiên; gói trải nghiệm
-     * áp dụng theo Gold).
+     * Có được đánh giá định kỳ hằng tháng không: ưu tiên cấu hình riêng trên gói; mặc định từ Gold trở lên.
      */
     public static boolean allowsPeriodicAssessment(MembershipPackage pkg) {
-        return pkg != null && !"SILVER".equals(tierOf(pkg));
+        if (pkg == null) return false;
+        if (pkg.getAllowsPeriodicAssessment() != null) return pkg.getAllowsPeriodicAssessment();
+        return !"SILVER".equals(tierOf(pkg));
+    }
+
+    /** Có được đánh giá định kỳ cho kỳ gói không (ưu tiên snapshot lúc mua). */
+    public static boolean allowsPeriodicAssessment(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getSnapshotAllowsPeriodicAssessment() != null) return sub.getSnapshotAllowsPeriodicAssessment();
+        return allowsPeriodicAssessment(sub.getMembershipPackage());
     }
 
     /**
-     * Có được xem giáo án HLV soạn không: hội viên Silver không thấy giáo án; gói trải nghiệm áp dụng theo Gold.
+     * Có được xem giáo án HLV soạn không: ưu tiên cấu hình riêng trên gói; mặc định từ Gold trở lên.
      */
     public static boolean canViewWorkoutPlan(MembershipPackage pkg) {
-        return pkg != null && !"SILVER".equals(tierOf(pkg));
+        if (pkg == null) return false;
+        if (pkg.getCanViewWorkoutPlan() != null) return pkg.getCanViewWorkoutPlan();
+        return !"SILVER".equals(tierOf(pkg));
+    }
+
+    /** Có được xem giáo án HLV soạn cho kỳ gói không (ưu tiên snapshot lúc mua). */
+    public static boolean canViewWorkoutPlan(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (sub.getSnapshotCanViewWorkoutPlan() != null) return sub.getSnapshotCanViewWorkoutPlan();
+        return canViewWorkoutPlan(sub.getMembershipPackage());
+    }
+
+    /** Hạn mức số lượt đăng ký khóa học nhóm của kỳ gói (ưu tiên snapshot lúc mua). */
+    public static Integer classCreditLimit(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return null;
+        if (sub.getSnapshotClassCreditLimit() != null) return sub.getSnapshotClassCreditLimit();
+        return sub.getMembershipPackage() != null ? sub.getMembershipPackage().getClassCreditLimit() : null;
+    }
+
+    /** Tên gói của kỳ gói (ưu tiên snapshot lúc mua để đổi tên gói ở danh mục không làm sai lịch sử). */
+    public static String packageName(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return null;
+        if (sub.getSnapshotPackageName() != null && !sub.getSnapshotPackageName().isBlank()) {
+            return sub.getSnapshotPackageName();
+        }
+        return sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null;
+    }
+
+    /** Hạng gói của kỳ gói (ưu tiên snapshot lúc mua). */
+    public static String packageTier(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return "SILVER";
+        if (sub.getSnapshotPackageTier() != null && !sub.getSnapshotPackageTier().isBlank()) {
+            return sub.getSnapshotPackageTier();
+        }
+        return tierOf(sub.getMembershipPackage());
+    }
+
+    /** Lưu bản sao tên, hạng và quyền lợi của gói vào kỳ gói lúc hội viên đăng ký/gia hạn/nâng cấp. */
+    public static void snapshotTo(com.swp391.scms.membership.entity.MembershipSubscription sub, MembershipPackage pkg) {
+        if (sub == null || pkg == null) return;
+        sub.setSnapshotPackageName(pkg.getName());
+        sub.setSnapshotPackageTier(tierOf(pkg));
+        sub.setSnapshotClassCreditLimit(pkg.getClassCreditLimit());
+        sub.setSnapshotPtSessionsPerCycle(ptSessionsPerCycle(pkg));
+        sub.setSnapshotHoldMaxDays(holdMaxDays(pkg));
+        sub.setSnapshotDiscountPercent(discountPercent(pkg));
+        sub.setSnapshotVipRoomAccess(hasVipRoomAccess(pkg));
+        sub.setSnapshotCanViewWorkoutPlan(canViewWorkoutPlan(pkg));
+        sub.setSnapshotAllowsPeriodicAssessment(allowsPeriodicAssessment(pkg));
+        sub.setSnapshotAllowsDeepAssessment(allowsDeepAssessment(pkg));
     }
 
     /**
@@ -148,7 +250,7 @@ public final class PackageBenefits {
     public static int totalPtSessions(com.swp391.scms.membership.entity.MembershipSubscription sub) {
         if (sub == null) return 0;
         if (isTrialSubscription(sub)) return 1;
-        int perCycle = ptSessionsPerCycle(sub.getMembershipPackage());
+        int perCycle = ptSessionsPerCycle(sub);
         if (perCycle <= 0) return 0;
         int durationDays = sub.getMembershipPackage() != null ? sub.getMembershipPackage().getDurationDays() : 0;
         if (durationDays <= 0 && sub.getStartDate() != null && sub.getEndDate() != null) {

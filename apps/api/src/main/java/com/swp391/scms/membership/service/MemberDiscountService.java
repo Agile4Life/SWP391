@@ -38,7 +38,7 @@ public class MemberDiscountService {
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null
                         && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today)
                         && !s.isHeldOn(today))
-                .mapToInt(s -> PackageBenefits.discountPercent(s.getMembershipPackage()))
+                .mapToInt(PackageBenefits::discountPercent)
                 .max().orElse(0);
     }
 

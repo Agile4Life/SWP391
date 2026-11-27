@@ -2,9 +2,13 @@
 
 Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên; số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
 
-Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng được báo ngay dưới ô Tên khóa học; wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên không trùng.
+Quyết định Receptionist — danh sách gia hạn: chỉ hiển thị kỳ cuối hợp lệ của từng chuỗi theo `previousSubscriptionId`, không gộp theo tên gói và không hiển thị kỳ cũ đã có kỳ tiếp theo. Chuỗi thiếu quan hệ, rẽ nhánh hoặc lặp vòng được ẩn kèm thông báo cần kiểm tra; các chuỗi độc lập đã xác minh vẫn được giữ. Dùng đúng ID kỳ hiển thị khi tạo gia hạn, rồi thanh toán ID yêu cầu mới do Backend trả về. Giữ nguyên mua mới, giá và validation Backend; không sửa lịch sử.
 
-Quyết định Thông báo phản hồi & trạng thái ứng dụng toàn web (27/11/2026 — **mở rộng** quyết định hộp thoại giữa màn hình của Manager ra toàn ứng dụng và **ghi đè** các mô tả trước đây về thông báo inline đầu trang hoặc toast góc trên bên phải): mọi phản hồi thao tác (`toast` / `notify`) và thông báo trạng thái ứng dụng (`PwaStatus`: mất kết nối mạng, có phiên bản mới, lỗi mở cài đặt) trên cả 5 vai trò portal lẫn các trang công khai/xác thực (`/`, `/login`, `/register`) đều hiển thị thống nhất dưới dạng **một hộp thoại `<dialog role="alertdialog">` căn giữa màn hình** (tối đa 1 popup mở tại một thời điểm). Hộp thoại gồm tiêu đề ở phần đầu và khung ngữ nghĩa `.portal-alert` (không dùng biểu tượng tròn/elip), **không đặt nút “Đóng” ở chân** — chỉ đóng bằng nút `×` góc trên phải, phím `Esc` hoặc bấm nền mờ. Riêng lỗi kiểm tra nhập liệu tại biểu mẫu và lỗi tải bảng/thẻ có nút thử lại vẫn giữ hiển thị inline ngay tại chỗ.
+Quyết định Member: sau khi hủy gói được duyệt, màn hình gói tập không chọn các kỳ trước thời điểm hủy làm nguồn gia hạn; hội viên có thể đăng ký gói mới. Kỳ gói được tạo sau lần hủy vẫn được xét gia hạn theo quy tắc hiện hành.
+
+Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng trong cùng bộ môn được báo ngay dưới ô Tên khóa học; các bộ môn khác nhau có thể dùng cùng tên. Wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu khi trùng. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên hoặc bộ môn không trùng.
+
+Quyết định Thông báo phản hồi & trạng thái ứng dụng toàn web (27/11/2026 — **mở rộng** quyết định hộp thoại giữa màn hình của Manager ra toàn ứng dụng và **ghi đè** các mô tả trước đây về thông báo inline đầu trang hoặc toast góc trên bên phải): mọi phản hồi thao tác (`toast` / `notify`) và thông báo trạng thái ứng dụng (`PwaStatus`: mất kết nối mạng, lỗi mở cài đặt; **bỏ hẳn popup “Đã có phiên bản mới” trên web** và không gọi `registration.update()` khi chuyển tab) trên cả 5 vai trò portal lẫn các trang công khai/xác thực (`/`, `/login`, `/register`) đều hiển thị thống nhất dưới dạng **một hộp thoại `<dialog role="alertdialog">` căn giữa màn hình** (tối đa 1 popup mở tại một thời điểm). Hộp thoại gồm tiêu đề ở phần đầu và khung ngữ nghĩa `.portal-alert` (không dùng biểu tượng tròn/elip), **không đặt nút “Đóng” ở chân** — chỉ đóng bằng nút `×` góc trên phải, phím `Esc` hoặc bấm nền mờ. Riêng lỗi kiểm tra nhập liệu tại biểu mẫu và lỗi tải bảng/thẻ có nút thử lại vẫn giữ hiển thị inline ngay tại chỗ.
 
 Quyết định Manager: ô trả lời khiếu nại trải rộng trong khung bo viền, giữ nút emoji và nút chữ Gửi bo tròn ở phía phải.
 
@@ -469,3 +473,7 @@ Quyết định Receptionist — Task 3 (25/11/2026): `/messages?tab=support` gi
 # Biểu đồ doanh thu theo ngày
 
 - Biểu đồ giữ từng ngày trong kỳ lọc; cuộn bánh xe chuột trên biểu đồ để di chuyển ngang, tiếp tục cuộn trang khi biểu đồ tới đầu hoặc cuối.
+
+# Phương thức POS đã ngừng
+
+Không hiển thị lựa chọn Thẻ (POS) trong form tạo giao dịch hoặc bộ lọc nạp ví. Giữ nhãn POS trong bảng lịch sử và hóa đơn cho dữ liệu cũ; không đổi thành tiền mặt. Không thay đổi các phương thức hợp lệ khác.

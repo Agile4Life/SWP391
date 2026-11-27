@@ -56,7 +56,7 @@ class ClassServiceRecurringTest {
 
     @Test
     void rejectsDuplicateCourseNameBeforeSaving() {
-        when(gymClasses.existsByNormalizedName("yoga advance")).thenReturn(true);
+        when(gymClasses.existsByNormalizedNameAndDiscipline("yoga advance", 1L)).thenReturn(true);
         var request = new CreateRecurringClassRequest("  yoga advance  ", 1L, 2L, 3L, 20, "all", null,
                 BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11), List.of("MONDAY"),
                 ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
