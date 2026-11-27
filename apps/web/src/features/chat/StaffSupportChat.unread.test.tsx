@@ -117,7 +117,8 @@ it('enables unread filter, latest message preview with sender, and mark-read for
   await render({ manager: true });
   expect(api.getSupportInbox).toHaveBeenCalledWith(0, '', false);
   expect([...host.querySelectorAll('button')].filter(b => b.textContent === 'Tất cả')).toHaveLength(1);
-  expect(button('Mọi trạng thái')).toBeDefined();
+  expect(button('Mọi trạng thái')).toBeUndefined();
+  expect(row().querySelector('time')).toBeNull();
   expect(row().querySelector('.direct-chat__unread')?.textContent).toBe('2');
   expect(row().querySelector('.direct-chat__preview.is-unread')?.textContent).toBe('Bạn: oke123');
   await act(async () => button('Chưa đọc').click());

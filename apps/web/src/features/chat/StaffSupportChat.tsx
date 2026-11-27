@@ -254,11 +254,12 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
         </HeaderAction>
       </SupportHeader>
       <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
-        {[false, true].map(value => <button key={String(value)} type="button" role="radio" aria-checked={unreadOnly === value} className={`support-chat__chip${unreadOnly === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, value)}>{value ? t('Chưa đọc', 'Unread') : t('Tất cả', 'All')}</button>)}
+        <button type="button" role="radio" aria-checked={!unreadOnly && filter === ''} className={`support-chat__chip${!unreadOnly && filter === '' ? ' is-selected' : ''}`} onClick={() => changeQuery(0, '', false)}>{t('Tất cả', 'All')}</button>
+        <button type="button" role="radio" aria-checked={unreadOnly} className={`support-chat__chip${unreadOnly ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, !unreadOnly)}>{t('Chưa đọc', 'Unread')}</button>
       </div>
       <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
-        {(['', ...STATUSES] as const).map(value => <button key={value || 'all'} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, value)}>
-          {value ? t(...SUPPORT_STATUS_LABEL[value]) : t('Mọi trạng thái', 'Any status')}</button>)}
+        {STATUSES.map(value => <button key={value} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter === value ? '' : value)}>
+          {t(...SUPPORT_STATUS_LABEL[value])}</button>)}
       </div>
       <div ref={listElement} className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
         {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
@@ -278,7 +279,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
                     <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
                     {!manager && <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>}
                     <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{senderPrefix}{rawPreview}</span>
-                    <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>
+                    {!manager && <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>}
                   </span>
                   <span className="support-chat__badges">
                     {unread && <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>{item.unreadCount! > 99 ? '99+' : item.unreadCount}</span>}
