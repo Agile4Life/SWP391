@@ -443,6 +443,8 @@ Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái t
 
 KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
 
+KYC lễ tân (27/11/2026): popup ảnh tại `/staff/kyc` chỉ xem ảnh trong ứng dụng, bỏ hành động “Mở ảnh gốc” mở tab mới. Giữ phóng to/thu nhỏ, ảnh trước/sau, nút đóng, Escape và phục hồi focus. `DocumentImageLightbox` dùng chung vẫn giữ hành động mở ảnh gốc mặc định cho Quầy lễ tân; chỉ KYC đặt `showOriginalAction={false}`.
+
 Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nhận tiền mặt; hiển thị phương thức cố định, giữ giao dịch lịch sử khác phương thức.
 
 Quyết định Receptionist (25/11/2026): Hai bảng lịch sử tại quầy có tìm kiếm độc lập, Hôm nay/7/30/90 ngày/Tất cả thời gian, sắp xếp hai chiều; giữ bộ lọc loại và phương thức lịch sử.

@@ -15,9 +15,12 @@ export interface LightboxImage {
 export function DocumentImageLightbox({
   image,
   onClose,
+  showOriginalAction = true,
 }: {
   image: LightboxImage | null;
   onClose: () => void;
+  /** KYC chỉ xem trong popup; các nơi dùng chung vẫn giữ hành động mở ảnh gốc. */
+  showOriginalAction?: boolean;
 }) {
   const { t } = useI18n();
   const [zoomed, setZoomed] = useState(false);
@@ -50,14 +53,14 @@ export function DocumentImageLightbox({
           >
             {zoomed ? t('Thu nhỏ (100%)', 'Reset zoom (100%)') : t('Phóng to (200%)', 'Zoom in (200%)')}
           </button>
-          <a
+          {showOriginalAction && <a
             href={image.url}
             target="_blank"
             rel="noreferrer"
             className="btn-secondary btn-sm"
           >
             {t('Mở ảnh gốc', 'Open original')}
-          </a>
+          </a>}
         </div>
       </div>
     </Modal>
