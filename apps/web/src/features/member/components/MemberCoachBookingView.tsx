@@ -671,7 +671,7 @@ export function MemberCoachBookingView({
                   ? 'An active membership is required to book 1:1 coaching.'
                   : `Membership ${displayedPackageName} does not include free 1:1 PT sessions.`}{' '}
                 Private 1:1 coaching costs{' '}
-                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Gold includes 3 sessions/month, Platinum 6 sessions/month).
+                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Free sessions &amp; discounts apply per package).
               </>
             ) : (
               <>
@@ -679,7 +679,7 @@ export function MemberCoachBookingView({
                   ? 'Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.'
                   : `Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`}{' '}
                 Phí đặt lịch HLV kèm riêng là{' '}
-                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
+                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Lượt miễn phí &amp; ưu đãi áp dụng theo gói tập).
               </>
             )}
           </p>
@@ -703,7 +703,7 @@ export function MemberCoachBookingView({
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             {memberText("Chọn Huấn luyện viên cá nhân (PT 1:1)")}</h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
-            {memberText("Phí tập tiêu chuẩn: ")}<strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Gold giảm 10% / Platinum giảm 20%", "Gold 10% off / Platinum 20% off")})
+            {memberText("Phí tập tiêu chuẩn: ")}<strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Ưu đãi giảm giá áp dụng theo gói tập", "Package tier discounts apply")})
           </span>
         </div>
 

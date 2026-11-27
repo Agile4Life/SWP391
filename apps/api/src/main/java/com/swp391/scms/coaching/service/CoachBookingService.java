@@ -246,7 +246,7 @@ public class CoachBookingService {
      */
     private int ptQuotaOf(MembershipSubscription sub, boolean trial) {
         if (trial) return 1;
-        return PackageBenefits.ptSessionsPerCycle(sub.getMembershipPackage());
+        return PackageBenefits.ptSessionsPerCycle(sub);
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -328,9 +328,8 @@ public class CoachBookingService {
         }
         MembershipSubscription sub = activeSubs.get(0);
         boolean isTrial = isTrialSubscription(sub);
-        String pkgName = isTrial ? "Gói Trải Nghiệm 3 Ngày"
-                : sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
-                        ? sub.getMembershipPackage().getName() : "";
+        String resolvedName = PackageBenefits.packageName(sub);
+        String pkgName = isTrial ? "Gói Trải Nghiệm 3 Ngày" : (resolvedName != null ? resolvedName : "");
         int monthlyQuota = ptQuotaOf(sub, isTrial);
 
         LocalDate startMonth = PackageBenefits.cycleStart(sub, now);

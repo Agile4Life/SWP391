@@ -116,6 +116,37 @@ public class MembershipSubscription {
     @Column(name = "hold_days_credited")
     private Boolean holdDaysCredited;
 
+    /** Bản sao quyền lợi gói tại thời điểm tạo kỳ gói (giúp quản lý chỉnh sửa gói sau này không làm đổi quyền lợi khách cũ). */
+    @Column(name = "snapshot_package_name", length = 150)
+    private String snapshotPackageName;
+
+    @Column(name = "snapshot_package_tier", length = 30)
+    private String snapshotPackageTier;
+
+    @Column(name = "snapshot_class_credit_limit")
+    private Integer snapshotClassCreditLimit;
+
+    @Column(name = "snapshot_pt_sessions_per_cycle")
+    private Integer snapshotPtSessionsPerCycle;
+
+    @Column(name = "snapshot_hold_max_days")
+    private Integer snapshotHoldMaxDays;
+
+    @Column(name = "snapshot_discount_percent")
+    private Integer snapshotDiscountPercent;
+
+    @Column(name = "snapshot_vip_room_access")
+    private Boolean snapshotVipRoomAccess;
+
+    @Column(name = "snapshot_can_view_workout_plan")
+    private Boolean snapshotCanViewWorkoutPlan;
+
+    @Column(name = "snapshot_allows_periodic_assessment")
+    private Boolean snapshotAllowsPeriodicAssessment;
+
+    @Column(name = "snapshot_allows_deep_assessment")
+    private Boolean snapshotAllowsDeepAssessment;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -246,4 +277,44 @@ public class MembershipSubscription {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    /** Lấy giá trị trường snapshotPackageName. */
+    public String getSnapshotPackageName() { return snapshotPackageName; }
+    /** Gán giá trị mới cho trường snapshotPackageName. */
+    public void setSnapshotPackageName(String snapshotPackageName) { this.snapshotPackageName = snapshotPackageName; }
+    /** Lấy giá trị trường snapshotPackageTier. */
+    public String getSnapshotPackageTier() { return snapshotPackageTier; }
+    /** Gán giá trị mới cho trường snapshotPackageTier. */
+    public void setSnapshotPackageTier(String snapshotPackageTier) { this.snapshotPackageTier = snapshotPackageTier; }
+    /** Lấy giá trị trường snapshotClassCreditLimit. */
+    public Integer getSnapshotClassCreditLimit() { return snapshotClassCreditLimit; }
+    /** Gán giá trị mới cho trường snapshotClassCreditLimit. */
+    public void setSnapshotClassCreditLimit(Integer snapshotClassCreditLimit) { this.snapshotClassCreditLimit = snapshotClassCreditLimit; }
+    /** Lấy giá trị trường snapshotPtSessionsPerCycle. */
+    public Integer getSnapshotPtSessionsPerCycle() { return snapshotPtSessionsPerCycle; }
+    /** Gán giá trị mới cho trường snapshotPtSessionsPerCycle. */
+    public void setSnapshotPtSessionsPerCycle(Integer snapshotPtSessionsPerCycle) { this.snapshotPtSessionsPerCycle = snapshotPtSessionsPerCycle; }
+    /** Lấy giá trị trường snapshotHoldMaxDays. */
+    public Integer getSnapshotHoldMaxDays() { return snapshotHoldMaxDays; }
+    /** Gán giá trị mới cho trường snapshotHoldMaxDays. */
+    public void setSnapshotHoldMaxDays(Integer snapshotHoldMaxDays) { this.snapshotHoldMaxDays = snapshotHoldMaxDays; }
+    /** Lấy giá trị trường snapshotDiscountPercent. */
+    public Integer getSnapshotDiscountPercent() { return snapshotDiscountPercent; }
+    /** Gán giá trị mới cho trường snapshotDiscountPercent. */
+    public void setSnapshotDiscountPercent(Integer snapshotDiscountPercent) { this.snapshotDiscountPercent = snapshotDiscountPercent; }
+    /** Lấy giá trị trường snapshotVipRoomAccess. */
+    public Boolean getSnapshotVipRoomAccess() { return snapshotVipRoomAccess; }
+    /** Gán giá trị mới cho trường snapshotVipRoomAccess. */
+    public void setSnapshotVipRoomAccess(Boolean snapshotVipRoomAccess) { this.snapshotVipRoomAccess = snapshotVipRoomAccess; }
+    /** Lấy giá trị trường snapshotCanViewWorkoutPlan. */
+    public Boolean getSnapshotCanViewWorkoutPlan() { return snapshotCanViewWorkoutPlan; }
+    /** Gán giá trị mới cho trường snapshotCanViewWorkoutPlan. */
+    public void setSnapshotCanViewWorkoutPlan(Boolean snapshotCanViewWorkoutPlan) { this.snapshotCanViewWorkoutPlan = snapshotCanViewWorkoutPlan; }
+    /** Lấy giá trị trường snapshotAllowsPeriodicAssessment. */
+    public Boolean getSnapshotAllowsPeriodicAssessment() { return snapshotAllowsPeriodicAssessment; }
+    /** Gán giá trị mới cho trường snapshotAllowsPeriodicAssessment. */
+    public void setSnapshotAllowsPeriodicAssessment(Boolean snapshotAllowsPeriodicAssessment) { this.snapshotAllowsPeriodicAssessment = snapshotAllowsPeriodicAssessment; }
+    /** Lấy giá trị trường snapshotAllowsDeepAssessment. */
+    public Boolean getSnapshotAllowsDeepAssessment() { return snapshotAllowsDeepAssessment; }
+    /** Gán giá trị mới cho trường snapshotAllowsDeepAssessment. */
+    public void setSnapshotAllowsDeepAssessment(Boolean snapshotAllowsDeepAssessment) { this.snapshotAllowsDeepAssessment = snapshotAllowsDeepAssessment; }
 }

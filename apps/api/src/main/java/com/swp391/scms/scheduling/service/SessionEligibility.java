@@ -205,7 +205,7 @@ final class SessionEligibility {
                 .anyMatch(sub -> sub != null && sub.getStartDate() != null && sub.getEndDate() != null
                         && !sub.getStartDate().isAfter(sessionDate)
                         && !sub.getEndDate().isBefore(sessionDate)
-                        && PackageBenefits.hasVipRoomAccess(sub.getMembershipPackage()));
+                        && PackageBenefits.hasVipRoomAccess(sub));
         if (!hasPlatinum) {
             throw new ForbiddenException("SCHEDULING_ROOM_PLATINUM_REQUIRED",
                     "error.scheduling.room_platinum_required", null,

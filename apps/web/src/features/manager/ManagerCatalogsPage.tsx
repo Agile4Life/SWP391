@@ -21,10 +21,10 @@ const PACKAGE_TIER_LABEL: Record<string, StaffMessage> = {
 };
 const QUICK_PRICE_PRESETS = [199000, 299000, 549000, 599000, 799000, 1599000, 1990000, 2990000, 5990000];
 const QUICK_DURATION_PRESETS = [
-  { days: 90, vi: '3 tháng (90 ngày)', en: '3 months (90 days)' },
-  { days: 180, vi: '6 tháng (180 ngày)', en: '6 months (180 days)' },
-  { days: 270, vi: '9 tháng (270 ngày)', en: '9 months (270 days)' },
-  { days: 365, vi: '12 tháng (365 ngày)', en: '12 months (365 days)' },
+  { days: 90, vi: '3 tháng', en: '3 months' },
+  { days: 180, vi: '6 tháng', en: '6 months' },
+  { days: 270, vi: '9 tháng', en: '9 months' },
+  { days: 365, vi: '12 tháng', en: '12 months' },
 ];
 const ROOM_LOCATION_MAX_LENGTH = 150;
 
@@ -110,7 +110,22 @@ export function ManagerCatalogsPage() {
       ? { name: '', description: '' }
       : tab === 'rooms'
         ? { name: '', location: '', capacity: '10', status: 'available', tier: 'STANDARD' }
-        : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
+        : {
+            name: '',
+            description: '',
+            price: '199000',
+            durationDays: '90',
+            classCreditLimit: '3',
+            status: 'active',
+            tier: 'SILVER',
+            ptSessionsPerCycle: '0',
+            holdMaxDays: '7',
+            discountPercent: '0',
+            vipRoomAccess: 'false',
+            canViewWorkoutPlan: 'false',
+            allowsPeriodicAssessment: 'false',
+            allowsDeepAssessment: 'false',
+          };
 
   const nameMaxLength = tab === 'packages' ? 150 : 100;
 
@@ -195,6 +210,17 @@ export function ManagerCatalogsPage() {
           };
           return id == null ? catalogApi.createRoom(room) : catalogApi.updateRoom(id, room);
         }
+        const ptSessionsPerCycle = Number(f.ptSessionsPerCycle ?? 0);
+        const holdMaxDays = Number(f.holdMaxDays ?? 0);
+        const discountPercent = Number(f.discountPercent ?? 0);
+        if (!Number.isFinite(ptSessionsPerCycle) || ptSessionsPerCycle < 0 || !Number.isFinite(holdMaxDays) || holdMaxDays < 0) {
+          setFormError(staffMessage('Số buổi PT và số ngày bảo lưu không được âm.', 'PT sessions and hold days cannot be negative.'));
+          return Promise.reject(new Error('invalid_benefits'));
+        }
+        if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+          setFormError(staffMessage('Phần trăm giảm giá phải từ 0 đến 100.', 'Discount percentage must be between 0 and 100.'));
+          return Promise.reject(new Error('invalid_discount'));
+        }
         return catalogApi.savePackage(id, {
           name: trimmedName,
           description: (f.description ?? '').trim(),
@@ -203,6 +229,13 @@ export function ManagerCatalogsPage() {
           classCreditLimit: f.classCreditLimit === '' ? null : Number(f.classCreditLimit),
           status: (f.status as MembershipPackage['status']) || 'active',
           tier: (f.tier as MembershipPackage['tier']) || resolvePackageTier({ name: trimmedName }),
+          ptSessionsPerCycle,
+          holdMaxDays,
+          discountPercent,
+          vipRoomAccess: isNew ? undefined : f.vipRoomAccess === 'true',
+          canViewWorkoutPlan: isNew ? undefined : f.canViewWorkoutPlan === 'true',
+          allowsPeriodicAssessment: isNew ? undefined : f.allowsPeriodicAssessment === 'true',
+          allowsDeepAssessment: isNew ? undefined : f.allowsDeepAssessment === 'true',
         });
       },
       isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!',
@@ -232,6 +265,13 @@ export function ManagerCatalogsPage() {
           classCreditLimit: p.classCreditLimit,
           status: p.status,
           tier: resolvePackageTier(p),
+          ptSessionsPerCycle: p.ptSessionsPerCycle,
+          holdMaxDays: p.holdMaxDays,
+          discountPercent: p.discountPercent,
+          vipRoomAccess: p.vipRoomAccess,
+          canViewWorkoutPlan: p.canViewWorkoutPlan,
+          allowsPeriodicAssessment: p.allowsPeriodicAssessment,
+          allowsDeepAssessment: p.allowsDeepAssessment,
         }),
       staffMessage(`Đã cập nhật giá gói "${p.name}" thành ${vnd(nextPrice)}!`, `Updated membership "${p.name}" price to ${vnd(nextPrice)}!`),
       'quickPrice',
@@ -259,14 +299,6 @@ export function ManagerCatalogsPage() {
   const set = (key: string, value: string) => {
     setFormError('');
     if (editing) setEditing({ ...editing, form: { ...editing.form, [key]: value } });
-  };
-
-  // Tăng/giảm giá trong biểu mẫu (không âm).
-  const adjustFormPrice = (delta: number) => {
-    if (!editing) return;
-    const current = Number(editing.form.price) || 0;
-    const next = Math.max(0, current + delta);
-    set('price', String(next));
   };
 
   // Tiêu đề hộp thoại theo tab và thêm/sửa.
@@ -511,27 +543,7 @@ export function ManagerCatalogsPage() {
                 </div>
 
                 <div data-i18n-managed style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Chọn nhanh giá:")}</span>
-                  {QUICK_PRICE_PRESETS.slice(0, 6).map((preset) => (
-                    <button data-i18n-managed
-                      key={preset}
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={() => set('price', String(preset))}
-                    >
-                      {vnd(preset)}
-                    </button>
-                  ))}
-                  <button type="button" className="btn-secondary btn-sm" onClick={() => adjustFormPrice(-50000)}>
-                    -50k
-                  </button>
-                  <button type="button" className="btn-secondary btn-sm" onClick={() => adjustFormPrice(50000)}>
-                    +50k
-                  </button>
-                </div>
-
-                <div data-i18n-managed style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Chọn nhanh kỳ hạn:")}</span>
+                  <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Chọn nhanh kỳ hạn:", "Quick duration:")}</span>
                   {QUICK_DURATION_PRESETS.map((preset) => (
                     <button data-i18n-managed
                       key={preset.days}
@@ -547,18 +559,66 @@ export function ManagerCatalogsPage() {
             )}
 
             {tab === 'packages' && (
-              <div data-i18n-managed className="portal-form-group">
-                <label className="portal-label" htmlFor="cat-credit">
-                  {t("Số buổi lớp kèm theo (để trống = không giới hạn)")}</label>
-                <input data-i18n-managed
-                  id="cat-credit"
-                  className="portal-input"
-                  type="number"
-                  min="0"
-                  placeholder={t("Vd: 2, 5, 15 hoặc để trống (không giới hạn)")}
-                  value={editing.form.classCreditLimit ?? ''}
-                  onChange={(e) => set('classCreditLimit', e.target.value)}
-                />
+              <div
+                data-i18n-managed
+                className="grid-2"
+                style={{ alignItems: 'end', gap: 12 }}
+              >
+                <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                  <label className="portal-label" htmlFor="cat-credit">
+                    {t("Số lượt khóa học", "Course credits")}
+                  </label>
+                  <input data-i18n-managed
+                    id="cat-credit"
+                    className="portal-input"
+                    type="number"
+                    min="0"
+                    placeholder={t("Trống = không giới hạn", "Blank = unlimited")}
+                    value={editing.form.classCreditLimit ?? ''}
+                    onChange={(e) => set('classCreditLimit', e.target.value)}
+                  />
+                </div>
+                <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                  <label className="portal-label" htmlFor="cat-pt-sessions">
+                    {t("Số buổi PT 1:1 / 30 ngày", "Free 1:1 PT sessions / 30 days")}
+                  </label>
+                  <input
+                    id="cat-pt-sessions"
+                    className="portal-input"
+                    type="number"
+                    min="0"
+                    value={editing.form.ptSessionsPerCycle ?? '0'}
+                    onChange={(e) => set('ptSessionsPerCycle', e.target.value)}
+                  />
+                </div>
+                <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                  <label className="portal-label" htmlFor="cat-hold-days">
+                    {t("Số ngày bảo lưu tối đa", "Max hold days")}
+                  </label>
+                  <input
+                    id="cat-hold-days"
+                    className="portal-input"
+                    type="number"
+                    min="0"
+                    placeholder={t("0 = không hỗ trợ", "0 = disabled")}
+                    value={editing.form.holdMaxDays ?? '0'}
+                    onChange={(e) => set('holdMaxDays', e.target.value)}
+                  />
+                </div>
+                <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                  <label className="portal-label" htmlFor="cat-discount">
+                    {t("Giảm giá PT / khóa trả phí (%)", "Extra PT & course discount (%)")}
+                  </label>
+                  <input
+                    id="cat-discount"
+                    className="portal-input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editing.form.discountPercent ?? '0'}
+                    onChange={(e) => set('discountPercent', e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
@@ -815,6 +875,13 @@ export function ManagerCatalogsPage() {
                                     classCreditLimit: p.classCreditLimit == null ? '' : String(p.classCreditLimit),
                                     status: p.status,
                                     tier,
+                                    ptSessionsPerCycle: String(p.ptSessionsPerCycle ?? 0),
+                                    holdMaxDays: String(p.holdMaxDays ?? 0),
+                                    discountPercent: String(p.discountPercent ?? 0),
+                                    vipRoomAccess: p.vipRoomAccess ? 'true' : 'false',
+                                    canViewWorkoutPlan: p.canViewWorkoutPlan ? 'true' : 'false',
+                                    allowsPeriodicAssessment: p.allowsPeriodicAssessment ? 'true' : 'false',
+                                    allowsDeepAssessment: p.allowsDeepAssessment ? 'true' : 'false',
                                   },
                                 })
                               }
