@@ -22,7 +22,7 @@ const TRANSITIONS: Record<Status, Status[]> = { open: ['open', 'in_progress'], i
  * mở một phiếu để trả lời bằng ô soạn tin, đổi trạng thái hoặc chuyển cấp lên quản lý.
  * Với quản lý (`manager`), API chỉ trả phiếu đã chuyển cấp; quản lý trả lời, đổi trạng thái nhưng không chuyển cấp tiếp.
  */
-export function StaffSupportChat({ onBack, active = true, manager = false }: { onBack: () => void; active?: boolean; manager?: boolean }) {
+export function StaffSupportChat({ onBack, active = true, manager = false, split = false, onUnreadCountChange }: { onBack: () => void; active?: boolean; manager?: boolean; split?: boolean; onUnreadCountChange?: (count: number) => void }) {
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [page, setPage] = useState(0);
@@ -82,9 +82,12 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
         if (!current()) return;
       }
       setTickets(result.content); setPages(result.totalPages); setListError(null);
+      if (status === '' && !unread) {
+        onUnreadCountChange?.(result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0));
+      }
     } catch (cause) { if (current()) setListError(supportError(cause)); }
     finally { if (current()) setLoading(false); }
-  }, []);
+  }, [onUnreadCountChange]);
   useEffect(() => { void loadList(); }, [loadList]);
 
   // Tải chi tiết phiếu và các tin nhắn (silent thì không hiện trạng thái tải).
@@ -246,59 +249,57 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   // Tên hội viên của phiếu (không có tên thì hiện "Hội viên #id").
   const memberName = (item: SupportTicket) => item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`);
 
-  if (selected === null) {
-    return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
-      <SupportHeader onBack={onBack} active={active} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={null}>
-        <HeaderAction label={t('Làm mới', 'Refresh')} disabled={loading} onClick={() => void loadList()}>
-          <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-        </HeaderAction>
-      </SupportHeader>
-      <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
-        <button type="button" role="radio" aria-checked={!unreadOnly && filter === ''} className={`support-chat__chip${!unreadOnly && filter === '' ? ' is-selected' : ''}`} onClick={() => changeQuery(0, '', false)}>{t('Tất cả', 'All')}</button>
-        <button type="button" role="radio" aria-checked={unreadOnly} className={`support-chat__chip${unreadOnly ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, !unreadOnly)}>{t('Chưa đọc', 'Unread')}</button>
-      </div>
-      <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
-        {STATUSES.map(value => <button key={value} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter === value ? '' : value)}>
-          {t(...SUPPORT_STATUS_LABEL[value])}</button>)}
-      </div>
-      <div ref={listElement} className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
-        {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
-          : listError ? <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadList()}>{t('Thử lại', 'Retry')}</button></div>
-            : tickets.length === 0 ? <p className="direct-chat__empty">{manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
-              : <ul className="support-chat__ticket-list">{tickets.map(item => {
-                const pair = SUPPORT_STATUS_LABEL[item.status];
-                const unread = !!item.unreadCount;
-                const rawPreview = item.lastMessage ?? item.description ?? localizedSubject(item.subject, t);
-                const senderPrefix = item.lastMessageMine
-                  ? t('Bạn: ', 'You: ')
-                  : item.lastMessageSenderName
-                    ? `${item.lastMessageSenderName}: `
-                    : '';
-                return <li key={item.id}><button type="button" data-support-ticket={item.id} className={`direct-chat__person${unread ? ' has-unread' : ''}`} onClick={() => open(item)}>
-                  <span className="direct-chat__person-info">
-                    <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
-                    {!manager && <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>}
-                    <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{senderPrefix}{rawPreview}</span>
-                    {!manager && <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>}
-                  </span>
-                  <span className="support-chat__badges">
-                    {unread && <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>{item.unreadCount! > 99 ? '99+' : item.unreadCount}</span>}
-                    <span className={`support-chat__pill support-chat__pill--${item.status}`}>{pair ? t(...pair) : item.status}</span>
-                    {item.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}
-                  </span>
-                </button></li>;
-              })}</ul>}
-        {!loading && !listError && pages > 1 && <nav className="direct-chat__pagination" aria-label={t('Trang phiếu hỗ trợ', 'Support ticket pages')}>
-          <button type="button" className="direct-chat__link" disabled={page === 0} onClick={() => changeQuery(page - 1, filter)}>{t('Trước', 'Previous')}</button><span>{page + 1}/{pages}</span>
-          <button type="button" className="direct-chat__link" disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>{t('Sau', 'Next')}</button>
-        </nav>}
-      </div>
-    </section>;
-  }
+  const inboxPane = <section data-i18n-managed className={`direct-chat__thread direct-chat__support support-chat${split ? ' support-chat__split-list' : ''}`} aria-labelledby="chat-support-title">
+    <SupportHeader onBack={onBack} active={active && (!split || selected === null)} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={null}>
+      <HeaderAction label={t('Làm mới', 'Refresh')} disabled={loading} onClick={() => void loadList()}>
+        <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      </HeaderAction>
+    </SupportHeader>
+    <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
+      <button type="button" role="radio" aria-checked={!unreadOnly && filter === ''} className={`support-chat__chip${!unreadOnly && filter === '' ? ' is-selected' : ''}`} onClick={() => changeQuery(0, '', false)}>{t('Tất cả', 'All')}</button>
+      <button type="button" role="radio" aria-checked={unreadOnly} className={`support-chat__chip${unreadOnly ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, !unreadOnly)}>{t('Chưa đọc', 'Unread')}</button>
+    </div>
+    <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
+      {STATUSES.map(value => <button key={value} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter === value ? '' : value)}>
+        {t(...SUPPORT_STATUS_LABEL[value])}</button>)}
+    </div>
+    <div ref={listElement} className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
+      {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
+        : listError ? <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadList()}>{t('Thử lại', 'Retry')}</button></div>
+          : tickets.length === 0 ? <p className="direct-chat__empty">{manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
+            : <ul className="support-chat__ticket-list">{tickets.map(item => {
+              const pair = SUPPORT_STATUS_LABEL[item.status];
+              const unread = !!item.unreadCount;
+              const rawPreview = item.lastMessage ?? item.description ?? localizedSubject(item.subject, t);
+              const senderPrefix = item.lastMessageMine
+                ? t('Bạn: ', 'You: ')
+                : item.lastMessageSenderName
+                  ? `${item.lastMessageSenderName}: `
+                  : '';
+              return <li key={item.id}><button type="button" data-support-ticket={item.id} className={`direct-chat__person${unread ? ' has-unread' : ''}${item.id === selected ? ' is-selected' : ''}`} onClick={() => open(item)}>
+                <span className="direct-chat__person-info">
+                  <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
+                  {!manager && <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>}
+                  <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{senderPrefix}{rawPreview}</span>
+                  {!manager && <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>}
+                </span>
+                <span className="support-chat__badges">
+                  {unread && <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>{item.unreadCount! > 99 ? '99+' : item.unreadCount}</span>}
+                  <span className={`support-chat__pill support-chat__pill--${item.status}`}>{pair ? t(...pair) : item.status}</span>
+                  {item.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}
+                </span>
+              </button></li>;
+            })}</ul>}
+      {!loading && !listError && pages > 1 && <nav className="direct-chat__pagination" aria-label={t('Trang phiếu hỗ trợ', 'Support ticket pages')}>
+        <button type="button" className="direct-chat__link" disabled={page === 0} onClick={() => changeQuery(page - 1, filter)}>{t('Trước', 'Previous')}</button><span>{page + 1}/{pages}</span>
+        <button type="button" className="direct-chat__link" disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>{t('Sau', 'Next')}</button>
+      </nav>}
+    </div>
+  </section>;
 
   const pair = ticket ? SUPPORT_STATUS_LABEL[ticket.status] : null;
   const closed = ticket?.status === 'closed';
-  return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
+  const detailPane = selected !== null ? <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
     <SupportHeader onBack={close} active={active} inboxBackLabel={t('Quay lại hộp thư', 'Back to inbox')} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
       {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setEscalationError(null); setEscalating(true); }}>
         <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
@@ -332,5 +333,22 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
         <div className="form-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => { setEscalating(false); setEscalationError(null); }}>{t('Hủy', 'Cancel')}</button><button type="submit" className="btn-primary" disabled={busy || !reason.trim()}>{busy ? t('Đang chuyển…', 'Escalating…') : t('Chuyển lên quản lý', 'Escalate to management')}</button></div>
       </form>
     </Modal>}
-  </section>;
+  </section> : null;
+
+  if (split) {
+    return (
+      <div data-i18n-managed className={`support-chat support-chat--split${selected !== null ? ' has-selection' : ''}`}>
+        {inboxPane}
+        <div className="support-chat__split-detail">
+          {detailPane ?? (
+            <div className="support-chat__split-placeholder">
+              <p>{t('Chọn một khiếu nại ở danh sách bên trái để xem chi tiết và phản hồi.', 'Select a ticket on the left to view details and reply.')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return selected === null ? inboxPane : detailPane;
 }

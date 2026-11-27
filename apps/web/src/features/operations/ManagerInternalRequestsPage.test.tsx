@@ -93,7 +93,9 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
   it('renders manager review page with pending requests and approve/reject actions', async () => {
     await render();
 
-    expect(host.textContent).toContain('Duyệt đơn từ nội bộ');
+    expect(host.textContent).toContain('Đơn từ & Khiếu nại');
+    expect(host.textContent).toContain('Đơn từ nội bộ');
+    expect(host.textContent).toContain('Khiếu nại chuyển lên');
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Phê duyệt đơn');

@@ -77,8 +77,8 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/manager/classes', label: 'Lớp học & xếp lịch', icon: 'calendar', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/coach-assignments', label: 'Phân công HLV', icon: 'users', roles: ['MANAGER'] },
-  // Khiếu nại chuyển lên nằm trong khung Tin nhắn (Hỗ trợ & Khiếu nại), sidebar chỉ còn đơn nội bộ.
-  { to: '/manager/requests', label: 'Duyệt đơn từ nội bộ', icon: 'inbox', roles: ['MANAGER'] },
+  // Đơn từ nội bộ và khiếu nại chuyển lên gộp chung trong /manager/requests.
+  { to: '/manager/requests', label: 'Đơn từ & Khiếu nại', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'badge', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ cá nhân', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
@@ -120,7 +120,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/manager/coach-assignments': 'Coach assignments',
   '/staff/kyc': 'Identity & holds',
   '/staff/reception-history': 'History',
-  '/manager/requests': 'Review internal requests',
+  '/manager/requests': 'Requests & Tickets',
   '/manager/staff-accounts': 'Staff accounts',
   '/member/profile': 'My profile',
 };

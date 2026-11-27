@@ -37,20 +37,12 @@ function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
  */
 export function ChatWidget() {
   const user = useCurrentUser();
-  const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
+  const allowed = !user || ['MEMBER', 'STAFF', 'COACH'].includes(user.role);
   if (!allowed) return null;
   const identity = sessionIdentityKey(user);
-  if (user?.role === 'MANAGER') return <ManagerChatWidget key={identity} />;
   return user
     ? <SignedInChatWidget key={identity} />
     : <ChatShell key={identity} unread={0} feed={null} onOpen={() => {}} />;
-}
-
-/** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */
-const MANAGER_FEED: ChatRealtimeFeed = { connection: 'disabled', tick: 0, reconnect: () => {} };
-/** Nút chat nổi cho quản lý (không có số chưa đọc và không hiện trạng thái kết nối). */
-function ManagerChatWidget() {
-  return <ChatShell unread={0} feed={MANAGER_FEED} onOpen={() => {}} />;
 }
 
 /** Widget giữ một kết nối realtime duy nhất: vừa cập nhật badge chưa đọc, vừa báo cho khung chat tải lại. */

@@ -52,3 +52,19 @@
 }
 .support-chat__closed { display: grid; gap: 4px; padding: 10px 16px; border-top: 1px solid var(--support-line); }
 .support-chat__closed .direct-chat__link { justify-self: start; }
+
+/* Bố cục 2 cột toàn trang khi nhúng trong trang Đơn từ & Khiếu nại của Quản lý */
+.support-chat--split { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); min-height: 560px; max-height: 74vh; border: 1px solid var(--portal-border); border-radius: 16px; background: var(--portal-surface); overflow: hidden; }
+.support-chat__split-list { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--portal-border); }
+.support-chat__split-detail { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.support-chat__split-detail > .direct-chat__thread { flex: 1; min-height: 0; }
+.support-chat__split-placeholder { flex: 1; display: grid; place-content: center; text-align: center; padding: 32px; color: var(--portal-muted); }
+@media (min-width: 901px) {
+  .support-chat--split .direct-chat__back { display: none; }
+}
+@media (max-width: 900px) {
+  .support-chat--split { grid-template-columns: 1fr; }
+  .support-chat--split.has-selection .support-chat__split-list { display: none; }
+  .support-chat--split:not(.has-selection) .support-chat__split-detail { display: none; }
+  .support-chat__split-list { border-right: 0; }
+}

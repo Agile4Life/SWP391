@@ -117,10 +117,10 @@ it('asks guests to log in without fetching private data', async () => {
   expect(api.getConversations).not.toHaveBeenCalled();
 });
 
-it('offers managers the widget without private chat realtime or unread polling', async () => {
+it('hides the chat widget for managers because escalated tickets live in ManagerInternalRequestsPage', async () => {
   setCurrentUser({ id: 'manager', identifier: 'manager', name: 'Manager', role: 'MANAGER' });
   await render();
-  expect(host.querySelector('.chat-widget__trigger')).not.toBeNull();
+  expect(host.querySelector('.chat-widget__trigger')).toBeNull();
   expect(api.getConversations).not.toHaveBeenCalled();
   expect(api.getChatUnreadCount).not.toHaveBeenCalled();
   expect(subscribeChat).not.toHaveBeenCalled();

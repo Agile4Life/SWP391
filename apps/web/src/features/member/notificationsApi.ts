@@ -144,7 +144,8 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
     if (/^\/manager\/equipment(?:\/|$)/.test(pathname)) return '/manager/catalogs';
     if (/^\/manager\/coach-reviews(?:\/|$)/.test(pathname)) return '/manager/coach-assignments';
     if (/^\/manager\/users(?:\/|$)/.test(pathname)) return '/manager/staff-accounts';
-    if (/^\/manager\/support(?:\/|$)/.test(pathname)) return '/messages?tab=support';
+    if (/^\/manager\/support(?:\/|$)/.test(pathname)) return '/manager/requests?tab=complaints';
+    if (path === '/manager/requests?tab=complaints') return path;
     return MANAGER_ACTIVE_PATHS.has(pathname) ? path : null;
   }
 
@@ -286,7 +287,7 @@ export function notificationDestination(notification: NotificationTarget, role =
   }
 
   if (['MANAGER', 'CENTER_MANAGER'].includes(role)) {
-    if (rawEntity === 'support_request' || rawType === 'support_reply') return '/messages?tab=support';
+    if (rawEntity === 'support_request' || rawType === 'support_reply') return '/manager/requests?tab=complaints';
     if (
       ['staff_internal_request', 'internal_request', 'staff_request'].includes(rawEntity) ||
       /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request/.test(text)
