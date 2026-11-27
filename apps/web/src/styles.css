@@ -438,6 +438,15 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   margin: 0 0 16px;
 }
 
+.portal-v2 #portal-main > .sol-toast {
+  margin-inline: var(--portal-gutter, 24px);
+}
+
+@media (min-width: 768px) {
+  /* Topbar nổi chiếm hàng 54px; toast inline phải nằm dưới hàng nút, không phủ nội dung/đóng. */
+  .portal-v2 #portal-main > .sol-toast { margin-top: 64px; }
+}
+
 .sol-toast__card {
   display: flex;
   flex-direction: row;
