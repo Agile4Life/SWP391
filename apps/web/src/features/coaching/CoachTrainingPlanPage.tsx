@@ -478,6 +478,7 @@ export function CoachTrainingPlanPage() {
           id: appliedRecommendationId ?? 0,
           memberId: targetMemberId,
           memberName: targetMember?.fullName,
+          modelName: 'sol-coach-assistant',
           goal: planGoal || targetMember?.fitnessGoal || '',
           analysis: t(
             'Giáo án AI đã áp dụng trước đó trong trình soạn của học viên này.',
@@ -525,6 +526,7 @@ export function CoachTrainingPlanPage() {
           id: appliedRecommendationId ?? 0,
           memberId: targetMemberId,
           memberName: targetMember?.fullName,
+          modelName: 'sol-coach-assistant',
           goal: planGoal || targetMember?.fitnessGoal || '',
           analysis: t(
             'Giáo án AI đang được áp dụng trong trình soạn cho học viên này.',
