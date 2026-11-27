@@ -250,7 +250,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
         {showTickets ? <span className="support-chat__ticketbar-subject">{t('Phiếu của tôi', 'My tickets')}</span>
           : ticket ? <><span className="support-chat__ticketbar-subject">{displaySubject(ticket.subject)}</span>
             <span className={`support-chat__pill support-chat__pill--${ticket.status}`}>{statusPair ? t(...statusPair) : ticket.status}</span></>
-            : null}
+            : <span className="support-chat__ticketbar-subject">{t('Yêu cầu mới', 'New request')}</span>}
       </p>
       <div className="support-chat__tools">
         {(!newMode || showTickets) && (
