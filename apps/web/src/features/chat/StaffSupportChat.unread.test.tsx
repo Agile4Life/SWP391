@@ -128,6 +128,19 @@ it('enables unread filter, latest message preview with sender, and mark-read for
   expect(button('Quay lại hộp thư')).toBeDefined();
 });
 
+it('searches manager complaints across pages while retaining the status filter', async () => {
+  await render({ manager: true, split: true });
+  await act(async () => button('Đang chờ').click());
+  const search = host.querySelector<HTMLInputElement>('[aria-label="Tìm khiếu nại"]')!;
+  expect(search.compareDocumentPosition(button('Tất cả')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'Hội viên An');
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(resolve => setTimeout(resolve, 350));
+  });
+  await vi.waitFor(() => expect(api.getSupportInbox).toHaveBeenLastCalledWith(0, 'open', false, 'Hội viên An'));
+});
+
 it('shows unread again when realtime reports a new incoming member message', async () => {
   vi.mocked(api.getSupportInbox).mockResolvedValueOnce({ content: [{ ...ticket, unreadCount: 0 }], totalPages: 1 });
   await render();

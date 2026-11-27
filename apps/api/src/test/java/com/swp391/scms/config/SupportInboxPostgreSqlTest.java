@@ -57,6 +57,22 @@ class SupportInboxPostgreSqlTest {
     }
 
     @Test
+    void searchFindsEscalatedTicketsByMemberOrSubjectBeforePagination() {
+        long member = user("MEMBER"), manager = user("CENTER_MANAGER");
+        jdbc.update("update users set full_name = 'Nguyễn Minh An' where id = ?", member);
+        jdbc.update("insert into members(user_id,membership_code,join_date,fitness_level) values (?,?,current_date,'beginner')", member, "SEARCH-" + member);
+        long visible = ticket(member, "Yêu cầu hoàn gói");
+        long hidden = ticket(member, "Yêu cầu chưa chuyển");
+        jdbc.update("update support_requests set escalated_at = now() where id = ?", visible);
+        assertThat(inbox.inbox(manager, "CENTER_MANAGER", null, false, "Minh An", PageRequest.of(0, 1)).getContent())
+                .extracting(SupportRequestDto::id).containsExactly(visible);
+        assertThat(inbox.inbox(manager, "CENTER_MANAGER", null, false, "HOÀN GÓI", PageRequest.of(0, 1)).getContent())
+                .extracting(SupportRequestDto::id).containsExactly(visible);
+        assertThat(inbox.inbox(manager, "CENTER_MANAGER", null, false, "chưa chuyển", PageRequest.of(0, 1)).getContent())
+                .extracting(SupportRequestDto::id).doesNotContain(hidden);
+    }
+
+    @Test
     void readCursorsPersistPerUserAndFiltersAndActivityOrderPrecedePagination() {
         long member = user("MEMBER"), first = user("RECEPTIONIST"), second = user("RECEPTIONIST");
         jdbc.update("insert into members(user_id,membership_code,join_date,fitness_level) values (?,?,current_date,'beginner')",
