@@ -195,10 +195,13 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       nameInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    const preset299 = [...host.querySelectorAll('button')].find((b) =>
-      b.textContent === '299.000\u00a0₫'
-    )!;
-    await act(async () => preset299.click());
+    const priceInput = host.querySelector<HTMLInputElement>('#cat-price')!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(priceInput, '299000');
+      priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+      priceInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
 
     await act(async () => {
       host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -284,7 +287,8 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     await act(async () => tabs[2].click());
     const addPkgBtn = host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!;
     await act(async () => addPkgBtn.click());
-    expect(host.textContent).toContain('9 months (270 days)');
+    expect(host.textContent).toContain('9 months');
+    expect(host.textContent).not.toContain('9 months (270 days)');
 
     // Load error hides empty table completely
     vi.mocked(catalogApi.disciplines).mockRejectedValueOnce(new Error('Catalog offline'));
