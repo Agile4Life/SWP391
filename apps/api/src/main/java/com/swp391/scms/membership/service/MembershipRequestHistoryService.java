@@ -37,6 +37,7 @@ public class MembershipRequestHistoryService {
     public static final int DEFAULT_DAYS = 30;
     public static final int MAX_DAYS = 180;
     private static final List<String> SETTLED = List.of("success", "refunded");
+    private static final int PAYMENT_LOOKUP_BATCH_SIZE = 500;
 
     private final PaymentRepository payments;
     private final MembershipSubscriptionRepository subscriptions;
@@ -84,9 +85,20 @@ public class MembershipRequestHistoryService {
                 .map(p -> p.getSubscription().getId()).collect(Collectors.toSet());
         Map<Long, List<Payment>> unpaidPayments = new HashMap<>();
         List<Payment> evidencePayments = new ArrayList<>(settledPayments);
+        // Gom ID trước khi đọc Payment; loại ID trùng và chia lô để giới hạn tham số IN.
+        List<Long> lookupIds = cancelledSubs.stream()
+                .filter(sub -> !paidSubscriptionIds.contains(sub.getId()) && visible(sub))
+                .map(MembershipSubscription::getId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, List<Payment>> linkedPayments = new HashMap<>();
+        for (int offset = 0; offset < lookupIds.size(); offset += PAYMENT_LOOKUP_BATCH_SIZE) {
+            for (var payment : payments.findAllBySubscriptionIdIn(
+                    lookupIds.subList(offset, Math.min(offset + PAYMENT_LOOKUP_BATCH_SIZE, lookupIds.size())))) {
+                linkedPayments.computeIfAbsent(payment.getSubscriptionId(), id -> new ArrayList<>()).add(payment);
+            }
+        }
         for (var sub : cancelledSubs) {
             if (paidSubscriptionIds.contains(sub.getId()) || !visible(sub)) continue;
-            var linked = payments.findAllBySubscriptionId(sub.getId());
+            var linked = linkedPayments.getOrDefault(sub.getId(), List.of());
             if (linked.stream().anyMatch(p -> SETTLED.contains(p.getStatus()))) continue;
             unpaidPayments.put(sub.getId(), linked);
             evidencePayments.addAll(linked);

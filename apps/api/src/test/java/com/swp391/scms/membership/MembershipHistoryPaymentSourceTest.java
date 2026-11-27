@@ -38,6 +38,7 @@ class MembershipHistoryPaymentSourceTest {
         sub.setId(50L); sub.setMember(member); sub.setQuotedPrice(new BigDecimal("250000"));
         when(payment.getId()).thenReturn(7L); when(payment.getMember()).thenReturn(member);
         when(payment.getSubscription()).thenReturn(sub); when(payment.getAmount()).thenReturn(amount);
+        when(payment.getSubscriptionId()).thenReturn(50L);
         when(payment.getStatus()).thenReturn("success"); when(payment.getMethod()).thenReturn("online_wallet");
         when(payment.getPaidAt()).thenReturn(LocalDateTime.of(2026, 11, 25, 10, 0));
         when(payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(anyList())).thenReturn(List.of(payment));
@@ -135,7 +136,7 @@ class MembershipHistoryPaymentSourceTest {
     @Test void unpaidCancelledRequestCanHaveASeparateLateGatewayReturn() {
         when(payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(anyList())).thenReturn(List.of());
         when(subscriptions.findByStatusOrderByUpdatedAtDesc("cancelled")).thenReturn(List.of(sub));
-        when(payments.findAllBySubscriptionId(50L)).thenReturn(List.of(payment));
+        when(payments.findAllBySubscriptionIdIn(anyCollection())).thenReturn(List.of(payment));
         when(payment.getStatus()).thenReturn("failed");
         attempt("LATE", "success"); entry("LATE:LATE_REFUND", "REFUND_CREDIT", "VNPAY_LATE_REFUND");
         assertEquals("UNPAID", row().actualPaymentMethod()); assertEquals(BigDecimal.ZERO, row().paidAmount());
@@ -149,5 +150,71 @@ class MembershipHistoryPaymentSourceTest {
     @Test void conflictingGatewayReferenceCannotChooseTheOneConvenientMatchingRecord() {
         gateway("G1"); entry("G1:DEBIT", "PAYMENT_DEBIT", "VNPAY").setAmount(BigDecimal.ONE);
         assertEquals("UNKNOWN", row().actualPaymentMethod());
+    }
+
+    MembershipSubscription cancelled(long id, int day) {
+        var result = new MembershipSubscription(); result.setId(id); result.setMember(sub.getMember());
+        result.setQuotedPrice(new BigDecimal("250000"));
+        result.setUpdatedAt(LocalDateTime.of(2026, 11, day, 10, 0));
+        return result;
+    }
+
+    void onlyCancelled(List<MembershipSubscription> cancelled) {
+        when(payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(anyList())).thenReturn(List.of());
+        when(subscriptions.findByStatusOrderByUpdatedAtDesc("cancelled")).thenReturn(cancelled);
+    }
+
+    @Test void manyCancelledRequestsUseOneBatchAndPreserveHistoryOrderAndQuotes() {
+        var cancelled = java.util.stream.IntStream.rangeClosed(1, 100)
+                .mapToObj(i -> cancelled(i, i % 25 + 1)).toList();
+        onlyCancelled(cancelled);
+        var rows = service.history(0);
+        assertEquals(100, rows.size());
+        assertTrue(rows.stream().allMatch(r -> r.paidAmount().signum() == 0
+                && new BigDecimal("250000").equals(r.quotedAmount()) && "UNPAID".equals(r.actualPaymentMethod())));
+        for (int i = 1; i < rows.size(); i++) assertFalse(rows.get(i).processedAt().isAfter(rows.get(i - 1).processedAt()));
+        verify(payments).findAllBySubscriptionIdIn(argThat(ids -> ids.size() == 100 && new HashSet<>(ids).size() == 100));
+        verify(payments, never()).findAllBySubscriptionId(anyLong());
+    }
+
+    @Test void emptyHistoryDoesNotQueryPaymentBatches() {
+        onlyCancelled(List.of()); assertTrue(service.history(0).isEmpty());
+        verify(payments, never()).findAllBySubscriptionIdIn(anyCollection());
+        verify(payments, never()).findAllBySubscriptionId(anyLong());
+    }
+
+    @Test void duplicateSubscriptionIdsAreQueriedOnceWithoutChangingExistingRows() {
+        var first = cancelled(50, 24); var second = cancelled(50, 25);
+        onlyCancelled(List.of(first, second));
+        assertEquals(2, service.history(0).size());
+        verify(payments).findAllBySubscriptionIdIn(argThat(ids -> ids.size() == 1 && ids.contains(50L)));
+        verify(payments, never()).findAllBySubscriptionId(anyLong());
+    }
+
+    @Test void anySettledPaymentStillExcludesCancelledRequestEvenWhenOtherPaymentsFailed() {
+        onlyCancelled(List.of(sub));
+        Payment failed = mock(Payment.class); when(failed.getSubscriptionId()).thenReturn(50L);
+        when(failed.getStatus()).thenReturn("failed");
+        when(payment.getSubscriptionId()).thenReturn(50L);
+        when(payments.findAllBySubscriptionIdIn(anyCollection())).thenReturn(List.of(failed, payment));
+        assertTrue(service.history(0).isEmpty());
+    }
+
+    @Test void settledPaymentSelectionKeepsRepositoryOrderRatherThanSelectingAnotherPayment() {
+        Payment older = mock(Payment.class); when(older.getSubscription()).thenReturn(sub);
+        when(older.getId()).thenReturn(8L); when(older.getAmount()).thenReturn(BigDecimal.ONE);
+        when(payment.getMethod()).thenReturn("cash");
+        when(payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(anyList())).thenReturn(List.of(payment, older));
+        var rows = service.history(0);
+        assertEquals(1, rows.size()); assertEquals(7L, rows.getFirst().paymentId());
+        assertEquals(amount, rows.getFirst().paidAmount()); assertEquals("CASH", rows.getFirst().actualPaymentMethod());
+        verify(payments, never()).findAllBySubscriptionIdIn(anyCollection());
+    }
+
+    @Test void largeIdListUsesBoundedBatches() {
+        onlyCancelled(java.util.stream.IntStream.rangeClosed(1, 1201).mapToObj(i -> cancelled(i, 25)).toList());
+        assertEquals(1201, service.history(0).size());
+        verify(payments, times(3)).findAllBySubscriptionIdIn(argThat(ids -> !ids.isEmpty() && ids.size() <= 500));
+        verify(payments, never()).findAllBySubscriptionId(anyLong());
     }
 }
