@@ -140,6 +140,7 @@ export function StaffReceptionPage() {
   const [completedMemberName, setCompletedMemberName] = useState<string>('');
   const [completedMembershipCode, setCompletedMembershipCode] = useState<string | null>(null);
   const selectedMemberId = selectedMember?.userId;
+  useEffect(() => { setPaymentError(null); }, [selectedMemberId]);
   const selectedPendingId = selectedPending?.id;
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
@@ -1600,12 +1601,12 @@ export function StaffReceptionPage() {
                   ))}
                 </Select>
               )}
-              {!selectedPending && !loadingOffers && renewalOptions.error && (
-                <p role="status" className="form-error" data-testid="renewal-options-warning">{t(renewalOptions.error)}</p>
+              {!selectedPending && !loadingOffers && renewalOptions.chainWarning && (
+                <p role="status" className="form-error" data-testid="renewal-options-warning">{t(renewalOptions.chainWarning)}</p>
               )}
               {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
                 <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
-                  {t('Gói hiện tại còn hạn. Vui lòng chọn kỳ gia hạn hợp lệ.', 'The current membership is still valid. Please choose an eligible renewal period.')}
+                  {t('Gói còn hạn và có thể gia hạn nối tiếp khi đủ điều kiện.', 'The membership is still valid and can be renewed consecutively when eligible.')}
                 </p>
               )}
               {offersError && (
@@ -1650,7 +1651,7 @@ export function StaffReceptionPage() {
                   id="pos-method"
                   className="portal-select"
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  onChange={(e) => { setPaymentMethod(e.target.value as PaymentMethod); setPaymentError(null); }}
                   disabled={isSubmittingPayment}
                 >
                   <option value="cash">{t("Tiền mặt tại quầy")}</option>

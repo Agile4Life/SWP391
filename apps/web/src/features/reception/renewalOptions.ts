@@ -7,6 +7,11 @@ const reviewPeriod = () => staffMessage(
   'This period cannot be renewed. Choose another period or ask a manager to review it.',
 );
 
+const reviewChain = () => staffMessage(
+  'Không xác minh được một số chuỗi gia hạn. Vui lòng tải lại danh sách hoặc nhờ quản lý kiểm tra.',
+  'Some renewal chains could not be verified. Reload the list or ask a manager to review them.',
+);
+
 /** Đọc ngày YYYY-MM-DD thành mốc thời gian UTC; ngày không tồn tại thì trả null. */
 function dateValue(value: string): number | null {
   const time = Date.parse(`${value}T00:00:00Z`);
@@ -18,7 +23,7 @@ export function eligibleRenewalOptions(
   candidates: readonly RenewalCandidate[],
   packages: readonly { id: number; durationDays: number }[],
   today: string,
-): { options: RenewalCandidate[]; error: StaffMessage | null } {
+): { options: RenewalCandidate[]; chainWarning: StaffMessage | null } {
   const byId = new Map<number, RenewalCandidate>();
   const duplicates = new Set<number>();
   const childCounts = new Map<number, number>();
@@ -30,7 +35,7 @@ export function eligibleRenewalOptions(
     }
   }
   const options: RenewalCandidate[] = [];
-  let error: StaffMessage | null = null;
+  let chainWarning: StaffMessage | null = null;
   for (const candidate of candidates) {
     const visited = new Set<number>();
     let current: RenewalCandidate | undefined = candidate;
@@ -54,17 +59,20 @@ export function eligibleRenewalOptions(
       }
       current = parent;
     }
-    if (!valid) { error ??= reviewPeriod(); continue; }
+    if (!valid) { chainWarning ??= reviewChain(); continue; }
     if (childCounts.has(candidate.id)) continue;
-    const duration = packages.find(pkg => pkg.id === candidate.packageId)?.durationDays;
+    const pkg = packages.find(pkg => pkg.id === candidate.packageId);
+    if (!pkg) continue;
+    const duration = pkg.durationDays;
     if (!duration || !Number.isInteger(duration) || duration < 1 || dateValue(today) === null) {
-      error ??= reviewPeriod(); continue;
+      chainWarning ??= reviewChain(); continue;
     }
     const reason = renewalOptionError(candidate, candidates, packages, today);
-    if (reason) { error ??= reason; continue; }
+    // Lỗi của kỳ bị loại không phải lỗi của kỳ đang chọn; chỉ cảnh báo chung khi dữ liệu chuỗi lỗi.
+    if (reason) continue;
     options.push(candidate);
   }
-  return { options, error };
+  return { options, chainWarning };
 }
 
 /** Chỉ chặn lỗi chứng minh được từ DTO thật; backend vẫn kiểm tra toàn bộ lịch sử và quyền gia hạn. */
