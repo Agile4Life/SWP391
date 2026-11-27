@@ -65,9 +65,18 @@ export function uniqueMessages(messages: SupportMessage[]): SupportMessage[] {
   return [...new Map(messages.map(message => [message.id, message])).values()];
 }
 
-/** Lỗi hiển thị của phiếu hỗ trợ: giữ ApiError, nếu không dùng câu dự phòng song ngữ. */
+/** Lỗi hiển thị của phiếu hỗ trợ: lọc bỏ gợi ý thanh toán khi timeout, giữ ApiError khác hoặc dùng câu dự phòng song ngữ. */
 export function supportError(cause: unknown): ChatError {
-  return cause instanceof ApiError ? cause : sourceMessage('Không thể hoàn tất yêu cầu. Vui lòng thử lại.', 'Unable to complete the request. Please try again.');
+  if (cause instanceof ApiError) {
+    if (cause.code === 'TIMEOUT') {
+      return sourceMessage(
+        'Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại.',
+        'The server took too long to respond. Check your connection and try again.',
+      );
+    }
+    return cause;
+  }
+  return sourceMessage('Không thể hoàn tất yêu cầu. Vui lòng thử lại.', 'Unable to complete the request. Please try again.');
 }
 
 /** Lỗi 403 hoặc 404 nghĩa là không còn quyền truy cập phiếu. */
