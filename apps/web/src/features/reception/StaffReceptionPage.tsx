@@ -656,7 +656,7 @@ export function StaffReceptionPage() {
     setTrialRejectError(null);
     try {
       await receptionApi.rejectTrial(rejectingTrial.id, reason);
-      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'info', { record: true });
+      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'success', { record: true });
       setRejectingTrial(null);
       if (inspectingTrial?.id === rejectingTrial.id) setInspectingTrial(null);
       await loadPendingTrials();
