@@ -216,8 +216,23 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       </section>}
 
-      {/* Thanh công cụ: Bộ lọc, Tìm kiếm, Chuyển đổi chế độ xem */}
+      {/* Thanh công cụ: Chuyển đổi chế độ xem, Bộ lọc, Tìm kiếm */}
       <section className="portal-card coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
+        <div className="portal-switch coach-view-toggle" role="group" aria-label={t("Cách hiển thị")}>
+          <button
+            type="button"
+            aria-pressed={viewMode === 'cards'}
+            onClick={() => setViewMode('cards')}
+          >
+            {t("Theo HLV")}</button>
+          <button
+            type="button"
+            aria-pressed={viewMode === 'table'}
+            onClick={() => setViewMode('table')}
+          >
+            {t("Bảng danh sách")}</button>
+        </div>
+
         <div className="coach-assignments-filters">
           <input
             type="search"
@@ -266,21 +281,6 @@ export function ManagerCoachAssignmentsPage() {
             <option value="students_desc">{t("Số học viên khác nhau (Nhiều nhất)", "Distinct members (Highest)")}</option>
             <option value="students_asc">{t("Số học viên khác nhau (Ít nhất)", "Distinct members (Lowest)")}</option>
           </Select>
-        </div>
-
-        <div className="portal-switch coach-view-toggle" role="group" aria-label={t("Cách hiển thị")}>
-          <button
-            type="button"
-            aria-pressed={viewMode === 'cards'}
-            onClick={() => setViewMode('cards')}
-          >
-            {t("Theo HLV")}</button>
-          <button
-            type="button"
-            aria-pressed={viewMode === 'table'}
-            onClick={() => setViewMode('table')}
-          >
-            {t("Bảng danh sách")}</button>
         </div>
       </section>
 
