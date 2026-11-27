@@ -472,7 +472,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
           {inboxPane}
           <div className="support-split__detail">
             {detailPane ? (
-              <div className="portal-card support-split__detail-card">
+              <div className="portal-card support-split__detail-card direct-chat">
                 {detailPane}
               </div>
             ) : (

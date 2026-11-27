@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: ô trả lời khiếu nại trải rộng trong khung bo viền, giữ nút emoji và nút chữ Gửi bo tròn ở phía phải.
+
 Quyết định Manager: mỗi ngày và slot chỉ được có tối đa hai bộ môn lớp nhóm; wizard báo rõ khi đã đủ hai bộ môn.
 
 Quyết định Manager: tab Khiếu nại chuyển lên có ô tìm theo tên hội viên hoặc chủ đề trước bộ lọc trạng thái; danh sách dùng các hàng liền nhau và khung trao đổi rõ ràng, đồng bộ theme portal. Tab Đơn từ nội bộ có ô tìm theo nhân sự hoặc tiêu đề trước bộ lọc trạng thái, kết hợp với lọc loại đơn.
