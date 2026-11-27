@@ -291,6 +291,7 @@ describe('CoachAttendancePage (group class attendance)', () => {
     vi.mocked(attendanceApi.getHistory).mockResolvedValue([
       {
         sessionId: 88,
+        classId: 101,
         className: 'Boxing Pro',
         roomName: 'Ring 1',
         sessionDate: today,

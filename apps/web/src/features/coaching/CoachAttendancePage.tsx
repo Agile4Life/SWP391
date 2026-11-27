@@ -719,8 +719,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
                     <div className="history-stat-row">
                       <div className="stat-pill">
-                        <span className="stat-label">{t("Sĩ số đã đăng ký:")}</span>
-                        <span className="stat-num">{session.bookedCount} / {session.capacity} {t("học viên")}</span>
+                        <span className="stat-label">{t("Sĩ số đã đăng ký:", "Enrolled capacity:")}</span>
+                        <span className="stat-num">{session.bookedCount} / {session.capacity} {t("học viên", "students")}</span>
                       </div>
                     </div>
 
