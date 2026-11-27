@@ -76,9 +76,13 @@ export function ManagerReportsPage() {
   const latestRequest = useRef(0);
 
   const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
+  const [cancellationSearch, setCancellationSearch] = useState('');
   const [loadingCancellations, setLoadingCancellations] = useState(false);
   const [cancellationError, setCancellationError] = useState(false);
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
+  const filteredCancellations = cancellationRequests.filter(request =>
+    (request.memberName ?? '').toLocaleLowerCase('vi').includes(cancellationSearch.trim().toLocaleLowerCase('vi')),
+  );
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
@@ -650,6 +654,16 @@ export function ManagerReportsPage() {
           <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
         </div>
 
+        <input
+          className="portal-input"
+          type="search"
+          aria-label={t('Tìm hội viên theo tên', 'Search members by name')}
+          placeholder={t('Tìm hội viên theo tên', 'Search members by name')}
+          value={cancellationSearch}
+          onChange={event => setCancellationSearch(event.target.value)}
+          style={{ width: '100%', maxWidth: 400, marginTop: 12 }}
+        />
+
         {loadingCancellations ? (
           <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
         ) : cancellationError ? (
@@ -657,9 +671,11 @@ export function ManagerReportsPage() {
         ) : cancellationRequests.length === 0 ? (
           <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
             {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
+        ) : filteredCancellations.length === 0 ? (
+          <p role="status" className="row-card__meta" style={{ marginTop: 12 }}>{t('Không tìm thấy yêu cầu phù hợp.', 'No matching requests found.')}</p>
         ) : (
           <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
-            {cancellationRequests.map((req) => {
+            {filteredCancellations.map((req) => {
               const isBusy = decidingCancelId === req.id;
               const isPending = req.status === 'PENDING';
               return (

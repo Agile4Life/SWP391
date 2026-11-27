@@ -41,6 +41,28 @@ it('shows cancellation requests below daily revenue and before recent transactio
   expect(text.indexOf('Doanh thu theo ngày')).toBeLessThan(text.indexOf('Duyệt yêu cầu hủy'));
   expect(text.indexOf('Duyệt yêu cầu hủy')).toBeLessThan(text.indexOf('Giao dịch gần đây'));
 });
+it('filters cancellation requests by member name without changing the pending count', async () => {
+  api.getCancellationRequests.mockResolvedValue([
+    { id: 101, memberId: 1, memberName: 'Nguyễn Văn An', packageName: 'Gold', status: 'PENDING', reason: 'A' },
+    { id: 102, memberId: 2, memberName: 'Trần Thị Bình', packageName: 'Silver', status: 'PENDING', reason: 'B' },
+    { id: 103, memberId: 3, memberName: null, packageName: 'Bronze', status: 'APPROVED', reason: 'C' },
+  ]);
+  await act(async () => root.render(<ManagerReportsPage />));
+  const search = host.querySelector<HTMLInputElement>('input[aria-label="Tìm hội viên theo tên"]')!;
+  const setSearch = async (value: string) => act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, value);
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await setSearch(' NGUYỄN ');
+  expect(host.textContent).toContain('Nguyễn Văn An');
+  expect(host.textContent).not.toContain('Trần Thị Bình');
+  expect(host.textContent).toContain('Hoàn tiền về Ví (2)');
+  await setSearch('không có');
+  expect(host.textContent).toContain('Không tìm thấy yêu cầu phù hợp.');
+  await setSearch('');
+  expect(host.textContent).toContain('Trần Thị Bình');
+  expect(host.textContent).toContain('Hội viên #3');
+});
 it('scrolls a long daily chart with the mouse wheel and lets the page scroll at the ends', async () => {
   api.getSummary.mockResolvedValueOnce({ periodRevenue: 100, todayRevenue: 0, packagesSoldCount: 0, renewalRate: null,
     dailyRevenue: Array.from({ length: 40 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10), revenue: i + 1, transactionCount: 1 })),
