@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: tab Khiếu nại chuyển lên có ô tìm theo tên hội viên hoặc chủ đề trước bộ lọc trạng thái; danh sách dùng các hàng liền nhau và khung trao đổi rõ ràng, đồng bộ theme portal. Tab Đơn từ nội bộ có ô tìm theo nhân sự hoặc tiêu đề trước bộ lọc trạng thái, kết hợp với lọc loại đơn.
+
 Quyết định Manager: khi tạo khóa học thành công, hiển thị kết quả trong hộp thoại giữa màn hình; hộp thoại đóng bằng nút × hoặc Esc.
 
 Quyết định Hộp thoại / Popup toàn portal (27/11/2026 — **ghi đè** ngoại lệ giữ nút “Đóng” đơn lẻ ngày 14/11/2026 bên dưới): mọi popup/hộp thoại đã có nút `×` ở góc trên bên phải (như `<Modal>` với `.portal-dialog__close`) **không được đặt thêm nút “Đóng” / “Close” ở phía dưới**, kể cả khi hộp thoại chỉ có một nút ở chân (thông báo kết quả, cảnh báo không thể thực hiện, hồ sơ chi tiết, trạng thái đã thanh toán, kết quả sau khi hoàn tất thao tác). Nút `×` góc phải (cùng phím `Esc` / bấm nền mờ) là lối thoát duy nhất; hộp thoại biểu mẫu hoặc xác nhận có hành động chính vẫn giữ nút `Hủy` / nhãn phủ định cạnh nút xác nhận.
