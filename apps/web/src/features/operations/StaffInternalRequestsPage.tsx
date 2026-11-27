@@ -6,7 +6,6 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
-import { Select } from '../../shared/ui/Select';
 import {
   getMyStaffRequests,
   createStaffRequest,
