@@ -469,6 +469,7 @@ export function StaffInternalRequestsPage() {
                 </label>
                 <DatePicker
                   id="internal-request-start"
+                  highlightToday={false}
                   value={createStartDate}
                   min={minStartDate}
                   onChange={(e) => setCreateStartDate(e.target.value)}
@@ -481,6 +482,7 @@ export function StaffInternalRequestsPage() {
                 </label>
                 <DatePicker
                   id="internal-request-end"
+                  highlightToday={false}
                   value={createEndDate}
                   min={createStartDate && createStartDate >= minStartDate ? createStartDate : minStartDate}
                   onChange={(e) => setCreateEndDate(e.target.value)}
