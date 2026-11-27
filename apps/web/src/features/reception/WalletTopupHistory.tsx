@@ -53,7 +53,7 @@ export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) 
           </Select>
           <Select aria-label={t('Phương thức nạp', 'Topup method')} value={outcome} onChange={e => setOutcome(e.target.value)}>
             <option value="ALL">{t('Tất cả', 'All')}</option>
-            <option value="cash">{t('Tiền mặt', 'Cash')}</option><option value="bank_transfer">{t('Chuyển khoản', 'Bank transfer')}</option><option value="pos">{t('Thẻ (POS)', 'Card (POS)')}</option>
+            <option value="cash">{t('Tiền mặt', 'Cash')}</option><option value="bank_transfer">{t('Chuyển khoản', 'Bank transfer')}</option>
           </Select>
           <Select aria-label={t('Khoảng thời gian')} value={String(days)} onChange={(e) => setDays(Number(e.target.value))}>
             <option value="1">{t('Hôm nay', 'Today')}</option><option value="0">{t('Tất cả thời gian', 'All time')}</option>

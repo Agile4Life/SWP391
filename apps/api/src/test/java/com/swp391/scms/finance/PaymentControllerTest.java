@@ -31,6 +31,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class PaymentControllerTest {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"pos", "POS", " POS "})
+    void rejectsPosAtBothApiBoundariesWithoutCallingTheService(String method) throws Exception {
+        PaymentCreateDto request = new PaymentCreateDto();
+        request.setMemberId(2L);
+        request.setAmount(BigDecimal.TEN);
+        request.setMethod(method);
+        for (String path : List.of("/api/v1/payments", "/api/v1/payments/process")) {
+            mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        }
+        org.mockito.Mockito.verifyNoInteractions(paymentService);
+    }
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 

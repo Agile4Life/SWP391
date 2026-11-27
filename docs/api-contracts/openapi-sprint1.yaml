@@ -506,7 +506,7 @@ paths:
               required: [amount]
               properties:
                 amount: { type: number, minimum: 10000, maximum: 100000000 }
-                paymentMethod: { type: string, enum: [cash, bank_transfer, pos], default: cash }
+                paymentMethod: { type: string, enum: [cash], default: cash, description: "Counter top-ups accept cash only; historical POS/bank_transfer records remain readable." }
                 note: { type: string, maxLength: 500 }
                 clientRequestId:
                   type: string

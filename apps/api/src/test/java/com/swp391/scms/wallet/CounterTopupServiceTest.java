@@ -40,10 +40,19 @@ class CounterTopupServiceTest {
     }
 
     @Test
+    void rejectsPosBeforeAnyPaymentOrInvoiceIsCreated() {
+        for (String method : java.util.List.of("pos", " POS ")) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.record(7L, new BigDecimal("100000"), method, 3L))
+                    .isInstanceOf(com.swp391.scms.common.exception.BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "PAYMENT_POS_DISABLED");
+        }
+        org.mockito.Mockito.verifyNoInteractions(payments, members, users, invoices);
+    }
+
+    @Test
     void unknownMethodsAreRecordedAsCash() {
         assertThat(CounterTopupService.normalizeMethod(null)).isEqualTo("cash");
         assertThat(CounterTopupService.normalizeMethod("Bank_Transfer")).isEqualTo("bank_transfer");
-        assertThat(CounterTopupService.normalizeMethod("POS")).isEqualTo("pos");
         assertThat(CounterTopupService.normalizeMethod("crypto")).isEqualTo("cash");
     }
 
@@ -60,13 +69,13 @@ class CounterTopupServiceTest {
             return saved;
         });
 
-        service.record(7L, new BigDecimal("1000000"), "pos", 3L);
+        service.record(7L, new BigDecimal("1000000"), "cash", 3L);
 
         ArgumentCaptor<Payment> saved = ArgumentCaptor.forClass(Payment.class);
         verify(payments).save(saved.capture());
         Payment payment = saved.getValue();
         assertThat(payment.getStatus()).isEqualTo("success");
-        assertThat(payment.getMethod()).isEqualTo("pos");
+        assertThat(payment.getMethod()).isEqualTo("cash");
         assertThat(payment.getNote()).isEqualTo(CounterTopupService.COUNTER_NOTE);
         assertThat(payment.getReceivedBy()).isSameAs(staff);
         assertThat(payment.getPaidAt()).isNotNull();

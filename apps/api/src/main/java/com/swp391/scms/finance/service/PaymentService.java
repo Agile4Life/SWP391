@@ -260,6 +260,7 @@ public class PaymentService {
      * phía server; khoản cho kỳ gói luôn bắt đầu ở trạng thái pending.
      */
     private PaymentDto createPaymentInternal(PaymentCreateDto dto, Long cashierUserId) {
+        rejectPos(dto.getMethod());
         if (dto.getSubscriptionId() != null && dto.getClassEnrollmentId() != null) {
             throw new BadRequestException("PAYMENT_MULTIPLE_TARGETS", "finance.vnpay.target_required", null,
                     "Select exactly one payment target");
@@ -585,6 +586,7 @@ public class PaymentService {
      * khoản thu thành công, kích hoạt quyền lợi và xuất hóa đơn.
      */
     private PaymentDto processPaymentInternal(PaymentProcessDto dto, Long cashierUserId) {
+        rejectPos(dto.getMethod());
         if (dto.getSubscriptionId() == null && dto.getPackageId() == null && dto.getClassEnrollmentId() == null) {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null,
                     "Target subscription or enrollment is required");
@@ -1239,4 +1241,11 @@ public class PaymentService {
             payment.setPaidAt(LocalDateTime.now(clock));
         }
     }
+    // POS đã ngừng: chặn trước mọi thao tác ghi, kể cả caller bỏ qua DTO validation.
+    private static void rejectPos(String method) {
+        if (method != null && "pos".equalsIgnoreCase(method.trim())) {
+            throw new BadRequestException("PAYMENT_POS_DISABLED", "finance.payment.pos_disabled", null, null);
+        }
+    }
+
 }

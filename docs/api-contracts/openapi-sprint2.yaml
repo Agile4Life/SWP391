@@ -56,7 +56,7 @@ components:
         subscriptionId: {type: integer, format: int64, nullable: true}
         classEnrollmentId: {type: integer, format: int64, nullable: true}
         amount: {type: number, minimum: 0, exclusiveMinimum: true}
-        method: {type: string, enum: [cash, pos, bank_transfer, online_wallet]}
+        method: {type: string, enum: [cash, online_wallet], description: "POS is retired for new payments; historical response methods remain unchanged."}
         status: {type: string, enum: [pending, success, failed, refunded], default: pending, nullable: true}
         paidAt: {type: string, format: date-time, nullable: true}
         receivedById: {type: integer, format: int64, nullable: true}
@@ -1565,7 +1565,7 @@ paths:
   /payments/process:
     post:
       summary: Xử lý thanh toán và tự động kích hoạt gói tập/ghi danh (CENTER_MANAGER, RECEPTIONIST)
-      description: Khi tái sử dụng payment subscription đang pending, không gửi thêm classEnrollmentId; thanh toán các mục tiêu riêng biệt.
+      description: Khi tái sử dụng payment subscription đang pending, không gửi thêm classEnrollmentId; thanh toán các mục tiêu riêng biệt. Chỉ nhận method cash theo validation hiện có; POS bị từ chối (400), không đổi thành tiền mặt. Dữ liệu POS cũ vẫn đọc được qua các API lịch sử.
       tags: [Payments]
       responses:
         '201': {description: Xử lý thanh toán thành công}

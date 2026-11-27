@@ -471,3 +471,7 @@ Quyết định Receptionist — Task 3 (25/11/2026): `/messages?tab=support` gi
 # Biểu đồ doanh thu theo ngày
 
 - Biểu đồ giữ từng ngày trong kỳ lọc; cuộn bánh xe chuột trên biểu đồ để di chuyển ngang, tiếp tục cuộn trang khi biểu đồ tới đầu hoặc cuối.
+
+# Phương thức POS đã ngừng
+
+Không hiển thị lựa chọn Thẻ (POS) trong form tạo giao dịch hoặc bộ lọc nạp ví. Giữ nhãn POS trong bảng lịch sử và hóa đơn cho dữ liệu cũ; không đổi thành tiền mặt. Không thay đổi các phương thức hợp lệ khác.
