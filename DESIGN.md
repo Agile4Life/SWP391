@@ -8,6 +8,8 @@ Quyết định Manager: tại HLV & học viên phụ trách, danh sách theo H
 
 Quyết định Receptionist — danh sách gia hạn: chỉ hiển thị kỳ cuối hợp lệ của từng chuỗi theo `previousSubscriptionId`, không gộp theo tên gói và không hiển thị kỳ cũ đã có kỳ tiếp theo. Chuỗi thiếu quan hệ, rẽ nhánh hoặc lặp vòng được ẩn kèm thông báo cần kiểm tra; các chuỗi độc lập đã xác minh vẫn được giữ. Dùng đúng ID kỳ hiển thị khi tạo gia hạn, rồi thanh toán ID yêu cầu mới do Backend trả về. Giữ nguyên mua mới, giá và validation Backend; không sửa lịch sử.
 
+Quyết định Receptionist — Trial trong chuỗi gia hạn: API candidates vẫn chỉ cung cấp lựa chọn trả phí; metadata `excludedTrialAncestors` chỉ xác minh quan hệ cha Trial bị ẩn có chủ đích. Không đưa Trial vào dropdown hoặc overlap kỳ trả phí. Thiếu cha thật, dữ liệu mâu thuẫn, rẽ nhánh hoặc vòng lặp vẫn bị chặn. Không thay đổi ID kỳ gia hạn, giá, ngày hoặc thanh toán; cảnh báo gia hạn là phạm vi riêng của PR #252.
+
 Quyết định Member: sau khi hủy gói được duyệt, màn hình gói tập không chọn các kỳ trước thời điểm hủy làm nguồn gia hạn; hội viên có thể đăng ký gói mới. Kỳ gói được tạo sau lần hủy vẫn được xét gia hạn theo quy tắc hiện hành.
 
 Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng trong cùng bộ môn được báo ngay dưới ô Tên khóa học; các bộ môn khác nhau có thể dùng cùng tên. Wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu khi trùng. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên hoặc bộ môn không trùng.

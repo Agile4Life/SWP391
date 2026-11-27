@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info: {title: Reception renewal Trial ancestry, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /memberships/subscriptions/members/{memberId}/renewal-candidates:
+    get:
+      description: 'Existing RECEPTIONIST/CENTER_MANAGER authorization and paid candidate filters remain. Each SubscriptionDto additionally contains excludedTrialAncestors: only intentionally excluded Trial ancestors reachable in the actual history of this same member. Missing records are not fabricated. Metadata is not a renewal option or a paid period for overlap validation. Existing write-time eligibility checks remain authoritative.'
+      parameters: [{name: memberId, in: path, required: true, schema: {type: integer, format: int64}}]
+      responses:
+        '200':
+          description: Existing ApiResponse with SubscriptionDto array; additive metadata, no field removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        excludedTrialAncestors:
+                          type: array
+                          description: 'Empty if no excluded Trial ancestor is available. May be repeated across candidates; consumers deduplicate consistent nodes, reject contradictory nodes, missing links, branches and cycles. Other subscription endpoints omit this optional property.'
+                          items: {$ref: '#/components/schemas/TrialAncestor'}
+        '403': {description: Existing role/ownership restrictions}
+        '404': {description: Member not found or deleted}
+components:
+  schemas:
+    TrialAncestor:
+      type: object
+      additionalProperties: false
+      required: [id, memberId, packageId, previousSubscriptionId, startDate, endDate, status]
+      properties:
+        id: {type: integer, format: int64}
+        memberId: {type: integer, format: int64}
+        packageId: {type: integer, format: int64}
+        previousSubscriptionId: {type: integer, format: int64, nullable: true}
+        startDate: {type: string, format: date, nullable: true}
+        endDate: {type: string, format: date, nullable: true}
+        status: {type: string}

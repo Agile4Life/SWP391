@@ -1,5 +1,5 @@
 import { staffMessage, type StaffMessage } from '../operations/staffI18n';
-import type { RenewalCandidate } from './receptionApi';
+import type { RenewalCandidate, RenewalChainNode } from './receptionApi';
 
 /** Thông báo lỗi chung khi kỳ gói không gia hạn được. */
 const reviewPeriod = () => staffMessage(
@@ -19,21 +19,37 @@ export function eligibleRenewalOptions(
   packages: readonly { id: number; durationDays: number }[],
   today: string,
 ): { options: RenewalCandidate[]; error: StaffMessage | null } {
-  const byId = new Map<number, RenewalCandidate>();
+  const byId = new Map<number, RenewalChainNode>();
   const duplicates = new Set<number>();
   const childCounts = new Map<number, number>();
   for (const item of candidates) {
     if (byId.has(item.id)) duplicates.add(item.id);
     byId.set(item.id, item);
-    if (item.previousSubscriptionId != null) {
-      childCounts.set(item.previousSubscriptionId, (childCounts.get(item.previousSubscriptionId) ?? 0) + 1);
+  }
+  const paidIds = new Set(byId.keys());
+  const relationFields = ['id', 'memberId', 'packageId', 'previousSubscriptionId', 'startDate', 'endDate', 'status'] as const;
+  // Metadata chỉ bổ sung quan hệ thật. Bản sao mâu thuẫn hoặc lẫn kỳ trả phí phải bị chặn.
+  for (const candidate of candidates) {
+    for (const ancestor of candidate.excludedTrialAncestors ?? []) {
+      const existing = byId.get(ancestor.id);
+      if (ancestor.memberId !== candidate.memberId) { duplicates.add(candidate.id); continue; }
+      if (paidIds.has(ancestor.id) || (existing && relationFields.some(field => existing[field] !== ancestor[field]))) {
+        duplicates.add(ancestor.id);
+      } else {
+        byId.set(ancestor.id, ancestor);
+      }
+    }
+  }
+  for (const node of byId.values()) {
+    if (node.previousSubscriptionId != null) {
+      childCounts.set(node.previousSubscriptionId, (childCounts.get(node.previousSubscriptionId) ?? 0) + 1);
     }
   }
   const options: RenewalCandidate[] = [];
   let error: StaffMessage | null = null;
   for (const candidate of candidates) {
     const visited = new Set<number>();
-    let current: RenewalCandidate | undefined = candidate;
+    let current: RenewalChainNode | undefined = candidate;
     let valid = true;
     // Đọc ngược tới gốc để phát hiện cả nhánh lỗi phía trước kỳ cuối, vòng lặp và liên kết thiếu.
     while (current) {

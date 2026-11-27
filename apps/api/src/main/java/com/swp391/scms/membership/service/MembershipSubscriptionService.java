@@ -12,6 +12,7 @@ import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
+import com.swp391.scms.membership.dto.SubscriptionResponses.TrialAncestorDto;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipCancellationRequestRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
@@ -241,10 +242,37 @@ public class MembershipSubscriptionService {
         if (member.getUser() == null || member.getUser().getDeletedAt() != null) {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
-        return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
+        List<MembershipSubscription> history = subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
+                .filter(sub -> sub.getMember() != null && memberId.equals(sub.getMember().getUserId())).toList();
+        List<MembershipSubscription> candidates = history.stream()
                 .filter(this::isPaidPeriod)
                 .filter(sub -> !isRenewalTrial(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
-                .map(this::toDto).toList();
+                .toList();
+        java.util.Map<Long, MembershipSubscription> byId = new java.util.HashMap<>();
+        history.forEach(sub -> byId.put(sub.getId(), sub));
+        java.util.Set<Long> candidateIds = candidates.stream().map(MembershipSubscription::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        return candidates.stream().map(sub -> toDto(sub).withExcludedTrialAncestors(
+                excludedTrialAncestors(sub, byId, candidateIds))).toList();
+    }
+
+    /** Dùng lịch sử đã nạp của đúng hội viên; thiếu cha thì giữ liên kết thiếu để client chặn an toàn. */
+    private List<TrialAncestorDto> excludedTrialAncestors(MembershipSubscription candidate,
+            java.util.Map<Long, MembershipSubscription> history, java.util.Set<Long> candidateIds) {
+        List<TrialAncestorDto> result = new java.util.ArrayList<>();
+        java.util.Set<Long> visited = new java.util.HashSet<>();
+        MembershipSubscription current = candidate;
+        while (current != null && visited.add(current.getId()) && current.getPreviousSubscription() != null) {
+            current = history.get(current.getPreviousSubscription().getId());
+            if (current != null && !candidateIds.contains(current.getId())
+                    && current.getMembershipPackage() != null && isTrialSubscription(current)) {
+                result.add(new TrialAncestorDto(current.getId(), current.getMember().getUserId(),
+                        current.getMembershipPackage().getId(), current.getPreviousSubscription() == null
+                                ? null : current.getPreviousSubscription().getId(),
+                        current.getStartDate(), current.getEndDate(), current.getStatus()));
+            }
+        }
+        return result;
     }
 
     /**

@@ -9,6 +9,25 @@ const silver: RenewalCandidate = { ...gold, id: 1, packageId: 10, packageName: '
   startDate: '2026-02-24', endDate: '2026-11-20', status: 'expired' };
 const packages = [{ id: 10, durationDays: 270 }, { id: 20, durationDays: 270 }];
 
+it('verifies an intentionally excluded Trial parent without offering or overlapping it', () => {
+  const trial = { id: 99, memberId: 10, packageId: 99, previousSubscriptionId: null, status: 'expired', startDate: '2026-11-19', endDate: gold.startDate };
+  const upgraded = { ...gold, previousSubscriptionId: 99, excludedTrialAncestors: [trial] };
+  expect(eligibleRenewalOptions([upgraded], packages, today).options).toEqual([upgraded]);
+  const next = { ...gold, id: 3, previousSubscriptionId: gold.id, startDate: '2027-08-17', endDate: '2028-05-12', excludedTrialAncestors: [trial] };
+  expect(eligibleRenewalOptions([upgraded, next], packages, today).options).toEqual([next]);
+  expect(eligibleRenewalOptions([{ ...upgraded, excludedTrialAncestors: [] }], packages, today).options).toEqual([]);
+  expect(eligibleRenewalOptions([{ ...upgraded, excludedTrialAncestors: [{ ...trial, memberId: 20 }] }], packages, today).options).toEqual([]);
+});
+
+it('rejects contradictory, branching and cyclic Trial context', () => {
+  const trial = { id: 99, memberId: 10, packageId: 99, previousSubscriptionId: null, status: 'expired', startDate: '2026-11-19', endDate: gold.startDate };
+  const upgraded = { ...gold, previousSubscriptionId: 99, excludedTrialAncestors: [trial] };
+  const sibling = { ...upgraded, id: 3 };
+  expect(eligibleRenewalOptions([upgraded, sibling], packages, today).options).toEqual([]);
+  expect(eligibleRenewalOptions([{ ...upgraded, excludedTrialAncestors: [{ ...trial, previousSubscriptionId: gold.id }] }], packages, today).options).toEqual([]);
+  expect(eligibleRenewalOptions([{ ...upgraded, excludedTrialAncestors: [trial, { ...trial, endDate: '2026-11-20' }] }], packages, today).options).toEqual([]);
+});
+
 it('offers only the linked tail regardless of response order or earlier end dates', () => {
   const second = { ...gold, id: 3, previousSubscriptionId: gold.id, startDate: '2027-08-17', endDate: '2028-05-12' };
   const last = { ...gold, id: 4, previousSubscriptionId: second.id, startDate: '2028-05-13', endDate: '2029-02-06' };

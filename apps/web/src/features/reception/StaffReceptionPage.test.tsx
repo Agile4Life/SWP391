@@ -942,3 +942,18 @@ it.each([
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(api.processPayment).not.toHaveBeenCalled();
 });
+
+it('renews the displayed paid Silver tail when its Trial parent is intentionally excluded', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
+  const trial = { id: 99, memberId: 10, packageId: 99, previousSubscriptionId: null,
+    startDate: '2026-11-19', endDate: runningGold.startDate, status: 'expired' };
+  const silver = { ...runningGold, packageName: 'SILVER', previousSubscriptionId: 99, excludedTrialAncestors: [trial] };
+  api.getRenewalCandidates.mockResolvedValue([silver]);
+  api.createRenewal.mockResolvedValue({ ...silver, id: 51, previousSubscriptionId: 50, status: 'pending_payment' });
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  expect([...select.options].filter(option => option.value.startsWith('renew:')).map(option => option.value)).toEqual(['renew:50']);
+  await chooseAndPay('renew:50');
+  expect(api.createRenewal).toHaveBeenCalledWith(10, 50);
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: 51, packageId: 2, amount: 200 }));
+});

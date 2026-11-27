@@ -2115,4 +2115,50 @@ class MembershipSubscriptionServiceTest {
                 .contains("Đi công tác nước ngoài")
                 .doesNotContain("{0}");
     }
+
+    @Test
+    void candidatesExposeOnlyRealSameMemberTrialAncestorsWithoutOfferingTrial() {
+        Member member = new Member(); member.setUserId(10L); member.setUser(new com.swp391.scms.users.entity.User());
+        MembershipPackage trial = new MembershipPackage(); trial.setId(99L); trial.setName("TRIAL"); trial.setDurationDays(3); trial.setPrice(BigDecimal.ZERO);
+        MembershipPackage paid = new MembershipPackage(); paid.setId(1L); paid.setName("SILVER"); paid.setDurationDays(90); paid.setPrice(BigDecimal.TEN); paid.setStatus("active");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription parent = period(99L, member, trial, null, today.minusDays(2), today);
+        parent.setStatus("expired");
+        MembershipSubscription upgraded = period(100L, member, paid, parent, today, today.plusDays(89));
+        MembershipSubscription renewal = period(101L, member, paid, upgraded, today.plusDays(90), today.plusDays(179));
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(renewal, upgraded, parent));
+        var result = service.renewalCandidatesForStaff(staffPrincipal, 10L);
+        assertThat(result).extracting(SubscriptionDto::id).containsExactly(101L, 100L);
+        assertThat(result.getFirst().excludedTrialAncestors()).hasSize(1);
+        assertThat(result.getFirst().excludedTrialAncestors().getFirst().id()).isEqualTo(99L);
+        assertThat(result.getFirst().excludedTrialAncestors().getFirst().previousSubscriptionId()).isNull();
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(upgraded));
+        assertThat(service.renewalCandidatesForStaff(staffPrincipal, 10L).getFirst().excludedTrialAncestors()).isEmpty();
+        when(subscriptions.findById(101L)).thenReturn(Optional.of(renewal));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(parent, upgraded, renewal));
+        when(packages.findById(1L)).thenReturn(Optional.of(paid));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        var created = service.renewForMember(staffPrincipal, 10L, 101L);
+        assertThat(created.previousSubscriptionId()).isEqualTo(101L);
+        assertThat(created.startDate()).isEqualTo(renewal.getEndDate().plusDays(1));
+        org.mockito.Mockito.verify(members).findByUserIdForUpdate(10L);
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+                .valueToTree(result.getFirst()).get("excludedTrialAncestors").get(0);
+        assertThat(json.size()).isEqualTo(7);
+        assertThat(json.has("qrCode")).isFalse();
+        assertThat(json.has("remainingValue")).isFalse();
+        parent.setPreviousSubscription(upgraded);
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(upgraded, parent));
+        var cyclic = service.renewalCandidatesForStaff(staffPrincipal, 10L).getFirst();
+        assertThat(cyclic.excludedTrialAncestors()).hasSize(1);
+        assertThat(cyclic.excludedTrialAncestors().getFirst().previousSubscriptionId()).isEqualTo(100L);
+        parent.setPreviousSubscription(null);
+        assertThat(created.excludedTrialAncestors()).isNull();
+        org.mockito.Mockito.verify(subscriptions, org.mockito.Mockito.never()).findAll();
+        Member other = new Member(); other.setUserId(20L); parent.setMember(other);
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(upgraded, parent));
+        assertThat(service.renewalCandidatesForStaff(staffPrincipal, 10L).getFirst().excludedTrialAncestors()).isEmpty();
+    }
 }
