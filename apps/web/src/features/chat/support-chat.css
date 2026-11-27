@@ -72,8 +72,10 @@
 .support-split__preview.is-unread { font-weight: 700; color: var(--portal-paper); }
 .support-split__state-card { padding: 24px; border-radius: 16px; background: var(--portal-surface); border: 1px solid var(--portal-border); }
 .support-split__empty-card { padding: 48px 32px; text-align: center; background: var(--portal-surface); border-radius: 16px; border: 1px dashed var(--portal-border-strong, var(--portal-border)); }
-.support-split__empty-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; color: var(--portal-paper); }
-.support-split__empty-sub { font-size: 13px; color: var(--portal-muted); }
+.support-split__empty-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--portal-paper); }
+.support-split__refresh { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 999px; }
+.support-split__refresh.is-loading svg { animation: support-split-spin 0.8s linear infinite; }
+@keyframes support-split-spin { to { transform: rotate(360deg); } }
 .support-split__detail { min-width: 0; }
 .support-split__detail-card { border-radius: 16px; background: var(--portal-surface); border: 1px solid var(--portal-border); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); overflow: hidden; display: flex; flex-direction: column; min-height: 540px; max-height: 74vh; }
 .support-split__detail-card > .direct-chat__thread { flex: 1; min-height: 0; }

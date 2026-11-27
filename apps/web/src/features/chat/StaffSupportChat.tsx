@@ -269,12 +269,9 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
         </div>
       ) : tickets.length === 0 ? (
         <div className="portal-card support-split__empty-card">
-          <p className="support-split__empty-title">
+          <p className="support-split__empty-title" style={{ margin: 0 }}>
             {manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}
           </p>
-          <span className="support-split__empty-sub">
-            {t('Hãy thử chọn trạng thái khác hoặc bấm Làm mới.', 'Try choosing a different status or click Refresh.')}
-          </span>
         </div>
       ) : (
         <ul className="support-split__cards">
@@ -440,8 +437,18 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
               );
             })}
           </div>
-          <button type="button" className="btn-secondary btn-sm" disabled={loading} onClick={() => void loadList()}>
-            {t('Làm mới', 'Refresh')}
+          <button
+            type="button"
+            className={`btn-secondary btn-sm support-split__refresh${loading ? ' is-loading' : ''}`}
+            disabled={loading}
+            aria-label={t('Làm mới', 'Refresh')}
+            title={t('Làm mới', 'Refresh')}
+            onClick={() => void loadList()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
           </button>
         </div>
         <div className="support-split__grid">
