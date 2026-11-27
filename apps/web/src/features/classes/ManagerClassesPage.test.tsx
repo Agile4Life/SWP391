@@ -781,6 +781,34 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector('[data-testid="wizard-step-4"]')).toBeNull();
   });
 
+  it('explains when a slot already contains two disciplines', async () => {
+    vi.mocked(classesApi.checkRecurringAvailability).mockImplementation(async payload => {
+      const result = buildAvailabilityResponse(payload);
+      const selected = payload.startTime === '09:45:00';
+      return { ...result,
+        ...(selected ? { selectedSlotAvailable: false, selectedSlotConflictCode: 'SCHEDULING_SLOT_DISCIPLINE_LIMIT', selectedSlotConflictReason: 'Ngày 05/12/2026, slot đã đủ 2 bộ môn.' } : {}),
+        slots: result.slots.map(slot => slot.slotNumber === 2
+        ? { ...slot, available: false, disciplineConflict: false, conflictCode: 'SCHEDULING_SLOT_DISCIPLINE_LIMIT', conflictReason: 'Slot đã đủ 2 bộ môn' }
+        : slot) };
+    });
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Yoga kiểm thử'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    const slot = document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!;
+    expect(slot.textContent).toContain('Đã đủ 2 bộ môn');
+    expect(slot.classList.contains('is-unavailable')).toBe(true);
+    await act(async () => slot.click());
+    await act(async () => { await Promise.resolve(); });
+    const summary = document.querySelector('[data-testid="wizard-schedule-summary"]')!;
+    expect(summary.classList.contains('is-error')).toBe(true);
+    expect(summary.textContent).toContain('Ngày 05/12/2026, slot đã đủ 2 bộ môn.');
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-2"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="wizard-step-3"]')).toBeNull();
+  });
+
   it('surfaces availability API failure in Step 2 with a working retry button instead of pretending slots are free', async () => {
     vi.mocked(classesApi.checkRecurringAvailability)
       .mockRejectedValueOnce(new Error('Mất kết nối máy chủ kiểm tra lịch'))
