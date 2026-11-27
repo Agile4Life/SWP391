@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { renewalOptionError } from './renewalOptions';
+import { renewalOptionError, eligibleRenewalOptions } from './renewalOptions';
 import type { RenewalCandidate } from './receptionApi';
 
 const today = '2026-11-23';
@@ -8,6 +8,54 @@ const gold: RenewalCandidate = { id: 2, memberId: 10, packageId: 20, packageName
 const silver: RenewalCandidate = { ...gold, id: 1, packageId: 10, packageName: 'SILVER 9 THÁNG',
   startDate: '2026-02-24', endDate: '2026-11-20', status: 'expired' };
 const packages = [{ id: 10, durationDays: 270 }, { id: 20, durationDays: 270 }];
+
+it('offers only the linked tail regardless of response order or earlier end dates', () => {
+  const second = { ...gold, id: 3, previousSubscriptionId: gold.id, startDate: '2027-08-17', endDate: '2028-05-12' };
+  const last = { ...gold, id: 4, previousSubscriptionId: second.id, startDate: '2028-05-13', endDate: '2029-02-06' };
+  expect(eligibleRenewalOptions([second, last, gold], packages, today).options.map(item => item.id)).toEqual([4]);
+});
+
+it('keeps a single eligible period and an empty list without inventing an option', () => {
+  expect(eligibleRenewalOptions([gold], packages, today).options).toEqual([gold]);
+  expect(eligibleRenewalOptions([], packages, today)).toEqual({ options: [], error: null });
+  expect(eligibleRenewalOptions([{ ...gold, status: 'cancelled' }], packages, today).options).toEqual([]);
+  expect(eligibleRenewalOptions([gold], [], today).options).toEqual([]);
+});
+
+it('keeps independent chains even when their package names and IDs match', () => {
+  const old = { ...gold, id: 8, status: 'expired', startDate: '2025-01-01', endDate: '2025-09-27' };
+  const another = { ...old, id: 9, startDate: '2024-01-01', endDate: '2024-09-26' };
+  expect(eligibleRenewalOptions([old, another], packages, today).options.map(item => item.id)).toEqual([8, 9]);
+});
+
+it('hides branches, cycles, duplicate IDs and missing relationships with feedback', () => {
+  const next = { ...gold, id: 3, previousSubscriptionId: gold.id, startDate: '2027-08-17', endDate: '2028-05-12' };
+  for (const history of [
+    [gold, next, { ...next, id: 4 }],
+    [{ ...gold, previousSubscriptionId: next.id }, next],
+    [gold, { ...gold }],
+    [{ ...gold, previousSubscriptionId: undefined }],
+    [{ ...gold, previousSubscriptionId: 999 }],
+    [gold, { ...next, startDate: '2027-01-01' }],
+  ]) {
+    const result = eligibleRenewalOptions(history, packages, today);
+    expect(result.options).toEqual([]);
+    expect(result.error).not.toBeNull();
+  }
+});
+
+it('does not let a broken unrelated chain erase a verified independent choice', () => {
+  const broken = { ...silver, previousSubscriptionId: 999 };
+  const result = eligibleRenewalOptions([gold, broken], packages, today);
+  expect(result.options).toEqual([gold]);
+  expect(result.error).not.toBeNull();
+});
+
+it('filters a tail rejected by existing overlap validation', () => {
+  const result = eligibleRenewalOptions([gold, silver], packages, today);
+  expect(result.options).toEqual([gold]);
+  expect(result.error).toMatchObject({ vi: expect.stringContaining('SILVER') });
+});
 
 it('keeps the current Gold renewal and explains the old Silver overlap using real names', () => {
   expect(renewalOptionError(gold, [gold, silver], packages, today)).toBeNull();
