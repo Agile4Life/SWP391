@@ -285,7 +285,7 @@ export function ManagerInternalRequestsPage() {
           type="search"
           className="portal-input"
           aria-label={t('Tìm đơn nội bộ', 'Search internal requests')}
-          placeholder={t('Tìm nhân sự hoặc tiêu đề', 'Search staff or subject')}
+          placeholder={t('Tìm nhân sự', 'Search staff')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           style={{ flex: '1 1 240px', minWidth: 180, maxWidth: 320 }}
