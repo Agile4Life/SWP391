@@ -527,7 +527,8 @@ paths:
         '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Trùng ngày & slot với lớp nhóm đang hoạt động khác thuộc cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`,
+            Tên khóa học đã tồn tại, không phân biệt chữ hoa/thường và khoảng trắng hai đầu (`SCHEDULING_DUPLICATE_CLASS_NAME`),
+            trùng ngày & slot với lớp nhóm đang hoạt động khác thuộc cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`,
             qua `ClassService` và trigger `trg_sessions_check_discipline_conflict`),
             trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lịch lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
             HLV đã có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`),
@@ -568,7 +569,8 @@ paths:
         '404': { description: Không tìm thấy lớp học, bộ môn, phòng hoặc HLV }
         '409':
           description: >
-            Trùng ngày & slot với lớp nhóm `active` khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+            Tên mới trùng tên khóa học khác (`SCHEDULING_DUPLICATE_CLASS_NAME`),
+            trùng ngày & slot với lớp nhóm `active` khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
             trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
             trùng buổi PT 1:1 `confirmed` của HLV (`SCHEDULING_COACH_PT_CONFLICT`),
             HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), hoặc khi đổi HLV/kích hoạt lại lớp mà HLV mới đã dạy đủ

@@ -2,6 +2,7 @@ package com.swp391.scms.scheduling;
 
 import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -51,6 +52,18 @@ class ClassServiceRecurringTest {
     @BeforeEach
     void setUp() {
         classService = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock);
+    }
+
+    @Test
+    void rejectsDuplicateCourseNameBeforeSaving() {
+        when(gymClasses.existsByNormalizedName("yoga advance")).thenReturn(true);
+        var request = new CreateRecurringClassRequest("  yoga advance  ", 1L, 2L, 3L, 20, "all", null,
+                BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11), List.of("MONDAY"),
+                ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+
+        ConflictException error = assertThrows(ConflictException.class, () -> classService.createRecurringClass(request));
+        assertEquals("SCHEDULING_DUPLICATE_CLASS_NAME", error.getErrorCode());
+        verify(gymClasses, never()).save(any());
     }
 
     /** Kiểm thử: tạo lớp định kỳ thành công và sinh các buổi theo lịch. */

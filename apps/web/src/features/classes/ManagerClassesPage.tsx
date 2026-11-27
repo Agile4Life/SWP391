@@ -699,6 +699,7 @@ export function ManagerClassesPage() {
       {editingClass && (
         <EditClassModal
           gymClass={editingClass}
+          classes={classes}
           disciplines={disciplines}
           rooms={rooms}
           coaches={coaches}
