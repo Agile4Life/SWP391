@@ -92,6 +92,44 @@ describe('MembershipRequestHistory (P2-E2E-02)', () => {
     expect(rows[2].textContent).toContain('Đã hủy');
   });
 
+  it.each([['VNPAY', 'VNPay'], ['WALLET', 'VíSỒL'], ['CASH', 'Tiền mặt'], ['UNKNOWN', 'Chưa xác định'], ['UNPAID', 'Chưa thanh toán']])('shows backend-confirmed source %s without interpreting online_wallet', async (method, label) => {
+    mocks.history.mockResolvedValue([{ ...sampleItems[0], paymentMethod: 'online_wallet', actualPaymentMethod: method,
+      outcome: method === 'UNPAID' ? 'CANCELLED' : 'APPROVED', paidAmount: method === 'UNPAID' ? 0 : 1000, quotedAmount: 999000 }]);
+    await act(async () => root.render(<MembershipRequestHistory />));
+    const cell = host.querySelector('tbody tr')!.children[4];
+    expect(cell.textContent).toContain(label);
+    expect(cell.textContent).not.toContain('VNPay /');
+    expect(cell.querySelector('[data-testid="history-paid"]')?.textContent).toContain(method === 'UNPAID' ? '0' : '1.000');
+    expect(cell.textContent).toContain('Giá báo');
+  });
+
+  it('keeps collected, refunded, and late gateway return amounts separate', async () => {
+    mocks.history.mockResolvedValue([{ ...sampleItems[0], actualPaymentMethod: 'WALLET', paidAmount: 2000,
+      refundedAmount: 500, lateGatewayRefundedAmount: 3000, paymentStatus: 'success' }]);
+    await act(async () => root.render(<MembershipRequestHistory />));
+    const cell = host.querySelector('tbody tr')!.children[4];
+    expect(cell.querySelector('[data-testid="history-paid"]')?.textContent).toContain('2.000');
+    expect(cell.textContent).toContain('Đã hoàn'); expect(cell.textContent).toContain('500');
+    expect(cell.textContent).toContain('Hoàn VNPay đến muộn'); expect(cell.textContent).toContain('3.000');
+  });
+
+  it('does not describe a fully refunded payment as activated or invent its missing refund amount', async () => {
+    mocks.history.mockResolvedValue([{ ...sampleItems[0], actualPaymentMethod: 'CASH', paymentStatus: 'refunded', refundedAmount: null }]);
+    await act(async () => root.render(<MembershipRequestHistory />));
+    expect(host.querySelector('tbody')?.textContent).toContain('Chưa xác định');
+    expect(host.querySelector('tbody')?.textContent).toContain('Đã hoàn tiền');
+    expect(host.querySelector('tbody')?.textContent).not.toContain('kích hoạt');
+  });
+
+  it('never displays the legacy quote of an unpaid cancellation as collected money', async () => {
+    mocks.history.mockResolvedValue([{ ...sampleItems[2], amount: 999000 }]);
+    await act(async () => root.render(<MembershipRequestHistory />));
+    const cell = host.querySelector('tbody tr')!.children[4];
+    expect(cell.querySelector('[data-testid="history-paid"]')?.textContent).toContain('0');
+    expect(cell.querySelector('[data-testid="history-paid"]')?.textContent).not.toContain('999.000');
+    expect(cell.textContent).toContain('Chưa thanh toán');
+  });
+
   it('filters by search query, type, outcome, and distinguishes 0 filter matches from empty history (P2-FE-71)', async () => {
     mocks.history.mockResolvedValueOnce(sampleItems);
     await act(async () => root.render(<MembershipRequestHistory />));
