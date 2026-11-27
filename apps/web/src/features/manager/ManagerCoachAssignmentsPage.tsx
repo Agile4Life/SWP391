@@ -342,12 +342,6 @@ export function ManagerCoachAssignmentsPage() {
                         <div className="student-name-block">
                           <strong>{group.fullName}</strong>
                           <small>{group.membershipCode} {group.phone ? `• ${group.phone}` : ''}</small>
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm coach-action-btn coach-profile-detail"
-                            onClick={() => setDetail({ student: group.assignments[0], assignments: group.assignments })}
-                          >
-                            {t("Chi tiết")}</button>
                         </div>
                       </div>
 
@@ -377,6 +371,13 @@ export function ManagerCoachAssignmentsPage() {
                           </div>
                         ))}
                       </div>
+
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm coach-action-btn coach-profile-detail"
+                        onClick={() => setDetail({ student: group.assignments[0], assignments: group.assignments })}
+                      >
+                        {t("Chi tiết")}</button>
                     </div>
                   ))}
                 </div>

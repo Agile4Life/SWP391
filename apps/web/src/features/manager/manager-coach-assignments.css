@@ -229,19 +229,16 @@
   border-top: 1px solid var(--portal-border, rgba(255, 255, 255, 0.05));
 }
 
-.coach-assignment-line .coach-student-actions {
-  margin-left: auto;
-}
-
 /* Nhãn hình thức rộng cố định để chi tiết các dòng thẳng hàng. */
 .coach-assignment-line .coach-student-type-pill {
   flex: 0 0 9rem;
   text-align: center;
 }
 
+/* Nút Chi tiết nằm sát phải dòng học viên (vị trí cột thao tác cũ). */
 .coach-profile-detail {
-  display: flex;
-  margin-top: 0.4rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .coach-modal-actions {
