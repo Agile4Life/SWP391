@@ -245,3 +245,18 @@ it('P2-FE-80: disables "Tải thêm phiếu" while appending and guards SupportT
   await act(async () => { resolvePage2({ content: [page2Ticket], totalPages: 2 }); });
   expect(host.querySelectorAll('[data-support-ticket]')).toHaveLength(2);
 });
+
+it('subscribes to member-wide realtime updates even when selectedId is null (new request or ticket list)', async () => {
+  vi.mocked(supportApi.getMySupportTickets)
+    .mockResolvedValueOnce({ content: [], totalPages: 0 })
+    .mockResolvedValueOnce({ content: [{ ...ticket, id: 12, status: 'resolved' }], totalPages: 1 });
+  await render();
+
+  const memberInboxSub = vi.mocked(subscribeSupport).mock.calls.find(call => call[2] === undefined);
+  expect(memberInboxSub).toBeDefined();
+
+  await act(async () => { memberInboxSub![0](); await new Promise(resolve => setTimeout(resolve, 120)); });
+  await act(async () => button('Phiếu của tôi').click());
+  expect(host.querySelector('[data-support-ticket="12"]')).not.toBeNull();
+  expect(host.textContent).toContain('Đã giải quyết');
+});

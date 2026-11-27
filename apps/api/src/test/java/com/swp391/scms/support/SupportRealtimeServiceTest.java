@@ -49,13 +49,17 @@ class SupportRealtimeServiceTest {
         assertThat(claims).doesNotContainKeys("scms_chat_scope", "scms_chat_user_id", "username", "email");
         assertThat(claims.getExpiration().getTime()-claims.getIssuedAt().getTime()).isEqualTo(300000);
     }
-    @Test void memberCannotSubscribeToInboxOrAnotherTicketAndInactiveActorCannotSubscribe() {
+    @Test void memberGetsOwnMemberTopicOnlyAndInactiveOrCoachActorCannotSubscribe() {
         User actor = actor(10L, "MEMBER");
-        assertThatThrownBy(() -> realtime.inbox(principal)).isInstanceOf(ForbiddenException.class);
+        assertThat(realtime.inbox(principal).topic()).isEqualTo("scms:support:member:10");
+        var coach = actor(30L, "COACH");
+        assertThatThrownBy(() -> realtime.inbox(new AuthenticatedPrincipal(coach.getId(), "coach", "COACH")))
+                .isInstanceOf(ForbiddenException.class);
         var other = ticket(); other.getMember().setUserId(99L);
         when(tickets.findById(7L)).thenReturn(Optional.of(other));
         assertThatThrownBy(() -> realtime.ticket(7L, principal)).isInstanceOf(ForbiddenException.class);
         actor.setStatus("inactive");
+        assertThatThrownBy(() -> realtime.inbox(principal)).isInstanceOf(ForbiddenException.class);
         assertThatThrownBy(() -> realtime.ticket(7L, principal)).isInstanceOf(ForbiddenException.class);
     }
     @Test void staffReceivesOnlyInboxCapability() {
@@ -89,6 +93,7 @@ class SupportRealtimeServiceTest {
         String sql = new String(getClass().getResourceAsStream("/db/triggers/postgresql-triggers.sql").readAllBytes(),StandardCharsets.UTF_8);
         assertThat(sql).contains("trg_support_request_realtime AFTER INSERT OR UPDATE", "trg_support_message_realtime AFTER INSERT",
             "realtime.send('{}'::jsonb, 'changed', 'scms:support:ticket:' || ticket_id::text, true)",
+            "realtime.send('{}'::jsonb, 'changed', 'scms:support:member:' || owner_id::text, true)",
             "scms_support_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO PUBLIC",
             "scms_support_send_guard ON realtime.messages AS RESTRICTIVE FOR INSERT TO PUBLIC",
             "realtime.topic() = (auth.jwt() ->> 'scms_support_topic')");

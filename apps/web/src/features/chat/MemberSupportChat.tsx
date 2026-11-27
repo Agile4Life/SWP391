@@ -125,6 +125,30 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     void loadMessages(selectedId);
   }, [selectedId, loadMessages]);
 
+  // Kênh realtime toàn bộ phiếu của hội viên: luôn cập nhật danh sách phiếu ngay cả khi đang ở màn Yêu cầu mới hoặc Phiếu của tôi.
+  useEffect(() => {
+    let disposed = false, running = false, dirty = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const live = () => !disposed && alive.current;
+    async function refreshList() {
+      timer = undefined;
+      if (!live() || document.visibilityState === 'hidden') return;
+      if (running) { dirty = true; return; }
+      running = true;
+      await loadTickets(0);
+      running = false;
+      if (dirty && live()) { dirty = false; scheduleList(); }
+    }
+    function scheduleList() {
+      if (!live() || timer) return;
+      timer = setTimeout(() => { void refreshList(); }, 80);
+    }
+    const unsubscribe = subscribeSupport(scheduleList, state => {
+      if (live() && selection.current == null) setConnection(state);
+    });
+    return () => { disposed = true; clearTimeout(timer); unsubscribe(); };
+  }, [loadTickets]);
+
   // Phản hồi của lễ tân và đổi trạng thái phiếu đến qua realtime; luôn đọc lại dữ liệu chuẩn từ máy chủ.
   useEffect(() => {
     if (selectedId == null) return;
