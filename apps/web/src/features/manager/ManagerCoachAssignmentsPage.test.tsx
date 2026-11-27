@@ -192,7 +192,7 @@ describe('ManagerCoachAssignmentsPage', () => {
 
   it('tags only the student whose plan is on hold', async () => {
     await renderComponent();
-    const tags = host.querySelectorAll('.coach-membership-issue');
+    const tags = host.querySelectorAll('.coach-student-toggle .coach-membership-issue');
     expect(tags).toHaveLength(1);
     expect(tags[0].textContent).toBe('Đang bảo lưu');
   });
@@ -269,10 +269,10 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.querySelector('.coach-table-container')).toBeTruthy();
     expect(host.textContent).toContain('MEM-001');
     expect(host.textContent).toContain('MEM-002');
-    expect(host.textContent).toContain('Hết hạn giáo án / Buổi kế tiếp');
+    expect(host.textContent).toContain('Hình thức & số lượng');
     const rows = [...host.querySelectorAll('.coach-table tbody tr')];
-    expect(rows.find(row => row.textContent?.includes('MEM-001'))?.querySelectorAll('td')[4]?.textContent).toBe('09:00 10/11/2026');
-    expect(rows.find(row => row.textContent?.includes('MEM-002'))?.querySelectorAll('td')[4]?.textContent).toBe('05/12/2026');
+    expect(rows.find(row => row.textContent?.includes('MEM-001'))?.textContent).toContain('1 buổi PT sắp tới');
+    expect(rows.find(row => row.textContent?.includes('MEM-002'))?.textContent).toContain('1 giáo án riêng');
   });
 
   it('shows unavailable schedule data without claiming the assignment is active', async () => {
@@ -282,7 +282,8 @@ describe('ManagerCoachAssignmentsPage', () => {
     });
     await renderComponent();
     await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Bảng danh sách'))?.click(); });
-    expect(host.querySelector('.coach-table tbody tr td:nth-child(5)')?.textContent).toBe('Chưa có thông tin');
+    await act(async () => { host.querySelector<HTMLButtonElement>('.coach-table tbody tr button')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).not.toContain('09:00 10/11/2026');
   });
 
   it('shows a member once per coach even when they hold several assignments', async () => {
@@ -296,7 +297,61 @@ describe('ManagerCoachAssignmentsPage', () => {
     const rows = [...host.querySelectorAll('.coach-student-row')];
     expect(rows).toHaveLength(1);
     expect(rows[0].querySelectorAll('.student-name-block strong')).toHaveLength(1);
-    expect(rows[0].querySelectorAll('.coach-assignment-line')).toHaveLength(2);
+    expect(rows[0].textContent).toContain('1 giáo án riêng');
+    expect(rows[0].textContent).toContain('1 buổi PT sắp tới');
+  });
+
+  it('opens coaches then members to reveal their assignments', async () => {
+    const coach = mockData.coaches[0];
+    const student = { ...coach.students[0], assignmentType: 'CLASS' as const, detail: 'Yoga cơ bản' };
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({ ...mockData, coaches: [{ ...coach, students: [student] }] });
+    await renderComponent();
+    const coachDetails = host.querySelector<HTMLDetailsElement>('.coach-card-panel details')!;
+    const studentDetails = host.querySelector<HTMLDetailsElement>('.coach-student-row > details')!;
+    expect(coachDetails.open).toBe(false);
+    expect(studentDetails.open).toBe(false);
+    const profileButton = host.querySelector<HTMLButtonElement>('.coach-student-row > button')!;
+    expect(profileButton).toBeTruthy();
+    await act(async () => profileButton.click());
+    expect(studentDetails.open).toBe(false);
+    expect(host.querySelector('dialog[open]')).not.toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+    await act(async () => coachDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(coachDetails.open).toBe(true);
+    expect(studentDetails.open).toBe(false);
+    await act(async () => studentDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(studentDetails.open).toBe(true);
+    expect(studentDetails.querySelector('.coach-assignment-list')?.textContent).toContain('Yoga cơ bản');
+    await act(async () => coachDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(coachDetails.open).toBe(false);
+  });
+
+  it('summarizes many assignments and paginates the member details', async () => {
+    const coach = mockData.coaches[0];
+    const pt = { ...coach.students[0], sessionCount: 12 };
+    const classes = Array.from({ length: 12 }, (_, index) => ({
+      ...pt, assignmentType: 'CLASS' as const, referenceId: 1000 + index,
+      detail: `Khóa học ${index + 1}`, sessionCount: 8,
+    }));
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
+      ...mockData, coaches: [{ ...coach, students: [pt, ...classes] }],
+    });
+    await renderComponent();
+    const row = host.querySelector('.coach-student-row')!;
+    expect(row.textContent).toContain('12 khóa học nhóm');
+    expect(row.textContent).toContain('12 buổi PT sắp tới');
+    expect(row.querySelector('summary')?.textContent).not.toContain('Khóa học 1');
+    await act(async () => { row.querySelector<HTMLButtonElement>('button')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).toContain('Khóa học 1');
+    expect(host.querySelector('dialog')?.textContent).not.toContain('Khóa học 12');
+    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Tiếp')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).toContain('Khóa học 5');
+    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Tiếp')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).toContain('Khóa học 12');
+    await act(async () => { host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click(); });
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Bảng danh sách'))!.click(); });
+    expect(host.querySelectorAll('.coach-table tbody tr')).toHaveLength(1);
+    expect(host.querySelector('.coach-table tbody tr')?.textContent).toContain('12 khóa học nhóm');
   });
 
   it('shows one Chi tiết per member, the grouped PT session count and every assignment in the profile', async () => {
@@ -311,9 +366,10 @@ describe('ManagerCoachAssignmentsPage', () => {
     const buttons = [...row.querySelectorAll('button')].map(b => b.textContent);
     expect(buttons.filter(text => text === 'Chi tiết')).toHaveLength(1);
     expect(buttons.filter(text => text?.includes('Chuyển') || text?.includes('Kết thúc'))).toHaveLength(0);
-    expect(row.textContent).toContain('09:00 10/11/2026 · 2 buổi sắp tới');
+    expect(row.textContent).toContain('2 buổi PT sắp tới');
     await act(async () => { [...row.querySelectorAll('button')].find(b => b.textContent === 'Chi tiết')!.click(); });
     expect(host.querySelectorAll('dialog .coach-student-type-pill')).toHaveLength(2);
+    expect(host.querySelector('dialog')?.textContent).toContain('09:00 10/11/2026 · 2 buổi sắp tới');
   });
 
   it('closes the student detail modal via the top-right close button without a duplicate Đóng button', async () => {
@@ -345,7 +401,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     await renderComponent();
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));
     expect(row).toBeDefined();
-    expect(row!.textContent).toContain('Lớp học nhóm');
+    expect(row!.textContent).toContain('1 khóa học nhóm');
     expect(row!.textContent).not.toContain('Chuyển');
   });
 
@@ -353,8 +409,12 @@ describe('ManagerCoachAssignmentsPage', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-11-04T18:05:00Z'));
     await renderComponent();
-    expect(host.textContent).toContain('09:00 10/11/2026');
-    expect(host.textContent).toContain('Ngày kết thúc giáo án: 05/12/2026');
+    const rows = [...host.querySelectorAll('.coach-student-row')];
+    await act(async () => { rows.find(row => row.textContent?.includes('Nguyễn Văn Member'))!.querySelector<HTMLButtonElement>('button')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).toContain('09:00 10/11/2026');
+    await act(async () => { host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click(); });
+    await act(async () => { rows.find(row => row.textContent?.includes('Lê Thị Hoa'))!.querySelector<HTMLButtonElement>('button')!.click(); });
+    expect(host.querySelector('dialog')?.textContent).toContain('Ngày kết thúc giáo án: 05/12/2026');
   });
 
   it('requests sorted coaches list when sort dropdown value changes', async () => {
@@ -414,7 +474,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
     await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent?.includes('Bảng danh sách'))!.click(); });
     expect([...host.querySelectorAll('.coach-table tbody tr')].map(row => row.querySelectorAll('td')[1].textContent)).toEqual([
-      'HLV An', 'HLV Ánh', 'HLV Ánh', 'HLV Ánh', 'HLV Bình', 'HLV Bình',
+      'HLV An', 'HLV Ánh', 'HLV Bình', 'HLV Bình',
     ]);
     await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === 'Theo HLV')!.click(); });
     const typeFilter = host.querySelector('select[aria-label="Lọc theo hình thức"]') as HTMLSelectElement;
@@ -432,26 +492,26 @@ describe('ManagerCoachAssignmentsPage', () => {
       // KPI & pill include Group class members
       expect(host.textContent).toContain('Học viên lớp nhóm');
       expect(host.textContent).toContain('Lớp nhóm');
-      // Card view renders detail for CLASS and PT_1_1 (not only TRAINING_PLAN)
-      expect(host.textContent).toContain('Lớp Pilates Sáng Thứ 7');
-      expect(host.textContent).toContain('Buổi PT Fitness cá nhân');
+      // Cards summarize assignments; details remain available in the profile.
+      expect(host.textContent).toContain('1 khóa học nhóm');
+      expect(host.textContent).toContain('1 buổi PT sắp tới');
 
-      // Table view also renders detail for CLASS and PT_1_1
+      // Table also summarizes assignments for each member and coach.
       await act(async () => {
         [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Bảng danh sách'))?.click();
       });
       const tableText = host.querySelector('.coach-table')?.textContent ?? '';
-      expect(tableText).toContain('Lớp Pilates Sáng Thứ 7');
-      expect(tableText).toContain('Buổi PT Fitness cá nhân');
+      expect(tableText).toContain('1 khóa học nhóm');
+      expect(tableText).toContain('1 buổi PT sắp tới');
 
       // Switching language to EN translates assignmentType pills dynamically
       await act(async () => {
         setLanguage('en');
       });
       const enTableText = host.querySelector('.coach-table')?.textContent ?? '';
-      expect(enTableText).toContain('1:1 PT');
-      expect(enTableText).toContain('Training plan');
-      expect(enTableText).toContain('Group class');
+      expect(enTableText).toContain('upcoming PT sessions');
+      expect(enTableText).toContain('training plans');
+      expect(enTableText).toContain('group courses');
       await act(async () => {
         setLanguage('vi');
       });

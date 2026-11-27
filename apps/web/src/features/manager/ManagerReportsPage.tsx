@@ -76,12 +76,18 @@ export function ManagerReportsPage() {
   const latestRequest = useRef(0);
 
   const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
+  const [cancellationSearch, setCancellationSearch] = useState('');
+  const [cancellationsExpanded, setCancellationsExpanded] = useState(true);
   const [loadingCancellations, setLoadingCancellations] = useState(false);
   const [cancellationError, setCancellationError] = useState(false);
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
+  const filteredCancellations = cancellationRequests.filter(request =>
+    (request.memberName ?? '').toLocaleLowerCase('vi').includes(cancellationSearch.trim().toLocaleLowerCase('vi')),
+  );
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
+  const [transactionsExpanded, setTransactionsExpanded] = useState(true);
 
   const chartRef = useCallback((chart: HTMLDivElement | null) => {
     if (!chart) return;
@@ -642,14 +648,29 @@ export function ManagerReportsPage() {
       {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h2 className="portal-card-title">
-              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})
-            </h2>
+          <h2 className="portal-card-title" style={{ margin: 0, flex: '1 1 340px', minWidth: 0 }}>
+            <button type="button" aria-expanded={cancellationsExpanded} aria-controls="cancellation-requests-content"
+              onClick={() => setCancellationsExpanded(expanded => !expanded)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: 0, border: 0, background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+              <span>{t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})</span>
+              <span aria-hidden="true">{cancellationsExpanded ? '▴' : '▾'}</span>
+            </button>
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '0 1 440px', minWidth: 0 }}>
+            <input
+              className="portal-input"
+              type="search"
+              aria-label={t('Tìm hội viên theo tên', 'Search members by name')}
+              placeholder={t('Tìm hội viên theo tên', 'Search members by name')}
+              value={cancellationSearch}
+              onChange={event => setCancellationSearch(event.target.value)}
+              style={{ flex: '1 1 auto', minWidth: 0 }}
+            />
+            <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
           </div>
-          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
         </div>
 
+        <div id="cancellation-requests-content" hidden={!cancellationsExpanded}>
         {loadingCancellations ? (
           <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
         ) : cancellationError ? (
@@ -657,9 +678,11 @@ export function ManagerReportsPage() {
         ) : cancellationRequests.length === 0 ? (
           <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
             {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
+        ) : filteredCancellations.length === 0 ? (
+          <p role="status" className="row-card__meta" style={{ marginTop: 12 }}>{t('Không tìm thấy yêu cầu phù hợp.', 'No matching requests found.')}</p>
         ) : (
           <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
-            {cancellationRequests.map((req) => {
+            {filteredCancellations.map((req) => {
               const isBusy = decidingCancelId === req.id;
               const isPending = req.status === 'PENDING';
               return (
@@ -740,6 +763,7 @@ export function ManagerReportsPage() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Bảng danh sách giao dịch gần nhất */}
@@ -747,7 +771,13 @@ export function ManagerReportsPage() {
         <div data-i18n-managed className="portal-card">
           <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Giao dịch gần đây")}</h2>
+              <h2 className="portal-card-title" style={{ margin: 0 }}>
+                <button type="button" aria-expanded={transactionsExpanded} aria-controls="recent-transactions-content"
+                  onClick={() => setTransactionsExpanded(expanded => !expanded)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 0, border: 0, background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+                  <span>{t("Giao dịch gần đây")}</span><span aria-hidden="true">{transactionsExpanded ? '▴' : '▾'}</span>
+                </button>
+              </h2>
               {summary.recentTransactions.length > 0 && (
                 <span className="muted" style={{ fontSize: '0.82rem' }}>
                   {txSearchTerm.trim()
@@ -794,6 +824,7 @@ export function ManagerReportsPage() {
             </div>
           </div>
 
+          <div id="recent-transactions-content" hidden={!transactionsExpanded}>
           {summary.recentTransactions.length === 0 ? (
             <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
               {t("Chưa có giao dịch thanh toán nào được ghi nhận.")}
@@ -862,6 +893,7 @@ export function ManagerReportsPage() {
               </table>
             </div>
           )}
+          </div>
         </div>
       )}
       {confirmDialog}

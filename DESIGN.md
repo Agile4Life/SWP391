@@ -1,5 +1,11 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên bên trái nút làm mới; bấm tiêu đề để thu gọn hoặc mở rộng danh sách. Số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
+
+Quyết định Manager: bấm tiêu đề Giao dịch gần đây để thu gọn hoặc mở rộng bảng; ô tìm kiếm giữ trên cùng và giữ từ khóa khi thu gọn.
+
+Quyết định Manager: tại HLV & học viên phụ trách, danh sách theo HLV có hai cấp thu gọn mặc định: mở HLV để thấy học viên, bấm dòng học viên để xem các hình thức và khóa học mà không hiện biểu tượng xổ xuống ở dòng học viên. Mỗi học viên giữ tóm tắt số khóa nhóm, giáo án, buổi PT và cảnh báo gói; nút Chi tiết nằm cùng hàng. Danh sách dài cuộn trong vùng riêng và hồ sơ vẫn phân trang.
+
 Quyết định Receptionist — danh sách gia hạn: chỉ hiển thị kỳ cuối hợp lệ của từng chuỗi theo `previousSubscriptionId`, không gộp theo tên gói và không hiển thị kỳ cũ đã có kỳ tiếp theo. Chuỗi thiếu quan hệ, rẽ nhánh hoặc lặp vòng được ẩn kèm thông báo cần kiểm tra; các chuỗi độc lập đã xác minh vẫn được giữ. Dùng đúng ID kỳ hiển thị khi tạo gia hạn, rồi thanh toán ID yêu cầu mới do Backend trả về. Giữ nguyên mua mới, giá và validation Backend; không sửa lịch sử.
 
 Quyết định Member: sau khi hủy gói được duyệt, màn hình gói tập không chọn các kỳ trước thời điểm hủy làm nguồn gia hạn; hội viên có thể đăng ký gói mới. Kỳ gói được tạo sau lần hủy vẫn được xét gia hạn theo quy tắc hiện hành.
