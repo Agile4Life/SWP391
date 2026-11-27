@@ -249,8 +249,92 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
   // Tên hội viên của phiếu (không có tên thì hiện "Hội viên #id").
   const memberName = (item: SupportTicket) => item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`);
 
-  const inboxPane = <section data-i18n-managed className={`direct-chat__thread direct-chat__support support-chat${split ? ' support-chat__split-list' : ''}`} aria-labelledby="chat-support-title">
-    <SupportHeader onBack={onBack} active={active && (!split || selected === null)} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={null}>
+  const statusFilters: Array<{ key: '' | Status; label: string }> = [
+    { key: '', label: t('Tất cả', 'All') },
+    { key: 'open', label: t('Đang chờ', 'Open') },
+    { key: 'resolved', label: t('Đã giải quyết', 'Resolved') },
+    { key: 'closed', label: t('Đã đóng', 'Closed') },
+  ];
+
+  const inboxPane = split ? (
+    <div ref={listElement} className="support-split__list" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
+      {loading ? (
+        <div className="portal-card support-split__state-card">
+          <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
+        </div>
+      ) : listError ? (
+        <div role="alert" className="portal-alert">
+          <span>{t(listError)}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadList()}>{t('Thử lại', 'Retry')}</button>
+        </div>
+      ) : tickets.length === 0 ? (
+        <div className="portal-card support-split__empty-card">
+          <p className="support-split__empty-title">
+            {manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}
+          </p>
+          <span className="support-split__empty-sub">
+            {t('Hãy thử chọn trạng thái khác hoặc bấm Làm mới.', 'Try choosing a different status or click Refresh.')}
+          </span>
+        </div>
+      ) : (
+        <ul className="support-split__cards">
+          {tickets.map(item => {
+            const pair = SUPPORT_STATUS_LABEL[item.status];
+            const unread = !!item.unreadCount;
+            const isSelected = item.id === selected;
+            const rawPreview = item.lastMessage ?? item.description ?? localizedSubject(item.subject, t);
+            const senderPrefix = item.lastMessageMine
+              ? t('Bạn: ', 'You: ')
+              : item.lastMessageSenderName
+                ? `${item.lastMessageSenderName}: `
+                : '';
+            const name = memberName(item);
+            const initial = (name.trim().charAt(0) || '?').toUpperCase();
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  data-support-ticket={item.id}
+                  className={`portal-card support-split__card${unread ? ' has-unread' : ''}${isSelected ? ' is-selected' : ''}`}
+                  onClick={() => open(item)}
+                >
+                  <div className="support-split__card-head">
+                    <div className="support-split__card-author">
+                      <span className="support-split__avatar" aria-hidden="true">{initial}</span>
+                      <span className="support-split__card-meta">
+                        <strong data-i18n-managed className="support-split__member">{name}</strong>
+                        <span data-i18n-managed className={`support-split__preview${unread ? ' is-unread' : ''}`}>
+                          {senderPrefix}{rawPreview}
+                        </span>
+                      </span>
+                    </div>
+                    <span className="support-chat__badges">
+                      {unread && (
+                        <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>
+                          {item.unreadCount! > 99 ? '99+' : item.unreadCount}
+                        </span>
+                      )}
+                      <span className={`support-chat__pill support-chat__pill--${item.status}`}>
+                        {pair ? t(...pair) : item.status}
+                      </span>
+                    </span>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!loading && !listError && pages > 1 && (
+        <nav className="direct-chat__pagination" aria-label={t('Trang phiếu hỗ trợ', 'Support ticket pages')}>
+          <button type="button" className="btn-secondary btn-sm" disabled={page === 0} onClick={() => changeQuery(page - 1, filter)}>{t('Trước', 'Previous')}</button>
+          <span>{page + 1}/{pages}</span>
+          <button type="button" className="btn-secondary btn-sm" disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>{t('Sau', 'Next')}</button>
+        </nav>
+      )}
+    </div>
+  ) : <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
+    <SupportHeader onBack={onBack} active={active} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={null}>
       <HeaderAction label={t('Làm mới', 'Refresh')} disabled={loading} onClick={() => void loadList()}>
         <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
       </HeaderAction>
@@ -337,14 +421,42 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
 
   if (split) {
     return (
-      <div data-i18n-managed className={`support-chat support-chat--split${selected !== null ? ' has-selection' : ''}`}>
-        {inboxPane}
-        <div className="support-chat__split-detail">
-          {detailPane ?? (
-            <div className="support-chat__split-placeholder">
-              <p>{t('Chọn một khiếu nại ở danh sách bên trái để xem chi tiết và phản hồi.', 'Select a ticket on the left to view details and reply.')}</p>
-            </div>
-          )}
+      <div data-i18n-managed className={`support-split${selected !== null ? ' has-selection' : ''}`}>
+        <div className="support-split__filterbar">
+          <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo trạng thái', 'Filter by status')} style={{ marginBottom: 0 }}>
+            {statusFilters.map((tab) => {
+              const isActive = filter === tab.key;
+              return (
+                <button
+                  key={tab.key || 'all'}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`portal-tab ${isActive ? 'active' : ''}`}
+                  onClick={() => changeQuery(0, tab.key, false)}
+                >
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" className="btn-secondary btn-sm" disabled={loading} onClick={() => void loadList()}>
+            {t('Làm mới', 'Refresh')}
+          </button>
+        </div>
+        <div className="support-split__grid">
+          {inboxPane}
+          <div className="support-split__detail">
+            {detailPane ? (
+              <div className="portal-card support-split__detail-card">
+                {detailPane}
+              </div>
+            ) : (
+              <div className="portal-card support-split__placeholder">
+                <p style={{ margin: 0 }}>{t('Chọn một khiếu nại ở danh sách bên trái để xem chi tiết và phản hồi.', 'Select a ticket on the left to view details and reply.')}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
