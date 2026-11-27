@@ -13,6 +13,7 @@ import {
   type RequestType,
 } from './staffRequestApi';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { isOverdueLeave } from './staffRequestDates';
 
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
@@ -108,6 +109,11 @@ export function ManagerInternalRequestsPage() {
   async function handleReviewSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reviewTarget) return;
+
+    if (reviewAction === 'APPROVED' && isOverdueLeave(reviewTarget)) {
+      setModalError(staffMessage('Quá hạn duyệt đơn nghỉ. Nhân viên tiếp tục đi làm theo lịch bình thường.', 'Leave approval deadline passed. The staff member continues working their normal schedule.'));
+      return;
+    }
 
     if (reviewAction === 'REJECTED' && !managerNotes.trim()) {
       setModalError(staffMessage(
@@ -482,6 +488,7 @@ export function ManagerInternalRequestsPage() {
                 )}
 
                 {/* Thao tác của quản lý (nút Duyệt / Từ chối cho đơn chờ duyệt) */}
+                {isOverdueLeave(req) && <p role="note" className="portal-alert portal-alert--info">{t('Quá hạn duyệt — nhân viên tiếp tục đi làm theo lịch bình thường. Vẫn có thể từ chối đơn.', 'Approval deadline passed — the staff member continues working their normal schedule. Rejection is still available.')}</p>}
                 {isPending && (
                   <div data-i18n-managed
                     style={{
@@ -502,6 +509,7 @@ export function ManagerInternalRequestsPage() {
                       type="button"
                       className="btn-primary btn-sm"
                       onClick={() => handleOpenApprove(req)}
+                      disabled={isOverdueLeave(req)}
                     >
                       {t("Phê duyệt đơn")}</button>
                   </div>

@@ -83,6 +83,13 @@ export interface RequestHistoryItem {
   previousPackageName: string | null;
   amount: number | null;
   paymentMethod: string | null;
+  paymentId?: number | null;
+  paymentStatus?: string | null;
+  actualPaymentMethod?: 'VNPAY' | 'WALLET' | 'CASH' | 'POS' | 'BANK_TRANSFER' | 'UNKNOWN' | 'UNPAID';
+  paidAmount?: number | null;
+  quotedAmount?: number | null;
+  refundedAmount?: number | null;
+  lateGatewayRefundedAmount?: number | null;
   processedAt: string | null;
   processedByName: string | null;
 }

@@ -48,6 +48,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
 
+    /** Đọc các khoản thanh toán của nhiều yêu cầu trong một truy vấn. */
+    @EntityGraph(attributePaths = {"member"})
+    List<Payment> findAllBySubscriptionIdIn(java.util.Collection<Long> subscriptionIds);
+
     /**
      * Tìm các bản ghi có subscriptionId đã có giá trị và status thuộc danh sách tham số và paidAt ≥ tham số,
      * sắp xếp theo paidAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm).

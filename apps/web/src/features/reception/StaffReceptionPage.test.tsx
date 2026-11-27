@@ -60,10 +60,29 @@ it('keeps all five queue types and their existing details in separate informatio
   expect(cards[4].querySelector('a')?.getAttribute('href')).toBe('/staff/holds');
 });
 
+it('places lookup after the queue and keeps trial inspection beside document type with reject first', async () => {
+  api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const sections = [...host.querySelector('.reception-top__main')!.children];
+  expect(sections[0].classList.contains('reception-top__queue')).toBe(true);
+  expect(sections[1].classList.contains('reception-top__search')).toBe(true);
+  const trial = host.querySelector('.reception-todo__tag--trial')!.closest('.reception-request')!;
+  const type = [...trial.querySelectorAll('dl > div')].find(row => row.querySelector('dt')?.textContent === 'Loại giấy tờ')!;
+  expect(type.querySelector('dd')?.textContent).toContain('Hộ chiếu');
+  const view = type.querySelector<HTMLButtonElement>('button')!;
+  expect(view?.textContent?.trim()).toBe('Xem');
+  expect(view?.type).toBe('button');
+  const actions = [...trial.querySelectorAll<HTMLButtonElement>('.reception-request__actions button')];
+  expect(actions.map(button => button.textContent)).toEqual(['✕ Từ chối', '✓ Duyệt & Kích hoạt']);
+  expect(actions.every(button => !button.disabled)).toBe(true);
+  await act(async () => view.click());
+  expect(host.querySelector('dialog h2')?.textContent).toBe('Chi tiết đơn trải nghiệm #155');
+});
+
 it('shows a compact trial dialog without the business note and preserves image zoom and rejection reason validation', async () => {
   api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
   await act(async () => root.render(<StaffReceptionPage />));
-  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Xem giấy tờ & ảnh')!.click());
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Xem')!.click());
   const dialog = host.querySelector('dialog')!;
   expect(dialog.querySelector('h2')?.textContent).toBe('Chi tiết đơn trải nghiệm #155');
   expect(dialog.querySelector('.reception-trial-detail__member')?.textContent).toContain('An');
@@ -812,7 +831,7 @@ it('P2-FE-67 & P2-FE-68: shows "Chưa cấp thẻ" instead of fabricated code, o
   expect(host.textContent).not.toContain('MB-2026-010');
 
   // Open trial inspection modal and open in-app lightbox
-  const inspectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem giấy tờ & ảnh')!;
+  const inspectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem')!;
   await act(async () => inspectBtn.click());
   const zoomBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Phóng to ảnh mặt trước giấy tờ"]')!;
   expect(zoomBtn).not.toBeNull();

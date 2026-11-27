@@ -41,13 +41,9 @@ it('rejects unrelated QR content without sending a check-in', async () => {
   expect(host.textContent).toContain('Đây không phải mã QR cổng SÖL');
   expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self'))).toHaveLength(0);
 });
-it('sends the gate code to the checkout endpoint in check-out mode', async () => {
+it('does not render manual check-out mode toggle on the member check-in page', async () => {
   await render();
-  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Check-out')!.click());
-  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Bật camera')!.click());
-  const code = `SOL:GATE:1:A1:1793256000000:${'a'.repeat(64)}`;
-  await act(async () => camera.decode!({ data: code }));
-  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self/checkout'))).toHaveLength(1);
+  expect([...host.querySelectorAll('button')].find((item) => item.textContent === 'Check-out')).toBeUndefined();
 });
 it('requests a date range in Asia/Ho_Chi_Minh when a longer history window is chosen', async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -59,15 +55,6 @@ it('requests a date range in Asia/Ho_Chi_Minh when a longer history window is ch
   } finally {
     vi.useRealTimers();
   }
-});
-it('calls the check-out endpoint when toggling Check-in to Check-out while camera is already active (P1-FE-32)', async () => {
-  await render();
-  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Bật camera')!.click());
-  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Check-out')!.click());
-  const code = `SOL:GATE:1:A1:1793256000000:${'b'.repeat(64)}`;
-  await act(async () => camera.decode!({ data: code }));
-  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self/checkout'))).toHaveLength(1);
-  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).endsWith('/self'))).toHaveLength(0);
 });
 it('renders LoadingSkeleton and defers history load while active plan check is pending (P2-FE-58)', async () => {
   let resolvePlan!: (res: Response) => void;
@@ -114,11 +101,4 @@ it('ignores stale history responses when switching filters rapidly and adapts Ch
   }))));
   expect(host.textContent).toContain('Cổng Hôm Nay');
   expect(host.textContent).not.toContain('Cổng 30 Ngày Cũ');
-
-  // Check-out mode copy
-  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Check-out')!.click());
-  expect(host.textContent).toContain('Chờ xác nhận check-out thành công.');
-  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Bật camera')!.click());
-  await act(async () => camera.decode!({ data: `SOL:GATE:1:A1:1793256000000:${'c'.repeat(64)}` }));
-  expect(host.textContent).toContain('Chưa thể check-out');
 });

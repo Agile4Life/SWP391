@@ -8,6 +8,8 @@ import java.util.List;
 /** Truy cập bảng wallet_transactions. */
 @Repository
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"wallet", "wallet.user"})
+    List<WalletTransaction> findByReferenceIdIn(java.util.Collection<String> referenceIds);
 
     /**
      * Tìm các bản ghi có wallet_Id = tham số, sắp xếp theo createdAt giảm dần, id giảm dần (chỉ lấy bản ghi đầu
