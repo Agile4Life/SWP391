@@ -12,6 +12,7 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     
     String INBOX_FILTER = """
         from SupportRequest r where (:status is null or r.status = :status)
+        and (:escalatedOnly = false or r.escalatedAt is not null)
         and (:unreadOnly = false or not exists
           (select receipt.id from SupportRequestRead receipt where receipt.supportRequest = r and receipt.user.id = :userId)
           or exists (select m.id from SupportRequestMessage m where m.supportRequest = r
@@ -21,8 +22,12 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     @Query(value = "select r " + INBOX_FILTER + """
         order by coalesce((select max(m.createdAt) from SupportRequestMessage m where m.supportRequest = r), r.createdAt) desc, r.id desc
         """, countQuery = "select count(r) " + INBOX_FILTER)
-    Page<SupportRequest> findReceptionistInbox(@Param("status") String status, @Param("unreadOnly") boolean unreadOnly,
-            @Param("userId") Long userId, Pageable pageable);
+    Page<SupportRequest> findInbox(@Param("status") String status, @Param("unreadOnly") boolean unreadOnly,
+            @Param("escalatedOnly") boolean escalatedOnly, @Param("userId") Long userId, Pageable pageable);
+
+    default Page<SupportRequest> findReceptionistInbox(String status, boolean unreadOnly, Long userId, Pageable pageable) {
+        return findInbox(status, unreadOnly, false, userId, pageable);
+    }
     /** Lấy phiếu và khóa dòng để ghi, tránh hai người cập nhật cùng lúc. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from SupportRequest r where r.id = :id")

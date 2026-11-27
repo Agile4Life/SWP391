@@ -85,13 +85,23 @@ class SupportInboxControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"MEMBER", "CENTER_MANAGER", "COACH"})
+    @ValueSource(strings = {"MEMBER", "COACH"})
     void otherRolesCannotMarkRead(String role) throws Exception {
         login(role);
         mvc.perform(post("/api/v1/support/requests/1/read").contentType("application/json")
                 .content("{\"lastMessageId\":0}"))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(inbox);
+    }
+
+    @Test
+    void managerCanMarkEscalatedTicketRead() throws Exception {
+        login("CENTER_MANAGER");
+        when(inbox.markRead(1L, 2L, "CENTER_MANAGER", 5L)).thenReturn(new SupportReadResultDto(0));
+        mvc.perform(post("/api/v1/support/requests/1/read").contentType("application/json")
+                .content("{\"lastMessageId\":5}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.unreadCount").value(0));
+        verify(inbox).markRead(1L, 2L, "CENTER_MANAGER", 5L);
     }
 
     @Test
@@ -107,12 +117,13 @@ class SupportInboxControllerTest {
     }
 
     @Test
-    void managerKeepsExistingListing() throws Exception {
+    void managerUsesInboxWithUnreadFilter() throws Exception {
         login("CENTER_MANAGER");
-        when(support.getAllRequests(eq("open"), any(), eq("CENTER_MANAGER")))
+        when(inbox.inbox(eq(2L), eq("CENTER_MANAGER"), eq("open"), eq(true), any()))
                 .thenReturn(Page.empty(org.springframework.data.domain.PageRequest.of(0, 20)));
         mvc.perform(get("/api/v1/support/requests?status=open&unreadOnly=true"))
                 .andExpect(status().isOk());
-        verifyNoInteractions(inbox);
+        verify(inbox).inbox(eq(2L), eq("CENTER_MANAGER"), eq("open"), eq(true), any());
+        verifyNoInteractions(support);
     }
 }

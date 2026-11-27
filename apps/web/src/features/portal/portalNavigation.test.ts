@@ -96,7 +96,7 @@ it('keeps group-class navigation for Member, Coach and Manager while keeping Sta
   expect(manager.flatMap(portalNavRoutes)).not.toContain('/manager/products');
 
   const staff = forRole('STAFF').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
-  expect(staff).toHaveLength(4);
+  expect(staff).toHaveLength(5);
   expect(staff.flatMap(portalNavRoutes)).toEqual([
     '/staff/reception',
     '/staff/check-in',
@@ -105,6 +105,7 @@ it('keeps group-class navigation for Member, Coach and Manager while keeping Sta
     '/staff/holds',
     '/staff/reception-history',
     '/staff/requests',
+    '/messages',
   ]);
   const history = staff.find(item => item.to === '/staff/reception-history')!;
   expect(history.icon).toBe('history');

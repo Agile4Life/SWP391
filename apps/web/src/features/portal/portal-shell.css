@@ -552,6 +552,38 @@ html:root .portal-logo.portal-logo--mark {
   color: var(--portal-ink);
 }
 
+.portal-v2 .portal-rail-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.portal-v2 .portal-rail-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--sol-accent);
+  color: var(--sol-on-accent);
+  border: 1.5px solid var(--portal-surface);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-v2 .portal-rail-link.active .portal-rail-badge {
+  background: var(--portal-paper);
+  color: var(--portal-surface);
+  border-color: var(--portal-salmon);
+}
+
 .portal-v2 .portal-rail-profile.active {
   background: var(--portal-tint);
 }

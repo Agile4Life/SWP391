@@ -71,7 +71,8 @@ it('routes coach group-class, attendance, PT, plans and requests notifications t
 
 it('routes manager, staff and admin notifications cleanly including restored class links', () => {
   expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'STAFF')).toBe('/messages?tab=support');
-  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/messages?tab=support');
+  expect(notificationDestination({ relatedEntityType: 'support_request', relatedEntityId: 42, type: 'support_reply' }, 'MEMBER')).toBe('/messages?tab=support&ticketId=42');
+  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/manager/requests?tab=complaints');
   expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' }, 'MANAGER')).toBe('/manager/classes');
   expect(notificationDestination({ actionPath: '/staff/classes' }, 'MANAGER')).toBe('/manager/classes');
   expect(notificationDestination({ actionPath: '/staff/classes' }, 'CENTER_MANAGER')).toBe('/manager/classes');

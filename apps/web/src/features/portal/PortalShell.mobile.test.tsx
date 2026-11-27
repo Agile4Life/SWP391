@@ -188,9 +188,10 @@ describe('mobile portal navigation', () => {
     expect(host.querySelector('.member-ai-chat')).toBeNull();
   });
 
-  it('hides floating chat widget on /staff/check-in scanner route', async () => {
+  it('hides floating chat widget for STAFF and exposes /messages in the sidebar', async () => {
     const router = await renderPortal('STAFF', '/staff/dashboard');
-    expect(host.querySelector('.chat-widget')).not.toBeNull();
+    expect(host.querySelector('.chat-widget')).toBeNull();
+    expect(host.querySelector('.app-sidebar a[href="/messages"]')).not.toBeNull();
     await act(async () => router.navigate('/staff/check-in'));
     expect(host.querySelector('.chat-widget')).toBeNull();
   });

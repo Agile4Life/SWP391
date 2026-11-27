@@ -144,7 +144,8 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
     if (/^\/manager\/equipment(?:\/|$)/.test(pathname)) return '/manager/catalogs';
     if (/^\/manager\/coach-reviews(?:\/|$)/.test(pathname)) return '/manager/coach-assignments';
     if (/^\/manager\/users(?:\/|$)/.test(pathname)) return '/manager/staff-accounts';
-    if (/^\/manager\/support(?:\/|$)/.test(pathname)) return '/messages?tab=support';
+    if (/^\/manager\/support(?:\/|$)/.test(pathname)) return '/manager/requests?tab=complaints';
+    if (path === '/manager/requests?tab=complaints') return path;
     return MANAGER_ACTIVE_PATHS.has(pathname) ? path : null;
   }
 
@@ -161,7 +162,7 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   return MEMBER_ACTIVE_PATHS.has(pathname) ? path : null;
 }
 
-export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath' | 'title' | 'message'>>;
+export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntityType' | 'relatedEntityId' | 'type' | 'actionPath' | 'title' | 'message'>>;
 
 /**
  * Chọn trang đích khi bấm thông báo: ưu tiên đường dẫn hợp lệ trong thông báo, rồi theo vai trò và loại đối
@@ -175,6 +176,11 @@ export function notificationDestination(notification: NotificationTarget, role =
       (notification.type === 'payment' || notification.relatedEntityType === 'payment')) {
     return '/staff/reception-history';
   }
+  const supportTicketPath =
+    typeof notification.relatedEntityId === 'number' && notification.relatedEntityId > 0
+      ? `/messages?tab=support&ticketId=${notification.relatedEntityId}`
+      : '/messages?tab=support';
+  if (explicit === '/messages?tab=support') return supportTicketPath;
   if (explicit) return explicit;
   if (role === 'COACH' && notification.actionPath === '/staff/classes') {
     return '/coach/classes';
@@ -286,7 +292,7 @@ export function notificationDestination(notification: NotificationTarget, role =
   }
 
   if (['MANAGER', 'CENTER_MANAGER'].includes(role)) {
-    if (rawEntity === 'support_request' || rawType === 'support_reply') return '/messages?tab=support';
+    if (rawEntity === 'support_request' || rawType === 'support_reply') return '/manager/requests?tab=complaints';
     if (
       ['staff_internal_request', 'internal_request', 'staff_request'].includes(rawEntity) ||
       /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request/.test(text)
@@ -315,7 +321,7 @@ export function notificationDestination(notification: NotificationTarget, role =
     case 'membership_subscription': return '/member/packages';
     case 'payment': return '/member/invoices';
     case 'product_order': return '/member/invoices';
-    case 'support_request': return '/messages?tab=support';
+    case 'support_request': return supportTicketPath;
     case 'training_plan': return '/member/progress';
     default:
       if (rawType === 'class_reminder' || rawType === 'schedule_change') return '/member/classes';
@@ -325,7 +331,7 @@ export function notificationDestination(notification: NotificationTarget, role =
       if (rawType === 'package_expiry') return '/member/packages';
       if (rawType === 'payment') return '/member/invoices';
       if (rawType === 'order') return '/member/invoices';
-      if (rawType === 'support_reply') return '/messages?tab=support';
+      if (rawType === 'support_reply') return supportTicketPath;
       if (/đánh giá|nhận xét|evaluation|tiến độ|progress/.test(text)) return '/member/progress';
       return '/member/dashboard';
   }

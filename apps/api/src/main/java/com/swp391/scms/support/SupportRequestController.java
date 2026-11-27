@@ -57,7 +57,7 @@ public class SupportRequestController {
     }
 
     @PostMapping("/{id}/read")
-    @PreAuthorize("hasRole('RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
     public ApiResponse<SupportReadResultDto> markRead(@PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @Valid @RequestBody MarkSupportReadDto request) {
@@ -119,7 +119,7 @@ public class SupportRequestController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "false") boolean unreadOnly,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<SupportRequestDto> requests = "RECEPTIONIST".equals(principal.role()) && inboxService != null
+        Page<SupportRequestDto> requests = ("RECEPTIONIST".equals(principal.role()) || "CENTER_MANAGER".equals(principal.role())) && inboxService != null
                 ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, sanitizePageable(pageable))
                 : supportRequestService.getAllRequests(status, sanitizePageable(pageable), principal.role());
         return ApiResponse.ok(msg("support.list.success"), requests);

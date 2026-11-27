@@ -21,6 +21,11 @@ import { subscribeMembershipChanges } from '../member/membershipRealtime';
 import { getProfile } from '../member/profileApi';
 import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
+import { CHAT_UNREAD_EVENT, getChatUnreadCount } from '../chat/chatApi';
+import { subscribeChat } from '../chat/chatRealtime';
+import { SUPPORT_UNREAD_EVENT } from '../chat/supportChat';
+import { getSupportInbox } from '../member/memberSupportApi';
+import { subscribeSupport } from '../member/supportRealtime';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
@@ -440,6 +445,41 @@ function PortalShellContent({ user }: { user: UserSession }) {
     />
   );
 
+  const [staffChatUnread, setStaffChatUnread] = useState(0);
+  const [staffSupportUnread, setStaffSupportUnread] = useState(0);
+  const hasStaffMessagesNav = user.role === 'STAFF';
+  useEffect(() => {
+    if (!hasStaffMessagesNav) return;
+    let active = true;
+    const refreshStaffMessagesUnread = () => {
+      void getChatUnreadCount()
+        .then(data => { if (active && typeof data?.count === 'number') setStaffChatUnread(data.count); })
+        .catch(() => {});
+      void getSupportInbox(0, '', false)
+        .then(result => {
+          if (!active) return;
+          const count = Array.isArray(result?.content) ? result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0) : 0;
+          setStaffSupportUnread(count);
+        })
+        .catch(() => {});
+    };
+    refreshStaffMessagesUnread();
+    const onChatCount = (event: Event) => setStaffChatUnread((event as CustomEvent<number>).detail);
+    const onSupportCount = (event: Event) => setStaffSupportUnread((event as CustomEvent<number>).detail);
+    window.addEventListener(CHAT_UNREAD_EVENT, onChatCount);
+    window.addEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    const stopChat = subscribeChat(refreshStaffMessagesUnread, () => {});
+    const stopSupport = subscribeSupport(refreshStaffMessagesUnread, () => {});
+    return () => {
+      active = false;
+      window.removeEventListener(CHAT_UNREAD_EVENT, onChatCount);
+      window.removeEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+      stopChat();
+      stopSupport();
+    };
+  }, [hasStaffMessagesNav]);
+
+  const staffMessagesUnread = staffChatUnread + staffSupportUnread;
   const roleLabel = getRoleLabel(user.role, lang);
 
   return <div className="portal-backdrop">
@@ -454,8 +494,16 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => {
             // Mục gộp sáng khi đang ở bất kỳ tab con nào, không chỉ tab đầu.
             const active = isPortalNavActive(item, location.pathname);
-            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} title={item.to === '/staff/reception-history' ? item.label : undefined} aria-current={active ? 'page' : undefined}>
-              <PortalIcon name={item.icon} /><span className="portal-rail-label" aria-hidden="true">{item.label}</span>
+            const badgeCount = item.to === '/messages' ? staffMessagesUnread : 0;
+            const ariaLabel = badgeCount > 0
+              ? t(`${item.label} · ${badgeCount} chưa đọc`, `${item.label} · ${badgeCount} unread`)
+              : item.label;
+            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={ariaLabel} title={item.to === '/staff/reception-history' ? item.label : undefined} aria-current={active ? 'page' : undefined}>
+              <span className="portal-rail-icon">
+                <PortalIcon name={item.icon} />
+                {badgeCount > 0 && <span className="portal-rail-badge" aria-hidden="true">{badgeCount > 99 ? '99+' : badgeCount}</span>}
+              </span>
+              <span className="portal-rail-label" aria-hidden="true">{item.label}</span>
             </Link>;
           })}
         </nav>

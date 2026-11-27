@@ -6,17 +6,15 @@ import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { getSupportInbox } from '../member/memberSupportApi';
+import { subscribeSupport } from '../member/supportRealtime';
+import { SUPPORT_UNREAD_EVENT } from './supportChat';
 import { useDraggableWidget } from './useDraggableWidget';
 import { useI18n } from '../../shared/i18n';
 import './chat-widget.css';
 
 // Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
 const ChatPage = lazy(() => import('./ChatPage').then(module => ({ default: module.ChatPage })));
-
-const connectionLabel: Record<ChatConnection, [string, string]> = {
-  connecting: ['Đang kết nối…', 'Connecting…'], connected: ['Cập nhật trực tiếp', 'Live updates'],
-  reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Tự động đồng bộ tin nhắn', 'Auto-syncing messages'],
-};
 
 /** Ảnh đại diện nhỏ trên nút chat nổi; tự rơi về hình bóng mặc định khi ảnh lỗi. */
 function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
@@ -37,51 +35,62 @@ function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
 }
 
 /**
- * Nút chat nổi: khách xem được khung rỗng, quản lý dùng bản riêng, các vai trò khác dùng bản có kết nối
- * realtime; vai trò không hợp lệ thì không hiển thị.
+ * Nút chat nổi: khách xem được khung rỗng, hội viên và HLV dùng bản có kết nối realtime;
+ * lễ tân vào thẳng trang Tin nhắn từ sidebar, quản lý xử lý khiếu nại trong Đơn từ & Khiếu nại.
  */
 export function ChatWidget() {
   const user = useCurrentUser();
-  const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
+  const allowed = !user || ['MEMBER', 'COACH'].includes(user.role);
   if (!allowed) return null;
   const identity = sessionIdentityKey(user);
-  if (user?.role === 'MANAGER') return <ManagerChatWidget key={identity} />;
   return user
-    ? <SignedInChatWidget key={identity} />
+    ? <SignedInChatWidget key={identity} role={user.role} />
     : <ChatShell key={identity} unread={0} feed={null} onOpen={() => {}} />;
 }
 
-/** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */
-const MANAGER_FEED: ChatRealtimeFeed = { connection: 'disabled', tick: 0, reconnect: () => {} };
-/** Nút chat nổi cho quản lý (không có số chưa đọc và không hiện trạng thái kết nối). */
-function ManagerChatWidget() {
-  return <ChatShell unread={0} feed={MANAGER_FEED} showStatus={false} onOpen={() => {}} />;
-}
-
 /** Widget giữ một kết nối realtime duy nhất: vừa cập nhật badge chưa đọc, vừa báo cho khung chat tải lại. */
-function SignedInChatWidget() {
-  const [unread, setUnread] = useState(0);
+function SignedInChatWidget({ role }: { role: string }) {
+  const [chatUnread, setChatUnread] = useState(0);
+  const [supportUnread, setSupportUnread] = useState(0);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const [tick, setTick] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  // Tải lại số tin chưa đọc.
+  const hasSupportInbox = role === 'STAFF';
+  // Tải lại số tin chưa đọc (bao gồm phiếu khiếu nại chưa đọc đối với lễ tân).
   const refreshUnread = useCallback(() => {
-    void getChatUnreadCount().then(data => setUnread(data.count)).catch(() => {});
-  }, []);
+    void getChatUnreadCount().then(data => setChatUnread(data.count)).catch(() => {});
+    if (hasSupportInbox) {
+      void getSupportInbox(0, '', false)
+        .then(result => {
+          const count = Array.isArray(result?.content) ? result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0) : 0;
+          setSupportUnread(count);
+        })
+        .catch(() => {});
+    }
+  }, [hasSupportInbox]);
   useEffect(() => subscribeChat(() => { setTick(n => n + 1); refreshUnread(); }, setConnection), [refreshUnread, attempt]);
+  useEffect(() => {
+    if (!hasSupportInbox) return;
+    return subscribeSupport(() => { setTick(n => n + 1); refreshUnread(); }, () => {});
+  }, [hasSupportInbox, refreshUnread, attempt]);
   useEffect(() => {
     refreshUnread();
     // Nhận số chưa đọc phát từ nơi khác trong ứng dụng.
-    const onCount = (event: Event) => setUnread((event as CustomEvent<number>).detail);
+    const onCount = (event: Event) => setChatUnread((event as CustomEvent<number>).detail);
+    const onSupportCount = (event: Event) => setSupportUnread((event as CustomEvent<number>).detail);
     window.addEventListener(CHAT_UNREAD_EVENT, onCount);
-    return () => window.removeEventListener(CHAT_UNREAD_EVENT, onCount);
+    window.addEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    return () => {
+      window.removeEventListener(CHAT_UNREAD_EVENT, onCount);
+      window.removeEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    };
   }, [refreshUnread]);
   const feed: ChatRealtimeFeed = { connection, tick, reconnect: () => setAttempt(n => n + 1) };
-  return <ChatShell unread={unread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
+  return <ChatShell unread={chatUnread + supportUnread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
 }
 
 /** Vỏ của nút chat nổi: nút kèm số chưa đọc, panel chat có thể kéo, mở rộng, đóng bằng Esc hoặc bấm ra ngoài. */
-function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void; showStatus?: boolean }) {
+function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
@@ -198,8 +207,6 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
           </button>
         </div>
       </header>
-      {feed && showStatus && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
-        {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
       {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label={t("Đang mở tin nhắn…", "Opening messages…")} count={4} /></div>}>
         <ChatPage embedded visible={open} realtime={feed} onPeersChange={setPeers} />
       </Suspense> : <div className="chat-widget__login"><p>{t("Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.", "Sign in to chat with receptionists, coaches and SÖL AI.")}</p><Link to="/login" className="btn-primary">{t("Đăng nhập để nhắn tin", "Sign in to send messages")}</Link></div>}

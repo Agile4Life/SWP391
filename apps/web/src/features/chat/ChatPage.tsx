@@ -7,6 +7,9 @@ import { formatCenterDate } from '../../shared/lib/centerTime';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { chatRoleLabel, getConversations, openConversation, type ChatContact, type ChatConversation } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { getSupportInbox } from '../member/memberSupportApi';
+import { subscribeSupport } from '../member/supportRealtime';
+import { SUPPORT_UNREAD_EVENT, type SupportAudience } from './supportChat';
 import { useChatConversation } from './useChatConversation';
 import { ChatAvatar } from './ChatAvatar';
 import { ChatContacts } from './ChatContacts';
@@ -14,7 +17,6 @@ import { ChatThread } from './ChatThread';
 import { AiChatThread } from './AiChatThread';
 import { SupportThread } from './SupportThread';
 import { AI_PEER } from './aiPeer';
-import type { SupportAudience } from './supportChat';
 import { useI18n } from '../../shared/i18n';
 import './chat.css';
 
@@ -79,11 +81,16 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
   const [ownConnection, setConnection] = useState<ChatConnection>('connecting');
   const connection = realtime?.connection ?? ownConnection;
   const [connectionAttempt, setConnectionAttempt] = useState(0);
-  // /messages?tab=support (liên kết từ thông báo, email, đường dẫn cũ) mở thẳng mục Hỗ trợ & Khiếu nại.
-  const openSupportFromUrl = !embedded && !!support && new URLSearchParams(window.location.search).get('tab') === 'support';
+  // /messages?tab=support (liên kết từ thông báo, email, đường dẫn cũ) mở thẳng mục Hỗ trợ & Khiếu nại (và nhảy tới ticketId nếu có).
+  const initialSearch = new URLSearchParams(window.location.search);
+  const initialTicketRaw = Number(initialSearch.get('ticketId'));
+  const initialTicketId = Number.isInteger(initialTicketRaw) && initialTicketRaw > 0 ? initialTicketRaw : null;
+  const openSupportFromUrl = !embedded && !!support && initialSearch.get('tab') === 'support';
   const [mobileThread, setMobileThread] = useState(openSupportFromUrl);
   const [aiOpen, setAiOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(openSupportFromUrl || !direct);
+  const [supportTicketId, setSupportTicketId] = useState<number | null>(openSupportFromUrl ? initialTicketId : null);
+  const [supportUnread, setSupportUnread] = useState(0);
   const [likedIds, setLikedIds] = useState<Set<number>>(() => new Set());
   const toggleLike = useCallback((id: number) => {
     setLikedIds(prev => {
@@ -130,6 +137,29 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
     if (tick === 0 || !direct) return;
     void loadInbox(pageRef.current, true); void refresh();
   }, [tick, loadInbox, refresh, direct]);
+  // Đồng bộ số phiếu khiếu nại chưa đọc cho lễ tân/quản lý để hiển thị badge trên mục ghim Hỗ trợ & Khiếu nại.
+  const canCountSupportUnread = support === 'staff' || support === 'manager';
+  const refreshSupportUnread = useCallback(() => {
+    if (!canCountSupportUnread) return;
+    void getSupportInbox(0, '', false)
+      .then(result => {
+        if (!mounted.current) return;
+        const count = Array.isArray(result?.content) ? result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0) : 0;
+        setSupportUnread(count);
+      })
+      .catch(() => {});
+  }, [canCountSupportUnread]);
+  useEffect(() => {
+    if (!canCountSupportUnread) return;
+    refreshSupportUnread();
+    const onSupportCount = (event: Event) => setSupportUnread((event as CustomEvent<number>).detail);
+    window.addEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    const stop = subscribeSupport(refreshSupportUnread, () => {});
+    return () => {
+      window.removeEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+      stop();
+    };
+  }, [canCountSupportUnread, refreshSupportUnread]);
   // Đã đọc một hội thoại thì đưa số chưa đọc về 0.
   const onRead = useCallback((conversationId: number) => {
     setConversations(list => list.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
@@ -143,10 +173,13 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
   function selectAi() {
     setSupportOpen(false); setAiOpen(true); setMobileThread(true);
   }
-  // Mở khung hỗ trợ và khiếu nại.
-  function selectSupport() {
-    setAiOpen(false); setSupportOpen(true); setMobileThread(true);
-  }
+  // Mở khung hỗ trợ và khiếu nại (tùy chọn nhảy tới một ticketId cụ thể).
+  const selectSupport = useCallback((ticketId?: number | null) => {
+    setAiOpen(false);
+    setSupportOpen(true);
+    setMobileThread(true);
+    if (ticketId != null) setSupportTicketId(ticketId);
+  }, []);
   // Quay về danh sách (di động) và đưa focus vào tiêu đề danh sách.
   const backToList = () => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); };
   // Mở (hoặc tạo) hội thoại với một liên hệ rồi chọn nó.
@@ -173,7 +206,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
     <div className="direct-chat__workspace">
       <aside className="direct-chat__inbox" aria-labelledby="chat-inbox-title">
         <div className="direct-chat__inbox-heading">
-          <h2 id="chat-inbox-title" tabIndex={-1} ref={listTitle}>{t("Hội thoại của bạn", "Your conversations")}</h2>
+          <h2 id="chat-inbox-title" tabIndex={-1} ref={listTitle}>{t("Hội thoại", "Conversations")}</h2>
           {direct && <button
             type="button"
             data-i18n-managed
@@ -193,7 +226,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
         </div>
         {/* Hỗ trợ & Khiếu nại (hội viên → lễ tân) và SÖL AI luôn ghim ở đầu, trên cả danh bạ. */}
         <ul className="direct-chat__list direct-chat__list--pinned">
-          {support && <li><button type="button" className={`direct-chat__person direct-chat__person--support${supportOpen ? ' is-selected' : ''}`} onClick={selectSupport} aria-current={supportOpen ? 'true' : undefined}>
+          {support && <li><button type="button" className={`direct-chat__person direct-chat__person--support${supportOpen ? ' is-selected' : ''}${supportUnread > 0 ? ' has-unread' : ''}`} onClick={() => selectSupport()} aria-current={supportOpen ? 'true' : undefined}>
             <span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 18 0" /><path d="M3 12v3a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z" /><path d="M21 12v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z" /><path d="M18 17v1a3 3 0 0 1-3 3h-2" /></svg>
             </span>
@@ -201,6 +234,13 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
               <strong>{t("Hỗ trợ & Khiếu nại", "Support & Tickets")}</strong>
               <span className="direct-chat__person-sub"><small className="direct-chat__preview">{support === 'manager' ? t("Phiếu lễ tân chuyển lên quản lý", "Tickets the front desk escalated to you") : support === 'staff' ? t("Phiếu hội viên gửi lên lễ tân", "Tickets members send to the front desk") : t("Gửi yêu cầu, khiếu nại tới lễ tân", "Send requests and complaints to the front desk")}</small></span>
             </span>
+            {supportUnread > 0 && (
+              <span className="direct-chat__meta">
+                <span className="direct-chat__unread" aria-label={t(`${supportUnread} tin chưa đọc`, supportUnread === 1 ? '1 unread message' : `${supportUnread} unread messages`)}>
+                  {supportUnread > 99 ? '99+' : supportUnread}
+                </span>
+              </span>
+            )}
           </button></li>}
           {ai && <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
             <ChatAvatar contact={AI_PEER} />
@@ -244,7 +284,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
         </nav>}
         </>}
       </aside>
-      {supportOpen && support ? <SupportThread audience={support} active={support === 'staff' ? visible && mobileThread : mobileThread} onBack={backToList} />
+      {supportOpen && support ? <SupportThread audience={support} active={support === 'staff' ? visible && mobileThread : support === 'manager' ? visible : mobileThread} onBack={backToList} ticketId={supportTicketId} onUnreadCountChange={setSupportUnread} />
         : aiOpen && ai ? <AiChatThread audience={ai} active={mobileThread} onBack={backToList} />
         : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} likedIds={likedIds} onToggleLike={toggleLike} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}
@@ -256,12 +296,17 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
  * Mở mục Hỗ trợ & Khiếu nại mỗi lần điều hướng tới /messages?tab=support, kể cả khi trang Tin nhắn đang mở sẵn
  * (bấm thông báo phiếu hỗ trợ ngay trong trang). Theo location.key nên bấm lại cùng liên kết vẫn mở lại mục này.
  */
-function SupportTabLink({ onOpen }: { onOpen: () => void }) {
+function SupportTabLink({ onOpen }: { onOpen: (ticketId?: number | null) => void }) {
   const location = useLocation();
   const onOpenRef = useRef(onOpen);
   useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
   useEffect(() => {
-    if (new URLSearchParams(location.search).get('tab') === 'support') onOpenRef.current();
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'support') {
+      const rawTicket = Number(params.get('ticketId'));
+      const ticketId = Number.isInteger(rawTicket) && rawTicket > 0 ? rawTicket : null;
+      onOpenRef.current(ticketId);
+    }
   }, [location.key, location.search]);
   return null;
 }
