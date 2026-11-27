@@ -31,7 +31,6 @@ export interface CalendarEvent extends TimetableEvent {
   place: string;
   coach?: string;
   specialization?: string;
-  paymentLabel?: string;
   statusLabel?: string;
   notes?: string;
   cancelled: boolean;
@@ -142,14 +141,6 @@ function sortEvents(events: CalendarEvent[]) {
 function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
   const coachName = formatCoachName(booking.coachName);
   const title = lang === 'en' ? '1:1 PT Session' : 'Tập PT 1:1';
-  const isQuota = booking.paymentMethod === 'package_quota';
-  const paymentLabel = isQuota
-    ? (lang === 'en' ? 'Included in membership' : 'Miễn phí theo gói')
-    : booking.paymentStatus === 'paid'
-    ? (lang === 'en' ? 'Paid' : 'Đã thanh toán')
-    : booking.paymentStatus === 'pending'
-    ? (lang === 'en' ? 'Payment pending' : 'Chờ thanh toán')
-    : undefined;
   const statusLabel = booking.attendedAt
     ? (lang === 'en' ? 'Attended' : 'Đã điểm danh')
     : (lang === 'en' ? 'Not attended yet' : 'Chưa điểm danh');
@@ -157,7 +148,6 @@ function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
     title, place: '', coach: coachName,
     specialization: booking.coachSpecialization || undefined,
-    paymentLabel,
     statusLabel,
     notes: booking.notes?.trim() || undefined,
     cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
@@ -663,7 +653,6 @@ export function MemberCalendar() {
             {selected.place && <div className="kv-row"><span>{text("Địa điểm", "Location")}</span><strong>{selected.place}</strong></div>}
             {selected.coach && <div className="kv-row"><span>{text("Huấn luyện viên", "Coach")}</span><strong>{selected.coach}</strong></div>}
             {selected.specialization && <div className="kv-row"><span>{text("Chuyên môn", "Specialty")}</span><strong>{selected.specialization}</strong></div>}
-            {selected.paymentLabel && <div className="kv-row"><span>{text("Thanh toán", "Payment")}</span><strong>{selected.paymentLabel}</strong></div>}
             {selected.cancelled
               ? <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>
               : selected.statusLabel && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{selected.statusLabel}</strong></div>}
