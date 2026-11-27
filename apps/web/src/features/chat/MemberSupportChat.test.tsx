@@ -263,3 +263,15 @@ it('subscribes to member-wide realtime updates even when selectedId is null (new
   expect(host.querySelector('[data-support-ticket="12"]')).not.toBeNull();
   expect(host.textContent).toContain('Đã giải quyết');
 });
+
+it('jumps directly to the requested ticketId from notification URL even if it is not on page 0', async () => {
+  const olderTicket = { ...ticket, id: 99, subject: '[Thiết bị] Phiếu cũ từ thông báo', description: 'Nội dung cũ' };
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 2 });
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(olderTicket);
+  vi.mocked(supportApi.getSupportMessages).mockResolvedValue([]);
+
+  await act(async () => root.render(<MemberSupportChat onBack={() => {}} ticketId={99} />));
+  await vi.waitFor(() => expect(supportApi.getSupportTicket).toHaveBeenCalledWith(99));
+  await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar')?.textContent).toContain('Phiếu cũ từ thông báo'));
+  expect(supportApi.getSupportMessages).toHaveBeenCalledWith(99);
+});

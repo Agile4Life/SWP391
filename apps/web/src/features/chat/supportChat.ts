@@ -3,6 +3,9 @@ import { sourceMessage } from '../../shared/i18n';
 import type { ChatError } from './chatMessages';
 import type { SupportMessage, SupportTicket } from '../member/memberSupportApi';
 
+/** Sự kiện cửa sổ báo tổng số phiếu hỗ trợ chưa đọc thay đổi. */
+export const SUPPORT_UNREAD_EVENT = 'scms:support-unread';
+
 /**
  * Hỗ trợ & Khiếu nại chạy trên cùng mô hình hội thoại với Tin nhắn: mỗi phiếu là một cuộc trò chuyện giữa hội viên và lễ tân.
  * Phân loại vẫn được lưu ở đầu tiêu đề phiếu (`[Gói tập] …`) để lễ tân/quản lý lọc và đọc như trước.

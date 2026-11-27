@@ -11,9 +11,9 @@ const StaffSupportChat = lazy(() => import('./StaffSupportChat').then(module => 
  * Hỗ trợ & khiếu nại nằm chung khung Tin nhắn và dùng cùng giao diện hội thoại: hội viên nhắn tin để gửi và theo dõi phiếu,
  * lễ tân nhận, trả lời bằng tin nhắn và chuyển cấp; quản lý xử lý phiếu được chuyển lên trong cùng hộp thư.
  */
-export function SupportThread({ audience, onBack, active = true }: { audience: SupportAudience; onBack: () => void; active?: boolean }) {
+export function SupportThread({ audience, onBack, active = true, ticketId, onUnreadCountChange }: { audience: SupportAudience; onBack: () => void; active?: boolean; ticketId?: number | null; onUnreadCountChange?: (count: number) => void }) {
   const { t } = useI18n();
   return <Suspense fallback={<section className="direct-chat__thread direct-chat__support"><div className="direct-chat__transcript"><LoadingSkeleton label={t('Đang tải hỗ trợ…', 'Loading support…')} count={3} /></div></section>}>
-    {audience !== 'member' ? <StaffSupportChat manager={audience === 'manager'} onBack={onBack} active={active} /> : <MemberSupportChat onBack={onBack} active={active} />}
+    {audience !== 'member' ? <StaffSupportChat manager={audience === 'manager'} onBack={onBack} active={active} onUnreadCountChange={onUnreadCountChange} /> : <MemberSupportChat onBack={onBack} active={active} ticketId={ticketId} />}
   </Suspense>;
 }

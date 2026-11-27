@@ -8,7 +8,7 @@ import { subscribeSupport } from '../member/supportRealtime';
 import type { ChatError } from './chatMessages';
 import { ChatComposer } from './ChatComposer';
 import { HeaderAction, SupportHeader, SupportTranscript } from './SupportChatParts';
-import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, isAccessDenied, localizedSubject, supportBubbles, supportError, uniqueMessages } from './supportChat';
+import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, SUPPORT_UNREAD_EVENT, isAccessDenied, localizedSubject, supportBubbles, supportError, uniqueMessages } from './supportChat';
 import '../member/member-support.css';
 import './support-chat.css';
 
@@ -83,7 +83,9 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
       }
       setTickets(result.content); setPages(result.totalPages); setListError(null);
       if (status === '' && !unread) {
-        onUnreadCountChange?.(result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0));
+        const nextUnread = result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0);
+        onUnreadCountChange?.(nextUnread);
+        window.dispatchEvent(new CustomEvent(SUPPORT_UNREAD_EVENT, { detail: nextUnread }));
       }
     } catch (cause) { if (current()) setListError(supportError(cause)); }
     finally { if (current()) setLoading(false); }

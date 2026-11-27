@@ -6,6 +6,9 @@ import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
+import { getSupportInbox } from '../member/memberSupportApi';
+import { subscribeSupport } from '../member/supportRealtime';
+import { SUPPORT_UNREAD_EVENT } from './supportChat';
 import { useDraggableWidget } from './useDraggableWidget';
 import { useI18n } from '../../shared/i18n';
 import './chat-widget.css';
@@ -41,30 +44,49 @@ export function ChatWidget() {
   if (!allowed) return null;
   const identity = sessionIdentityKey(user);
   return user
-    ? <SignedInChatWidget key={identity} />
+    ? <SignedInChatWidget key={identity} role={user.role} />
     : <ChatShell key={identity} unread={0} feed={null} onOpen={() => {}} />;
 }
 
 /** Widget giữ một kết nối realtime duy nhất: vừa cập nhật badge chưa đọc, vừa báo cho khung chat tải lại. */
-function SignedInChatWidget() {
-  const [unread, setUnread] = useState(0);
+function SignedInChatWidget({ role }: { role: string }) {
+  const [chatUnread, setChatUnread] = useState(0);
+  const [supportUnread, setSupportUnread] = useState(0);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const [tick, setTick] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  // Tải lại số tin chưa đọc.
+  const hasSupportInbox = role === 'STAFF';
+  // Tải lại số tin chưa đọc (bao gồm phiếu khiếu nại chưa đọc đối với lễ tân).
   const refreshUnread = useCallback(() => {
-    void getChatUnreadCount().then(data => setUnread(data.count)).catch(() => {});
-  }, []);
+    void getChatUnreadCount().then(data => setChatUnread(data.count)).catch(() => {});
+    if (hasSupportInbox) {
+      void getSupportInbox(0, '', false)
+        .then(result => {
+          const count = Array.isArray(result?.content) ? result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0) : 0;
+          setSupportUnread(count);
+        })
+        .catch(() => {});
+    }
+  }, [hasSupportInbox]);
   useEffect(() => subscribeChat(() => { setTick(n => n + 1); refreshUnread(); }, setConnection), [refreshUnread, attempt]);
+  useEffect(() => {
+    if (!hasSupportInbox) return;
+    return subscribeSupport(() => { setTick(n => n + 1); refreshUnread(); }, () => {});
+  }, [hasSupportInbox, refreshUnread, attempt]);
   useEffect(() => {
     refreshUnread();
     // Nhận số chưa đọc phát từ nơi khác trong ứng dụng.
-    const onCount = (event: Event) => setUnread((event as CustomEvent<number>).detail);
+    const onCount = (event: Event) => setChatUnread((event as CustomEvent<number>).detail);
+    const onSupportCount = (event: Event) => setSupportUnread((event as CustomEvent<number>).detail);
     window.addEventListener(CHAT_UNREAD_EVENT, onCount);
-    return () => window.removeEventListener(CHAT_UNREAD_EVENT, onCount);
+    window.addEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    return () => {
+      window.removeEventListener(CHAT_UNREAD_EVENT, onCount);
+      window.removeEventListener(SUPPORT_UNREAD_EVENT, onSupportCount);
+    };
   }, [refreshUnread]);
   const feed: ChatRealtimeFeed = { connection, tick, reconnect: () => setAttempt(n => n + 1) };
-  return <ChatShell unread={unread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
+  return <ChatShell unread={chatUnread + supportUnread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
 }
 
 /** Vỏ của nút chat nổi: nút kèm số chưa đọc, panel chat có thể kéo, mở rộng, đóng bằng Esc hoặc bấm ra ngoài. */

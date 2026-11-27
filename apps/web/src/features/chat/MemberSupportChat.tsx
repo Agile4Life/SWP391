@@ -20,7 +20,7 @@ const NEW_DRAFT = 'new';
  * Hỗ trợ & Khiếu nại của hội viên dưới dạng một cuộc trò chuyện với lễ tân.
  * Tin nhắn đầu tiên tạo phiếu (loại yêu cầu chọn bằng chip phía trên ô soạn), các tin sau gửi vào phiếu đang mở.
  */
-export function MemberSupportChat({ onBack, active = true }: { onBack: () => void; active?: boolean }) {
+export function MemberSupportChat({ onBack, active = true, ticketId }: { onBack: () => void; active?: boolean; ticketId?: number | null }) {
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [page, setPage] = useState(0);
@@ -48,6 +48,8 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const listRequest = useRef(0);
   const messagesRequest = useRef(0);
   const firstLoad = useRef(true);
+  const requestedTicketId = useRef<number | null>(ticketId ?? null);
+  const ticketsRef = useRef<SupportTicket[]>([]);
   const loadingMoreRef = useRef(false);
   const sendingIds = useRef(new Set<string>());
   const closingIds = useRef(new Set<number>());
@@ -88,12 +90,34 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     try {
       const result = await getMySupportTickets(targetPage);
       if (!current()) return;
-      setTickets(previous => append ? [...previous, ...result.content.filter(item => !previous.some(old => old.id === item.id))] : result.content);
+      setTickets(previous => {
+        const next = append ? [...previous, ...result.content.filter(item => !previous.some(old => old.id === item.id))] : result.content;
+        ticketsRef.current = next;
+        return next;
+      });
       setPage(targetPage); setTotalPages(result.totalPages); setTicketsError(null);
       if (firstLoad.current) {
         firstLoad.current = false;
-        // Mở thẳng phiếu gần nhất để hội viên thấy phản hồi ngay, giống mở một cuộc trò chuyện.
-        if (result.content[0] && selection.current == null) selectTicket(result.content[0]);
+        const requested = requestedTicketId.current;
+        const matched = requested != null ? result.content.find(item => item.id === requested) : undefined;
+        if (matched) {
+          selectTicket(matched);
+        } else if (requested != null) {
+          const targetTicket = await getSupportTicket(requested).catch(() => null);
+          if (alive.current && targetTicket) {
+            setTickets(previous => {
+              const next = [targetTicket, ...previous.filter(item => item.id !== targetTicket.id)];
+              ticketsRef.current = next;
+              return next;
+            });
+            selectTicket(targetTicket);
+          } else if (alive.current && result.content[0] && selection.current == null) {
+            selectTicket(result.content[0]);
+          }
+        } else if (result.content[0] && selection.current == null) {
+          // Mở thẳng phiếu gần nhất để hội viên thấy phản hồi ngay, giống mở một cuộc trò chuyện.
+          selectTicket(result.content[0]);
+        }
       }
     } catch (cause) { if (current()) setTicketsError(supportError(cause)); }
     finally {
@@ -105,6 +129,26 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
   }, [selectTicket]);
   useEffect(() => { void loadTickets(0); }, [loadTickets]);
+
+  // Khi người dùng bấm thông báo tới một ticketId cụ thể sau khi đã mở trang.
+  useEffect(() => {
+    requestedTicketId.current = ticketId ?? null;
+    if (ticketId == null || firstLoad.current || selection.current === ticketId) return;
+    const matched = ticketsRef.current.find(item => item.id === ticketId);
+    if (matched) {
+      selectTicket(matched);
+      return;
+    }
+    void getSupportTicket(ticketId).then(targetTicket => {
+      if (!alive.current || requestedTicketId.current !== ticketId) return;
+      setTickets(previous => {
+        const next = [targetTicket, ...previous.filter(item => item.id !== targetTicket.id)];
+        ticketsRef.current = next;
+        return next;
+      });
+      selectTicket(targetTicket);
+    }).catch(() => {});
+  }, [ticketId, selectTicket]);
 
   // Tải tin nhắn của một phiếu (silent thì không hiện trạng thái tải).
   const loadMessages = useCallback(async (id: number, silent = false) => {
