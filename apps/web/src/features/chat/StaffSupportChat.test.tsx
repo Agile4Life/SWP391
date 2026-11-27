@@ -109,7 +109,7 @@ it('makes an escalated ticket read-only for the receptionist', async () => {
   vi.mocked(supportApi.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
   vi.mocked(supportApi.getSupportTicket).mockResolvedValue(escalated);
   await openTicket();
-  await vi.waitFor(() => expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('lễ tân chỉ xem'));
+  await vi.waitFor(() => expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Chuyển cấp: Hà'));
   expect(host.querySelector('textarea')).toBeNull();
   expect(host.querySelector('[aria-label="Trạng thái phiếu"]')).toBeNull();
 });
@@ -151,7 +151,7 @@ it('lets a manager reply on an escalated ticket but not escalate it again', asyn
   await act(async () => (host.querySelector('[data-support-ticket="7"]') as HTMLButtonElement).click());
   await vi.waitFor(() => expect(host.querySelector('textarea#staff-support-message')).not.toBeNull());
   expect(host.querySelector('[aria-label="Chuyển lên quản lý"]')).toBeNull();
-  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Cần hoàn tiền');
+  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Chuyển cấp: Lễ tân Hà');
 });
 
 it('keeps an escalated ticket read-only for the receptionist', async () => {

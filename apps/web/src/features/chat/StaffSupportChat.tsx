@@ -311,7 +311,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={localizedSubject(ticket.subject, t)}><span className="support-chat__ticketbar-subject">{localizedSubject(ticket.subject, t)}</span>
       {ticket.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
     {ticket?.escalatedAt && <p role="status" data-testid="escalation-info" className="direct-chat__muted support-chat__note">
-      {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — ${ticket.escalationReason}` : ''}. {manager ? t('Trả lời hội viên và cập nhật trạng thái tại đây.', 'Reply to the member and update the status here.') : t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
+      {t('Chuyển cấp', 'Escalated')}: {ticket.escalatedByName ? `${ticket.escalatedByName} · ` : ''}{formatCenterDateTime(ticket.escalatedAt)}</p>}
     {canAct && ticket && !closed && <div className="support-chat__categories" role="radiogroup" aria-label={t('Trạng thái phiếu', 'Ticket status')}>
       {STATUSES.filter(value => TRANSITIONS[ticket.status].includes(value)).map(value => <button key={value} type="button" role="radio" aria-checked={ticket.status === value} className={`support-chat__chip${ticket.status === value ? ' is-selected' : ''}`} disabled={busy || detailLoading} onClick={() => changeStatus(value)}>{t(...SUPPORT_STATUS_LABEL[value])}</button>)}
     </div>}
