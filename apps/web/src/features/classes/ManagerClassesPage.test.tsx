@@ -909,6 +909,27 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
   });
 
+  it('shows cancellation success in a centered dialog', async () => {
+    await renderPage('Lịch theo bộ môn');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Hủy buổi')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLTextAreaElement>('#cancel-reason')!, 'Bảo trì phòng'));
+    await act(async () => {
+      document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    const result = document.querySelector('dialog[role="alertdialog"]');
+    expect(result?.textContent).toContain('Đã hủy buổi học và gửi thông báo tới học viên, HLV.');
+    expect(result?.querySelector('h2')?.textContent).toBe('Thành công');
+    expect(result?.querySelector('.portal-alert--success')?.textContent).toContain('Đã hủy buổi học');
+    expect(result?.querySelector('.portal-alert--success svg')).toBeNull();
+    expect(document.querySelector('.sol-toast--success')?.textContent ?? '').not.toContain('Đã hủy buổi học');
+    await act(async () => result!.querySelector<HTMLButtonElement>('button')!.click());
+    expect(document.querySelector('dialog[role="alertdialog"]')).toBeNull();
+  });
+
   it('filters the schedule by a coach picked from a searchable dropdown, in week and month views', async () => {
     await renderPage('Lịch theo HLV');
     const titles = () => [...host.querySelectorAll('.mcal__event')].map((e) => e.textContent ?? '');
@@ -1071,6 +1092,13 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => step4SubmitBtn.click());
     await act(async () => { await Promise.resolve(); });
     expect(classesApi.createRecurringClass).toHaveBeenCalledTimes(1);
+    const result = document.querySelector<HTMLDialogElement>('dialog[role="alertdialog"]');
+    expect(result?.textContent).toContain('Đã tạo khóa học định kỳ thành công.');
+    expect(result?.querySelector('[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect(result?.querySelector('form')).toBeNull();
+    expect(document.querySelector('.sol-toast--success')?.textContent ?? '').not.toContain('Đã tạo khóa học định kỳ thành công.');
+    await act(async () => result!.querySelector<HTMLButtonElement>('[aria-label="Đóng hộp thoại"]')!.click());
+    expect(document.querySelector('dialog[role="alertdialog"]')).toBeNull();
   });
 
   it('P0-05: aligns EditClassModal and ClassListTable statuses to active, inactive, and archived without cancelled', async () => {
