@@ -81,6 +81,24 @@ it('collapses cancellation requests from the heading while search and refresh re
   expect(content.hidden).toBe(false);
   expect(content.textContent).toContain('Nguyễn Văn An');
 });
+it('collapses recent transactions independently and preserves the search', async () => {
+  await act(async () => root.render(<ManagerReportsPage />));
+  const toggle = host.querySelector<HTMLButtonElement>('button[aria-controls="recent-transactions-content"]')!;
+  const content = host.querySelector<HTMLElement>('#recent-transactions-content')!;
+  const search = host.querySelector<HTMLInputElement>('input[aria-label="Tìm kiếm giao dịch"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, 'invoice');
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => toggle.click());
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(content.hidden).toBe(true);
+  expect(host.querySelector('button[aria-controls="cancellation-requests-content"]')?.getAttribute('aria-expanded')).toBe('true');
+  await act(async () => toggle.click());
+  expect(content.hidden).toBe(false);
+  expect(search.value).toBe('invoice');
+  expect(content.textContent).toContain('=invoice');
+});
 it('scrolls a long daily chart with the mouse wheel and lets the page scroll at the ends', async () => {
   api.getSummary.mockResolvedValueOnce({ periodRevenue: 100, todayRevenue: 0, packagesSoldCount: 0, renewalRate: null,
     dailyRevenue: Array.from({ length: 40 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10), revenue: i + 1, transactionCount: 1 })),

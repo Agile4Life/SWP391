@@ -87,6 +87,7 @@ export function ManagerReportsPage() {
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
+  const [transactionsExpanded, setTransactionsExpanded] = useState(true);
 
   const chartRef = useCallback((chart: HTMLDivElement | null) => {
     if (!chart) return;
@@ -770,7 +771,13 @@ export function ManagerReportsPage() {
         <div data-i18n-managed className="portal-card">
           <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Giao dịch gần đây")}</h2>
+              <h2 className="portal-card-title" style={{ margin: 0 }}>
+                <button type="button" aria-expanded={transactionsExpanded} aria-controls="recent-transactions-content"
+                  onClick={() => setTransactionsExpanded(expanded => !expanded)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 0, border: 0, background: 'transparent', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+                  <span>{t("Giao dịch gần đây")}</span><span aria-hidden="true">{transactionsExpanded ? '▴' : '▾'}</span>
+                </button>
+              </h2>
               {summary.recentTransactions.length > 0 && (
                 <span className="muted" style={{ fontSize: '0.82rem' }}>
                   {txSearchTerm.trim()
@@ -817,6 +824,7 @@ export function ManagerReportsPage() {
             </div>
           </div>
 
+          <div id="recent-transactions-content" hidden={!transactionsExpanded}>
           {summary.recentTransactions.length === 0 ? (
             <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
               {t("Chưa có giao dịch thanh toán nào được ghi nhận.")}
@@ -885,6 +893,7 @@ export function ManagerReportsPage() {
               </table>
             </div>
           )}
+          </div>
         </div>
       )}
       {confirmDialog}

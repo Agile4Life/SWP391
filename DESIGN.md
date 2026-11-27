@@ -2,6 +2,8 @@
 
 Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên bên trái nút làm mới; bấm tiêu đề để thu gọn hoặc mở rộng danh sách. Số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
 
+Quyết định Manager: bấm tiêu đề Giao dịch gần đây để thu gọn hoặc mở rộng bảng; ô tìm kiếm giữ trên cùng và giữ từ khóa khi thu gọn.
+
 Quyết định Manager: tại HLV & học viên phụ trách, mỗi học viên theo HLV hiển thị tóm tắt số khóa nhóm, giáo án và buổi PT sắp tới; chi tiết được phân trang trong hồ sơ, giữ cảnh báo gói trên danh sách.
 
 Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng được báo ngay dưới ô Tên khóa học; wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên không trùng.
