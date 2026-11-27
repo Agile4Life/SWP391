@@ -64,7 +64,6 @@ const MEMBER_ACTIVE_PATHS = new Set([
 const STAFF_ACTIVE_PATHS = new Set([
   '/staff/reception',
   '/staff/check-in',
-  '/staff/check-out',
   '/staff/reception-history',
   '/staff/kyc',
   '/staff/holds',
@@ -121,6 +120,8 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   }
 
   if (role === 'STAFF' || role === 'RECEPTIONIST') {
+    // Thông báo đã lưu trỏ Check-out cũ được chuyển về màn Check-in còn hoạt động.
+    if (pathname === '/staff/check-out') return '/staff/check-in';
     if (pathname === '/staff/support') return '/messages?tab=support';
     if (/^\/staff\/(?:orders|classes|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
     return STAFF_ACTIVE_PATHS.has(pathname) ? pathname : null;

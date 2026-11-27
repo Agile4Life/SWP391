@@ -64,6 +64,17 @@ async function renderPortal(role: UserSession['role'], path: string) {
 }
 
 describe('mobile portal navigation', () => {
+  it('keeps only reception and check-in tabs and removes checkout from the complete staff menu', async () => {
+    await renderPortal('STAFF', '/staff/check-in');
+    const tabs = host.querySelector('.portal-section-tabs')!;
+    expect([...tabs.querySelectorAll('a')].map(link => link.getAttribute('href')))
+      .toEqual(['/staff/reception', '/staff/check-in']);
+    expect(host.querySelector('a[href="/staff/check-out"]')).toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]')!.click());
+    expect(host.querySelector('dialog')).not.toBeNull();
+    expect(host.querySelector('dialog a[href="/staff/check-out"]')).toBeNull();
+  });
+
   it('opens legacy notification URLs as a panel over the dashboard', async () => {
     const router = await renderPortal('MEMBER', '/member/notifications');
     expect(router.state.location.pathname).toBe('/member/dashboard');
@@ -232,11 +243,11 @@ describe('mobile portal navigation', () => {
     expect(document.activeElement).toBe(topbarMenu);
   });
 
-  it('keeps three front-desk tabs after moving history into its own sidebar entry', async () => {
+  it('keeps two front-desk tabs after retiring manual checkout', async () => {
     await renderPortal('STAFF', '/staff/reception');
     const tabs = host.querySelector<HTMLElement>('.portal-section-tabs');
-    expect(tabs?.getAttribute('data-tab-count')).toBe('3');
-    expect(tabs?.querySelectorAll('.portal-section-tab')).toHaveLength(3);
+    expect(tabs?.getAttribute('data-tab-count')).toBe('2');
+    expect(tabs?.querySelectorAll('.portal-section-tab')).toHaveLength(2);
     expect(tabs?.querySelector('a[href="/staff/reception-history"]')).toBeNull();
   });
 
