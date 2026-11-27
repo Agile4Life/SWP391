@@ -256,6 +256,7 @@ export function PtAttendancePage() {
 
   function renderPtCard(row: CoachBookingDto) {
     const outcome = outcomeOf(row, now);
+    const isPast = isCoach ? row.bookingDate < today : false;
     return (
       <div
         key={row.id}
@@ -299,6 +300,17 @@ export function PtAttendancePage() {
           <div>
             {outcome === 'ATTENDED' ? (
               <span className="session-status-badge is-saved">{t('Đã có mặt', 'Attended')}</span>
+            ) : isPast ? (
+              <span
+                className="session-status-badge"
+                style={{
+                  background: 'rgba(148, 163, 184, 0.15)',
+                  color: 'var(--portal-muted)',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                }}
+              >
+                {t('Buổi tập đã kết thúc', 'Session has ended')}
+              </span>
             ) : outcome === 'IN_PROGRESS' ? (
               <span className="session-status-badge is-pending">{t('Đang diễn ra · Chưa có mặt', 'In progress · Attendance unmarked')}</span>
             ) : outcome === 'UPCOMING' ? (
@@ -361,7 +373,7 @@ export function PtAttendancePage() {
               </button>
             ) : (
               <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
-                {t('Đã khóa (chỉ sửa trong ngày)', 'Locked (same-day only)')}
+                {t('Buổi tập đã kết thúc · Đã khóa (chỉ sửa trong ngày)', 'Session has ended · Locked (same-day only)')}
               </span>
             )
           )}
@@ -378,7 +390,7 @@ export function PtAttendancePage() {
               </button>
             ) : (
               <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
-                {t('Đã khóa (chỉ sửa trong ngày)', 'Locked (same-day only)')}
+                {t('Buổi tập đã kết thúc · Đã khóa (chỉ sửa trong ngày)', 'Session has ended · Locked (same-day only)')}
               </span>
             )
           )}
@@ -386,12 +398,6 @@ export function PtAttendancePage() {
           {outcome !== 'ATTENDED' && !hasStarted(row, now) && (
             <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
               {t('Điểm danh khi bắt đầu', 'Take attendance once started')}
-            </span>
-          )}
-
-          {outcome === 'MISSED' && (
-            <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
-              {t('Buổi tập đã kết thúc', 'Session has ended')}
             </span>
           )}
         </div>
