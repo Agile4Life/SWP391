@@ -1040,6 +1040,12 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00' }),
     );
+    const result = document.querySelector<HTMLDialogElement>('dialog[role="alertdialog"]');
+    expect(result?.querySelector('h2')?.textContent).toBe('Thành công');
+    expect(result?.querySelector('.portal-alert--success')?.textContent).toContain('Đã dời lịch buổi học và gửi thông báo tới học viên, HLV.');
+    expect(document.querySelector('.sol-toast--success')?.textContent ?? '').not.toContain('Đã dời lịch buổi học');
+    await act(async () => result!.querySelector<HTMLButtonElement>('[aria-label="Đóng hộp thoại"]')!.click());
+    expect(document.querySelector('dialog[role="alertdialog"]')).toBeNull();
   });
 
   it('P0-01: keeps Step 4 review open after clicking Step 3 Next with distinct non-submit button nodes until explicit Step 4 click', async () => {
