@@ -6,7 +6,6 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
-import { Select } from '../../shared/ui/Select';
 import {
   getMyStaffRequests,
   createStaffRequest,
@@ -427,25 +426,22 @@ export function StaffInternalRequestsPage() {
             )}
 
             <div>
-              <label htmlFor="internal-request-type" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                {t("Loại đơn từ:")}</label>
-              <Select
-                id="internal-request-type"
-                value={createType}
-                onChange={(e) => {
-                  const nextType = e.target.value as RequestType;
-                  setCreateType(nextType);
-                  if (nextType !== 'SHIFT_EXCHANGE' && nextType !== 'SCHEDULE_CHANGE') {
-                    setCreateTargetShift('');
-                  }
+              <span style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                {t("Loại đơn từ:")}
+              </span>
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'var(--portal-raised, #f5f5f5)',
+                  border: '1px solid var(--portal-border, rgba(0, 0, 0, 0.12))',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  color: 'var(--portal-paper, #202020)',
                 }}
-                style={{ width: '100%' }}
               >
-                <option value="LEAVE">{t("Xin nghỉ phép", "Leave request")}</option>
-                <option value="SHIFT_EXCHANGE">{t("Đổi ca làm việc", "Shift exchange")}</option>
-                <option value="SCHEDULE_CHANGE">{t("Đổi lịch đứng lớp", "Class schedule change")}</option>
-                <option value="OTHER">{t("Đề xuất công việc khác", "Other request")}</option>
-              </Select>
+                {t("Xin nghỉ phép", "Leave request")}
+              </div>
             </div>
 
             <div>
