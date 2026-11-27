@@ -1,6 +1,7 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { sourceMessage } from '../../shared/i18n';
 import { renewalOptionError, eligibleRenewalOptions } from './renewalOptions';
+import { subscriptionDates } from './subscriptionDates';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
@@ -394,6 +395,9 @@ export function StaffReceptionPage() {
     () => renewalCandidates.find((c) => c.status?.toLowerCase() === 'active') ?? null,
     [renewalCandidates]
   );
+
+  // Thời hạn quyền lợi độc lập với kỳ đang được dùng để gửi yêu cầu hủy.
+  const displayedDates = subscriptionDates(renewalCandidates, centerNowParts().date);
 
   // Khớp quy tắc thu tiền tại quầy (MEMBERSHIP_ALREADY_ACTIVE): hội viên còn kỳ đã trả tiền đang chạy thì chỉ được
   // gia hạn, nên không hiện lựa chọn "mua mới" thay vì để thất bại sau khi thu ngân bấm thu tiền.
@@ -1476,23 +1480,29 @@ export function StaffReceptionPage() {
                   <strong>
                     {selectedPending
                       ? t(`${selectedPending.packageName} (Yêu cầu #${selectedPending.id})`, `${selectedPending.packageName} (Request #${selectedPending.id})`)
-                      : activeCandidate
-                        ? t(`${activeCandidate.packageName} (Đang hoạt động)`, `${activeCandidate.packageName} (Active)`)
+                      : displayedDates
+                        ? t(`${displayedDates.current.packageName} (Đang hoạt động)`, `${displayedDates.current.packageName} (Active)`)
                         : selectedMember.currentPackage || t('Chưa có yêu cầu gói tập chờ thanh toán')}
                   </strong>
                 </div>
 
-                <div className="kv-row">
-                  <span>{t("Thời hạn gói")}</span>
+                <div className="kv-row" data-testid="reception-paid-dates">
+                  <span>{selectedPending ? t("Thời hạn gói") : t("Quyền lợi đã thanh toán", "Paid entitlement period")}</span>
                   <span style={{ color: 'var(--portal-salmon)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     {selectedPending
                       ? t(`${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} ngày)`, `${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} days)`)
-                      : activeCandidate
-                        ? `${formatCenterDate(activeCandidate.startDate)} → ${formatCenterDate(activeCandidate.endDate)}`
-                        : formatCenterDate(selectedMember.endDate, '') || t('Chưa kích hoạt')}
+                      : displayedDates
+                        ? `${formatCenterDate(displayedDates.current.startDate)} → ${formatCenterDate(displayedDates.paidThroughDate)}`
+                        : loadingOffers ? t('Đang tải...', 'Loading...') : offersError ? t('Không tải được thời hạn gói', 'Unable to load membership dates') : t('Không có kỳ đang hiệu lực', 'No currently effective period')}
                   </span>
                 </div>
 
+                {!selectedPending && displayedDates && (
+                  <div className="kv-row" data-testid="reception-current-period">
+                    <span>{t('Kỳ đang sử dụng', 'Current period')}</span>
+                    <span>{formatCenterDate(displayedDates.current.startDate)} → {formatCenterDate(displayedDates.current.endDate)}</span>
+                  </div>
+                )}
                 <div className="kv-row" style={{ alignItems: 'center' }}>
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -1800,7 +1810,8 @@ export function StaffReceptionPage() {
               {activeCandidate && (
                 <>
                   <br data-i18n-managed />
-                  {t("Gói đang hoạt động: ")}<strong data-i18n-managed>{activeCandidate.packageName}</strong> ({formatCenterDate(activeCandidate.startDate)} → {formatCenterDate(activeCandidate.endDate)})
+                  {t("Kỳ được yêu cầu hủy: ", "Period requested for cancellation: ")}#{activeCandidate.id} — <strong data-i18n-managed>{activeCandidate.packageName}</strong> ({formatCenterDate(activeCandidate.startDate)} → {formatCenterDate(activeCandidate.endDate)})
+                  {activeCandidate.startDate > centerNowParts().date && <p role="note">{t('Đây là kỳ tương lai, chưa phải kỳ đang sử dụng. Yêu cầu này nhắm tới kỳ nêu trên.', 'This is a future period, not the period currently in use. This request targets the period shown above.')}</p>}
                 </>
               )}
             </div>

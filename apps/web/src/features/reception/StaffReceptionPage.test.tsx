@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
   getUnpaidCourseEnrollments: vi.fn(), confirmCourseEnrollmentPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
-  getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(), getRequestHistory: vi.fn(),
+  getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(), getRequestHistory: vi.fn(), requestSubscriptionCancellation: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
@@ -941,4 +941,26 @@ it.each([
   await chooseAndPay('renew:50');
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it('shows current-to-paid-through dates while keeping the original future cancellation target', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-28T01:00:00Z'));
+  const current = { ...runningGold, startDate: '2026-11-28', endDate: '2027-02-25' };
+  const future = { ...current, id: 51, previousSubscriptionId: 50, startDate: '2027-02-26', endDate: '2027-05-26' };
+  api.getRenewalCandidates.mockResolvedValue([future, current]);
+  api.requestSubscriptionCancellation.mockResolvedValue({});
+  await selectMember();
+  expect(host.querySelector('[data-testid="reception-paid-dates"]')?.textContent).toContain('28/11/2026 → 26/05/2027');
+  expect(host.querySelector('[data-testid="reception-current-period"]')?.textContent).toContain('28/11/2026 → 25/02/2027');
+  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Yêu cầu hủy gói & hoàn tiền'))!.click());
+  const reason = host.querySelector<HTMLTextAreaElement>('#reception-cancel-reason')!;
+  expect(reason.closest('form')?.textContent).toContain('#51');
+  expect(reason.closest('form')?.textContent).toContain('Đây là kỳ tương lai');
+  expect(reason.closest('form')?.textContent).not.toContain('Gói đang hoạt động');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(reason, 'Theo yêu cầu hội viên');
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => reason.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.requestSubscriptionCancellation).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, subscriptionId: 51 }));
 });
