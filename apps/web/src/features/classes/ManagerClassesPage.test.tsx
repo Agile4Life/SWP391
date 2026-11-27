@@ -951,6 +951,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="session-detail-students-trigger"]')!.click());
     expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Nguyễn Minh Anh');
+    const studentDialog = document.querySelector('[data-testid="session-detail-students"]')!.closest('dialog')!;
+    expect(studentDialog.querySelector('[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect([...studentDialog.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Đóng')).toBe(false);
   });
 
   it('shows cancellation success in a centered dialog', async () => {
@@ -1186,6 +1189,13 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await renderPage();
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
     const input = document.querySelector<HTMLInputElement>('#cls-name')!;
+    await act(async () => setInputValue(input, 'Boxing Cơ Bản'));
+    expect(document.querySelector('#cls-name-error')).toBeNull();
+    await act(async () => document.querySelector<HTMLButtonElement>('#cls-discipline')!.click());
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent?.includes('Boxing'))!.click());
+    expect(document.querySelector('#cls-name-error')?.textContent).toContain('Tên khóa học đã tồn tại');
+    await act(async () => document.querySelector<HTMLButtonElement>('#cls-discipline')!.click());
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent?.includes('Gym'))!.click());
     await act(async () => setInputValue(input, '  full body strength 101  '));
     expect(document.querySelector('#cls-name-error')?.textContent).toContain('Tên khóa học đã tồn tại');
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
@@ -1226,6 +1236,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     const input = document.querySelector<HTMLInputElement>('#edit-cls-name')!;
     expect(document.querySelector('#edit-cls-name-error')).toBeNull();
     await act(async () => setInputValue(input, '  boxing cơ bản '));
+    expect(document.querySelector('#edit-cls-name-error')).toBeNull();
+    await act(async () => document.querySelector<HTMLButtonElement>('#edit-cls-disc')!.click());
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent?.includes('Boxing'))!.click());
     expect(document.querySelector('#edit-cls-name-error')?.textContent).toContain('Tên khóa học đã tồn tại');
     await act(async () => document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     expect(classesApi.updateClass).not.toHaveBeenCalled();

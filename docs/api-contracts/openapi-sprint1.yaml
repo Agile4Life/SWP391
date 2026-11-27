@@ -74,11 +74,11 @@ components:
         gender: { type: string, enum: [male, female, other], nullable: true }
     StaffAccountCreate:
       type: object
-      required: [fullName, email, password, gender, roleCode]
+      required: [fullName, email, phone, password, gender, roleCode]
       properties:
         fullName: { type: string, minLength: 1, maxLength: 150 }
         email: { type: string, format: email, maxLength: 150 }
-        phone: { type: string, maxLength: 20, nullable: true }
+        phone: { type: string, minLength: 1, maxLength: 20, pattern: '^(0|\+84)(3|5|7|8|9)[0-9]{8}$' }
         password: { type: string, minLength: 8, maxLength: 50, pattern: '^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$' }
         gender: { type: string, enum: [male, female, other] }
         roleCode: { type: string, enum: [COACH, RECEPTIONIST] }
@@ -286,7 +286,7 @@ paths:
         '403': { description: CENTER_MANAGER or ADMIN required }
     post:
       summary: Provision Coach or Receptionist (CENTER_MANAGER or ADMIN)
-      description: Creates an active account and its matching professional profile. Role codes other than COACH and RECEPTIONIST are rejected. Email is normalized and must be unique. A verified Google sign-in using the provisioned email preserves the assigned role.
+      description: Creates an active account and its matching professional profile. Role codes other than COACH and RECEPTIONIST are rejected. Email and phone are required, normalized, and must be unique across accounts. A verified Google sign-in using the provisioned email preserves the assigned role.
       requestBody:
         required: true
         content:

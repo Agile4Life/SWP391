@@ -48,7 +48,11 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   await setInput('staff-email', 'coach@gmail.com');
   await setInput('staff-password', 'Secret123!');
   await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'male', roleCode: 'COACH' });
+  expect(createStaffAccount).not.toHaveBeenCalled();
+  expect(host.querySelector('#staff-phone-error')?.textContent).toContain('Vui lòng nhập số điện thoại');
+  await setInput('staff-phone', '0912345678');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: '0912345678', password: 'Secret123!', gender: 'male', roleCode: 'COACH' });
   expect(host.querySelector('tbody')?.textContent).toContain('coach@gmail.com');
   expect(host.querySelector<HTMLInputElement>('#staff-password')?.value).toBe('');
   expect(host.textContent).not.toContain('Phân quyền');

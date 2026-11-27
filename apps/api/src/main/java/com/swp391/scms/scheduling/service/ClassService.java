@@ -227,7 +227,7 @@ public class ClassService {
     @Audited(action = "CLASS_CREATE_RECURRING", entity = "classes")
     public GymClassDto createRecurringClass(CreateRecurringClassRequest request) {
         String name = request.name().trim();
-        if (gymClasses.existsByNormalizedName(name)) {
+        if (gymClasses.existsByNormalizedNameAndDiscipline(name, request.disciplineId())) {
             throw new ConflictException("SCHEDULING_DUPLICATE_CLASS_NAME", "error.scheduling.duplicate_class_name",
                     null, "Course name already exists. Please choose another name.");
         }
@@ -356,8 +356,10 @@ public class ClassService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 
         String name = request.name().trim();
-        if (!name.equalsIgnoreCase(gymClass.getName().trim())
-                && gymClasses.existsByNormalizedNameAndIdNot(name, classId)) {
+        boolean unchangedNameAndDiscipline = name.equalsIgnoreCase(gymClass.getName().trim())
+                && gymClass.getDiscipline() != null && Objects.equals(gymClass.getDiscipline().getId(), request.disciplineId());
+        if (!unchangedNameAndDiscipline
+                && gymClasses.existsByNormalizedNameAndDisciplineAndIdNot(name, request.disciplineId(), classId)) {
             throw new ConflictException("SCHEDULING_DUPLICATE_CLASS_NAME", "error.scheduling.duplicate_class_name",
                     null, "Course name already exists. Please choose another name.");
         }
