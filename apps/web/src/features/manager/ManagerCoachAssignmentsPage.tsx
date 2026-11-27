@@ -322,7 +322,8 @@ export function ManagerCoachAssignmentsPage() {
         <div data-i18n-managed className="coach-cards-grid">
           {data.coaches.map((coach: CoachAssignmentOverview) => (
             <article data-i18n-managed key={coach.coachId} className="portal-card portal-card--flush coach-card-panel">
-              <header className="coach-card-header">
+              <details>
+              <summary className="coach-card-header coach-expand-toggle">
                 <div className="coach-info-main">
                   <div className="coach-avatar-badge" aria-hidden="true">
                     {coach.coachName.charAt(0).toUpperCase()}
@@ -350,8 +351,9 @@ export function ManagerCoachAssignmentsPage() {
                   <span className="student-count-pill">
                     <strong>{coach.classStudentsCount}</strong> {t('Lớp nhóm', 'Group classes')}
                   </span>
+                  <span className="coach-expand-indicator" aria-hidden="true" />
                 </div>
-              </header>
+              </summary>
 
               {coach.students.length === 0 ? (
                 <div data-i18n-managed style={{ padding: '1.25rem', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
@@ -360,6 +362,8 @@ export function ManagerCoachAssignmentsPage() {
                 <div data-i18n-managed className="coach-students-list">
                   {groupStudentsByMember(coach.students).map((group) => (
                     <div data-i18n-managed key={group.memberId} className="coach-student-row">
+                      <details>
+                      <summary className="coach-student-toggle coach-expand-toggle">
                       <div className="coach-student-profile">
                         <div className="student-avatar-circle">
                           {group.fullName.charAt(0).toUpperCase()}
@@ -371,6 +375,22 @@ export function ManagerCoachAssignmentsPage() {
                       </div>
 
                       <AssignmentSummary assignments={group.assignments} />
+                      </summary>
+
+                      <div className="coach-assignment-list">
+                        {group.assignments.map(student => (
+                          <div key={`${student.assignmentType}-${student.referenceId}`} className="coach-assignment-line">
+                            <span className={`coach-student-type-pill coach-student-type-pill--${student.assignmentType === 'PT_1_1' ? 'pt' : student.assignmentType === 'TRAINING_PLAN' ? 'plan' : 'class'}`}>
+                              {assignmentTypeLabel(student.assignmentType, student.assignmentTypeLabel)}
+                            </span>
+                            <div className="coach-student-detail">
+                              <div>{student.detail || '—'} <MembershipIssueTag issue={student.membershipIssue} /></div>
+                              {assignmentSchedule(student) && <small>{assignmentSchedule(student)}</small>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      </details>
 
                       <button
                         type="button"
@@ -382,6 +402,7 @@ export function ManagerCoachAssignmentsPage() {
                   ))}
                 </div>
               )}
+              </details>
             </article>
           ))}
         </div>

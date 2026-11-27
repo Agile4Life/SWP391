@@ -192,7 +192,7 @@ describe('ManagerCoachAssignmentsPage', () => {
 
   it('tags only the student whose plan is on hold', async () => {
     await renderComponent();
-    const tags = host.querySelectorAll('.coach-membership-issue');
+    const tags = host.querySelectorAll('.coach-student-toggle .coach-membership-issue');
     expect(tags).toHaveLength(1);
     expect(tags[0].textContent).toBe('Đang bảo lưu');
   });
@@ -301,6 +301,31 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(rows[0].textContent).toContain('1 buổi PT sắp tới');
   });
 
+  it('opens coaches then members to reveal their assignments', async () => {
+    const coach = mockData.coaches[0];
+    const student = { ...coach.students[0], assignmentType: 'CLASS' as const, detail: 'Yoga cơ bản' };
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({ ...mockData, coaches: [{ ...coach, students: [student] }] });
+    await renderComponent();
+    const coachDetails = host.querySelector<HTMLDetailsElement>('.coach-card-panel details')!;
+    const studentDetails = host.querySelector<HTMLDetailsElement>('.coach-student-row > details')!;
+    expect(coachDetails.open).toBe(false);
+    expect(studentDetails.open).toBe(false);
+    const profileButton = host.querySelector<HTMLButtonElement>('.coach-student-row > button')!;
+    expect(profileButton).toBeTruthy();
+    await act(async () => profileButton.click());
+    expect(studentDetails.open).toBe(false);
+    expect(host.querySelector('dialog[open]')).not.toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+    await act(async () => coachDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(coachDetails.open).toBe(true);
+    expect(studentDetails.open).toBe(false);
+    await act(async () => studentDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(studentDetails.open).toBe(true);
+    expect(studentDetails.querySelector('.coach-assignment-list')?.textContent).toContain('Yoga cơ bản');
+    await act(async () => coachDetails.querySelector<HTMLElement>('summary')!.click());
+    expect(coachDetails.open).toBe(false);
+  });
+
   it('summarizes many assignments and paginates the member details', async () => {
     const coach = mockData.coaches[0];
     const pt = { ...coach.students[0], sessionCount: 12 };
@@ -315,7 +340,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     const row = host.querySelector('.coach-student-row')!;
     expect(row.textContent).toContain('12 khóa học nhóm');
     expect(row.textContent).toContain('12 buổi PT sắp tới');
-    expect(row.textContent).not.toContain('Khóa học 1');
+    expect(row.querySelector('summary')?.textContent).not.toContain('Khóa học 1');
     await act(async () => { row.querySelector<HTMLButtonElement>('button')!.click(); });
     expect(host.querySelector('dialog')?.textContent).toContain('Khóa học 1');
     expect(host.querySelector('dialog')?.textContent).not.toContain('Khóa học 12');

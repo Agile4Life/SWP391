@@ -129,16 +129,24 @@
 }
 
 .coach-student-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 1rem;
   background: var(--portal-ink);
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.05));
   border-radius: 8px;
   padding: 0.85rem 1rem;
 }
+
+.coach-expand-toggle { cursor: pointer; list-style: none; }
+.coach-expand-toggle::-webkit-details-marker { display: none; }
+.coach-expand-toggle:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.coach-expand-indicator::before { content: '▾'; }
+details[open] > .coach-expand-toggle .coach-expand-indicator::before { content: '▴'; }
+.coach-student-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.coach-assignment-list { max-height: 20rem; overflow-y: auto; margin-top: 0.85rem; }
+.coach-assignment-list .coach-student-detail small { display: block; color: var(--portal-salmon); margin-top: 0.2rem; }
 
 .coach-student-profile {
   display: flex;
@@ -248,7 +256,8 @@
 
 /* Nút Chi tiết nằm sát phải dòng học viên (vị trí cột thao tác cũ). */
 .coach-profile-detail {
-  margin-left: auto;
+  align-self: start;
+  margin: 0;
   flex-shrink: 0;
 }
 
