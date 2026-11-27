@@ -15,7 +15,6 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
-import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.scheduling.entity.*;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
@@ -49,17 +48,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CoachAssignmentServiceTest {
     @Mock CoachRepository coaches;
-    @Mock MemberRepository members;
     @Mock TrainingPlanRepository plans;
     @Mock CoachBookingRepository bookings;
     @Mock ClassEnrollmentRepository enrollments;
     @Mock SessionBookingRepository sessionBookings;
     @Mock ClassSessionRepository sessions;
-    @Mock StaffInternalRequestRepository staffRequests;
     @Mock MembershipSubscriptionRepository subscriptions;
-    @Mock NotificationService notifications;
     @Mock MessageService messages;
-    @Mock AuditLogRepository audit;
     final Clock clock = Clock.fixed(Instant.parse("2026-11-04T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     final LocalDate today = LocalDate.of(2026, 11, 4);
     CoachAssignmentService service;
@@ -69,8 +64,8 @@ class CoachAssignmentServiceTest {
     /** Chuẩn bị trước mỗi test: tạo CoachAssignmentService với repository giả lập. */
     @BeforeEach
     void setup() {
-        service = new CoachAssignmentService(coaches, members, plans, bookings, enrollments, sessionBookings,
-                sessions, staffRequests, subscriptions, notifications, messages, audit, new ObjectMapper(), clock);
+        service = new CoachAssignmentService(coaches, plans, bookings, enrollments, sessionBookings,
+                sessions, subscriptions, messages, clock);
         from = coach(10L, "Coach Alpha"); to = coach(20L, "Coach Beta");
         member = new Member(); member.setUserId(100L); member.setMembershipCode("SOL100");
         member.setUser(user(100L, "Member One"));
@@ -94,140 +89,6 @@ class CoachAssignmentServiceTest {
         b.setStartTime(ScheduleSlot.SLOT_2.startTime());
         b.setEndTime(ScheduleSlot.SLOT_2.endTime());
         return b;
-    }
-    /** Hàm trợ giúp của test: thực hiện chuyển HLV. */
-    private CoachAssignmentReassignDto transfer(String type, Long id) { return new CoachAssignmentReassignDto(100L, 10L, 20L, id, type, "Schedule adjustment"); }
-    /** Hàm trợ giúp của test: thiết lập tài khoản hội viên và HLV hợp lệ. */
-    private void validAccounts() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(coaches.findById(20L)).thenReturn(Optional.of(to));
-        when(members.findById(100L)).thenReturn(Optional.of(member)); when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
-    }
-
-    @Test void transfersOnlySelectedPlanAndRecordsBothCoachIdsAndActor() throws Exception {
-        validAccounts(); TrainingPlan selected = plan(501L, "active"), untouched = plan(502L, "active");
-        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(70L, "manager", "CENTER_MANAGER"), null));
-        service.reassignStudent(transfer("TRAINING_PLAN", 501L));
-        assertThat(selected.getCoach()).isSameAs(to); assertThat(untouched.getCoach()).isSameAs(from);
-        assertThat(selected.getStartDate()).isEqualTo(today.minusDays(3)); assertThat(selected.getStatus()).isEqualTo("active");
-        verify(plans).save(selected); verify(plans, never()).findByMemberUserIdOrderByCreatedAtDesc(anyLong()); verifyNoInteractions(bookings);
-        ArgumentCaptor<AuditLog> capture = ArgumentCaptor.forClass(AuditLog.class); verify(audit).save(capture.capture());
-        var log = capture.getValue(); assertThat(log.getUserId()).isEqualTo(70L); assertThat(log.getAction()).isEqualTo("COACH_ASSIGNMENT_TRANSFER");
-        var old = new ObjectMapper().readTree(log.getOldValue()); var next = new ObjectMapper().readTree(log.getNewValue());
-        assertThat(old.get("coachId").asLong()).isEqualTo(10L); assertThat(next.get("coachId").asLong()).isEqualTo(20L);
-        assertThat(old.get("referenceId").asLong()).isEqualTo(501L); assertThat(next.get("reason").asText()).isEqualTo("Schedule adjustment");
-        verify(notifications, times(3)).send(anyLong(), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), anyString());
-        verify(messages).getMessage("manager.coach_assignments.notice.transferred.member", to.getUser().getFullName(), 501L, "Schedule adjustment");
-    }
-
-    @Test void rejectsTransferWhenTargetAlreadyHasAnActivePlan() {
-        validAccounts(); TrainingPlan selected = plan(501L, "active");
-        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        when(plans.findOtherActiveForMemberAndCoach(100L, 20L, 501L)).thenReturn(List.of(plan(800L, "active")));
-        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 501L)))
-                .hasFieldOrPropertyWithValue("errorCode", "COACH_ALREADY_HAS_ACTIVE_PLAN");
-        assertThat(selected.getCoach()).isSameAs(from); verify(plans, never()).save(any());
-        verifyNoInteractions(audit, notifications);
-    }
-
-    @Test void allowsTransferCreatingFourConsecutivePtSessions() {
-        validAccounts(); CoachBooking selected = booking(601L);
-        selected.setStartTime(ScheduleSlot.SLOT_4.startTime());
-        selected.setEndTime(ScheduleSlot.SLOT_4.endTime());
-        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
-        List<CoachBooking> occupied = new ArrayList<>();
-        for (ScheduleSlot slot : List.of(ScheduleSlot.SLOT_1, ScheduleSlot.SLOT_2, ScheduleSlot.SLOT_3)) {
-            CoachBooking b = booking((long) slot.slotNumber());
-            b.setStartTime(slot.startTime());
-            b.setEndTime(slot.endTime());
-            occupied.add(b);
-        }
-        when(bookings.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(occupied);
-        service.reassignStudent(transfer("PT_1_1", 601L));
-        assertThat(selected.getCoach()).isSameAs(to);
-        verify(bookings).save(selected);
-        verify(audit).save(any());
-    }
-
-    /** Kiểm thử: từ chối chuyển HLV không có lý do, trước khi ghi hay thông báo. */
-    @ParameterizedTest @ValueSource(strings = {"", "   "})
-    void rejectsTransferWithoutReasonBeforeWritingOrNotifying(String blank) {
-        assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", blank)))
-                .isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "REASON_REQUIRED");
-        assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", null)))
-                .isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "REASON_REQUIRED");
-        verifyNoInteractions(plans, bookings, audit, notifications);
-    }
-
-    @Test void rejectsClassTransferWithoutWritingOrNotifying() {
-        assertThatThrownBy(() -> service.reassignStudent(transfer("CLASS", 701L))).isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(plans, bookings, audit, notifications);
-    }
-
-    @Test void requiresExplicitReference() {
-        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", null))).isInstanceOf(BadRequestException.class);
-        verifyNoInteractions(plans, bookings, audit, notifications);
-    }
-
-    @Test void rejectsMemberRelationshipMismatch() {
-        validAccounts(); TrainingPlan selected = plan(501L, "active"); Member other = new Member(); other.setUserId(200L); selected.setMember(other);
-        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 501L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "ASSIGNMENT_MISMATCH");
-        assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(audit, notifications); verify(plans, never()).save(any());
-    }
-
-    @Test void rejectsSourceCoachMismatch() {
-        validAccounts(); TrainingPlan selected = plan(501L, "active"); selected.setCoach(to);
-        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 501L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "ASSIGNMENT_MISMATCH");
-        verifyNoInteractions(audit, notifications); verify(plans, never()).save(any());
-    }
-
-    @Test void missingRelationshipNeverReturnsSuccessOrNotifies() {
-        validAccounts();
-        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 987L))).isInstanceOf(ResourceNotFoundException.class);
-        verifyNoInteractions(audit, notifications);
-    }
-
-    @Test void transfersEveryUpcomingPtOfTheMemberTogether() {
-        validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
-        later.setBookingDate(today.plusDays(8));
-        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(bookings.findUpcomingForMemberAndCoachForUpdate(10L, 100L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
-        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
-        service.reassignStudent(transfer("PT_1_1", 601L));
-        assertThat(selected.getCoach()).isSameAs(to); assertThat(later.getCoach()).isSameAs(to);
-        verify(bookings).save(selected); verify(bookings).save(later); verify(bookings, never()).findByMemberId(anyLong());
-        ArgumentCaptor<AuditLog> entry = ArgumentCaptor.forClass(AuditLog.class);
-        verify(audit).save(entry.capture());
-        assertThat(entry.getValue().getNewValue()).contains("\"sessionIds\":[601,602]");
-        verify(audit).save(any());
-        verify(notifications).send(eq(100L), any(), any(), eq("system"), isNull(), eq(601L), eq("/member/classes?tab=pt"));
-    }
-
-    @Test void ptTransferHandsPlansToNewCoachAndKeepsOneActive() {
-        validAccounts(); CoachBooking selected = booking(601L);
-        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
-        TrainingPlan active = plan(701L, "active"), draft = plan(702L, "draft"), history = plan(703L, "superseded");
-        when(plans.findOtherActiveForMemberAndCoach(100L, 20L, -1L)).thenReturn(java.util.List.of(plan(800L, "active")));
-        when(plans.findByMemberUserIdAndCoachUserIdAndStatusIn(eq(100L), eq(10L), any())).thenReturn(java.util.List.of(active, draft, history));
-        service.reassignStudent(transfer("PT_1_1", 601L));
-        assertThat(java.util.List.of(active, draft, history)).allSatisfy(p -> assertThat(p.getCoach()).isSameAs(to));
-        assertThat(active.getStatus()).isEqualTo("superseded"); assertThat(draft.getStatus()).isEqualTo("draft");
-    }
-
-    @Test void ptTransferIsAllOrNothingWhenALaterSessionConflicts() {
-        validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
-        later.setBookingDate(today.plusDays(8));
-        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(bookings.findUpcomingForMemberAndCoachForUpdate(10L, 100L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
-        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
-        lenient().when(staffRequests.existsApprovedLeaveOn(20L, today.plusDays(8))).thenReturn(true);
-        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_ON_LEAVE");
-        assertThat(selected.getCoach()).isSameAs(from); assertThat(later.getCoach()).isSameAs(from);
-        verify(bookings, never()).save(any()); verifyNoInteractions(notifications, audit);
     }
 
     @Test void overviewSearchPrioritizesMatchingCoachAndKeepsMemberSearch() {
@@ -265,54 +126,19 @@ class CoachAssignmentServiceTest {
         assertThat(rows.getFirst().ptStudentsCount()).isEqualTo(1);
     }
 
-    @Test void doesNotTransferEarlierTodayPt() {
-        validAccounts(); CoachBooking selected = booking(601L); selected.setBookingDate(today);
-        selected.setStartTime(ScheduleSlot.SLOT_1.startTime()); selected.setEndTime(ScheduleSlot.SLOT_1.endTime());
-        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "ASSIGNMENT_NOT_CURRENT");
-        assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(notifications, audit);
-    }
-
-    @Test void rejectsTargetCoachApprovedLeave() {
-        validAccounts(); CoachBooking selected = booking(601L); when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
-        when(staffRequests.existsApprovedLeaveOn(20L, today.plusDays(1))).thenReturn(true);
-        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_ON_LEAVE");
-        assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(notifications, audit);
-    }
-
-    @Test void rejectsTargetCoachClassConflict() {
-        validAccounts(); CoachBooking selected = booking(601L); when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
-        ClassSession busy = new ClassSession();
-        busy.setStartTime(ScheduleSlot.SLOT_2.startTime()); busy.setEndTime(ScheduleSlot.SLOT_2.endTime());
-        when(sessions.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(List.of(busy));
-        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_SCHEDULE_CONFLICT");
-        assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(notifications, audit);
-    }
-
-    @Test void endingActiveAssignmentCancelsWithoutMarkingCompleted() {
-        TrainingPlan selected = plan(501L, "active"); when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        service.removeAssignment(501L);
-        assertThat(selected.getStatus()).isEqualTo("cancelled"); assertThat(selected.getEndDate()).isEqualTo(today.plusDays(30));
-        assertThat(selected.getCoach()).isSameAs(from); assertThat(selected.getMember()).isSameAs(member);
-        verify(audit).save(any(AuditLog.class));
-        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), eq("/coach/training-plans"));
-        verify(notifications).send(eq(100L), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), eq("/member/progress"));
-    }
-
-    /** Kiểm thử: kết thúc phân công đã hoàn thành giữ nguyên trạng thái lịch sử. */
-    @ParameterizedTest @ValueSource(strings = {"completed", "cancelled", "draft"})
-    void endingCompletedAssignmentPreservesItsHistoricalStatus(String status) {
-        TrainingPlan selected = plan(501L, status); when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        assertThatThrownBy(() -> service.removeAssignment(501L)).isInstanceOf(BadRequestException.class);
-        assertThat(selected.getStatus()).isEqualTo(status); verify(plans, never()).save(any()); verifyNoInteractions(notifications);
-    }
-
-    @Test void cannotCancelExpiredActivePlan() {
-        TrainingPlan selected = plan(501L, "active"); selected.setEndDate(today.minusDays(1)); when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
-        assertThatThrownBy(() -> service.removeAssignment(501L)).isInstanceOf(BadRequestException.class);
-        assertThat(selected.getStatus()).isEqualTo("active"); verify(plans, never()).save(any());
+    @Test void overviewListsInactiveCoachOnlyWhileTheyStillHaveStudents() {
+        Coach left = coach(40L, "HLV Đã nghỉ"); left.setEmploymentStatus("terminated");
+        Coach idle = coach(50L, "HLV Nghỉ không học viên"); idle.setEmploymentStatus("on_leave");
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from));
+        when(coaches.findAll()).thenReturn(List.of(from, left, idle));
+        TrainingPlan held = plan(901L, "active"); held.setCoach(left);
+        lenient().when(plans.findCurrentAssignments(anyLong(), eq(today))).thenReturn(List.of());
+        when(plans.findCurrentAssignments(40L, today)).thenReturn(List.of(held));
+        var overview = service.getOverview(null, null, null);
+        @SuppressWarnings("unchecked") var rows = (List<CoachAssignmentOverviewDto>) overview.get("coaches");
+        assertThat(rows).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(10L, 40L);
+        assertThat(rows.get(1).employmentStatus()).isEqualTo("terminated");
+        assertThat((List<?>) overview.get("availableCoaches")).hasSize(1);
     }
 
     @Test void overviewUsesCurrentQueriesIncludesSessionMembersAndCountsDistinctStudents() {

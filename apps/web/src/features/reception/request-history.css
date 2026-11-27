@@ -10,6 +10,14 @@
 /* Bảng cuộn trong card trên màn nhỏ; không ép cột giao dịch thành các mảnh chữ. */
 .request-history .portal-table { min-width: 960px; }
 .request-history--wallet .portal-table { min-width: 760px; }
+.hold-history__filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.hold-history__filters .ui-select { width: min(100%, 300px); min-width: 0; }
+.hold-history__note { margin: 0 0 16px; }
+.request-history--holds .portal-table { min-width: 1100px; }
+.request-history--holds td { white-space: normal; overflow-wrap: anywhere; max-width: 280px; vertical-align: top; }
+.request-history--holds td:first-child, .request-history--holds td:nth-child(2) { min-width: 140px; }
+.request-history--holds td:nth-child(3), .request-history--holds td:nth-child(4), .request-history--holds td:nth-child(7) { white-space: nowrap; }
+.request-history--holds td:nth-child(6) { min-width: 240px; }
 @container reception-history (min-width: 400px) {
   .request-history__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
