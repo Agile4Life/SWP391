@@ -5,7 +5,6 @@ import { Modal } from '../../shared/ui/Modal';
 import { useI18n } from '../../shared/i18n';
 import { escalateSupportTicket, getSupportInbox, getSupportMessages, getSupportTicket, markSupportRead, sendSupportMessage, updateSupportStatus, type SupportMessage, type SupportTicket } from '../member/memberSupportApi';
 import { subscribeSupport } from '../member/supportRealtime';
-import type { ChatConnection } from './chatRealtime';
 import type { ChatError } from './chatMessages';
 import { ChatComposer } from './ChatComposer';
 import { HeaderAction, SupportHeader, SupportTranscript } from './SupportChatParts';
@@ -47,7 +46,6 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const [pending, setPending] = useState<string | null>(null);
   const [escalating, setEscalating] = useState(false);
   const [reason, setReason] = useState('');
-  const [connection, setConnection] = useState<ChatConnection>('connecting');
   const alive = useRef(false);
   const activeRef = useRef(active);
   const selection = useRef<number | null>(null);
@@ -135,7 +133,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
       if (running) { dirty = true; return; }
       if (!timer) timer = setTimeout(async () => { timer = undefined; running = true; await loadList(true); running = false; if (dirty) { dirty = false; invalidate(); } }, 80);
     };
-    const stop = subscribeSupport(invalidate, state => { if (!disposed && alive.current) { setConnection(state); if (state === 'connected') invalidate(); } });
+    const stop = subscribeSupport(invalidate, state => { if (!disposed && alive.current && state === 'connected') invalidate(); });
     return () => { disposed = true; stop(); clearTimeout(timer); };
   }, [loadList]);
   useEffect(() => {
@@ -247,17 +245,10 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const bubbles = useMemo(() => supportBubbles(ticket, messages, false), [ticket, messages]);
   // Tên hội viên của phiếu (không có tên thì hiện "Hội viên #id").
   const memberName = (item: SupportTicket) => item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`);
-  const connectionText = connection === 'reconnecting'
-    ? t('Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting')
-    : connection === 'connected'
-      ? t('Cập nhật trực tiếp', 'Live updates')
-      : connection === 'connecting'
-        ? t('Đang kết nối…', 'Connecting…')
-        : t('Tự động đồng bộ phiếu', 'Auto-syncing tickets');
 
   if (selected === null) {
     return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
-      <SupportHeader onBack={onBack} active={active} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={connectionText}>
+      <SupportHeader onBack={onBack} active={active} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={null}>
         <HeaderAction label={t('Làm mới', 'Refresh')} disabled={loading} onClick={() => void loadList()}>
           <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
         </HeaderAction>
@@ -267,7 +258,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
       </div>
       <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
         {(['', ...STATUSES] as const).map(value => <button key={value || 'all'} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, value)}>
-          {value ? t(...SUPPORT_STATUS_LABEL[value]) : manager ? t('Tất cả', 'All') : t('Mọi trạng thái', 'Any status')}</button>)}
+          {value ? t(...SUPPORT_STATUS_LABEL[value]) : t('Mọi trạng thái', 'Any status')}</button>)}
       </div>
       <div ref={listElement} className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
         {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
@@ -276,11 +267,17 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
               : <ul className="support-chat__ticket-list">{tickets.map(item => {
                 const pair = SUPPORT_STATUS_LABEL[item.status];
                 const unread = !!item.unreadCount;
+                const rawPreview = item.lastMessage ?? item.description ?? localizedSubject(item.subject, t);
+                const senderPrefix = item.lastMessageMine
+                  ? t('Bạn: ', 'You: ')
+                  : item.lastMessageSenderName
+                    ? `${item.lastMessageSenderName}: `
+                    : '';
                 return <li key={item.id}><button type="button" data-support-ticket={item.id} className={`direct-chat__person${unread ? ' has-unread' : ''}`} onClick={() => open(item)}>
                   <span className="direct-chat__person-info">
-                    <strong data-i18n-managed className="support-chat__member">{memberName(item)}{manager && item.assignedToName ? ` · ${item.assignedToName}` : ''}</strong>
-                    <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>
-                    <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{item.lastMessage ?? item.description ?? localizedSubject(item.subject, t)}</span>
+                    <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
+                    {!manager && <span data-i18n-managed className="support-chat__subject">#{item.id} · {localizedSubject(item.subject, t)}</span>}
+                    <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{senderPrefix}{rawPreview}</span>
                     <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>
                   </span>
                   <span className="support-chat__badges">

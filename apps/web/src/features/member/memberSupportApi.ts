@@ -21,6 +21,8 @@ export interface SupportTicket {
   lastMessage?: string | null;
   lastMessageAt?: string | null;
   unreadCount?: number;
+  lastMessageSenderName?: string | null;
+  lastMessageMine?: boolean | null;
 }
 
 /** Một tin nhắn trong phiếu hỗ trợ: người gửi, vai trò, nội dung và thời điểm. */

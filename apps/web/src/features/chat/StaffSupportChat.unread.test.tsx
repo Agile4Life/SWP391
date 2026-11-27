@@ -109,11 +109,17 @@ it('preserves latest-activity ordering from the paginated backend rather than ti
   expect([...host.querySelectorAll('[data-support-ticket]')].map(node => node.getAttribute('data-support-ticket'))).toEqual(['2', '6']);
 });
 
-it('enables unread filter, latest message preview, and mark-read for manager escalated inbox', async () => {
+it('enables unread filter, latest message preview with sender, and mark-read for manager escalated inbox', async () => {
+  vi.mocked(api.getSupportInbox).mockResolvedValue({
+    content: [{ ...ticket, lastMessage: 'oke123', lastMessageMine: true, lastMessageSenderName: 'Center Manager' }],
+    totalPages: 1,
+  });
   await render({ manager: true });
   expect(api.getSupportInbox).toHaveBeenCalledWith(0, '', false);
+  expect([...host.querySelectorAll('button')].filter(b => b.textContent === 'Tất cả')).toHaveLength(1);
+  expect(button('Mọi trạng thái')).toBeDefined();
   expect(row().querySelector('.direct-chat__unread')?.textContent).toBe('2');
-  expect(row().querySelector('.direct-chat__preview.is-unread')?.textContent).toBe(ticket.lastMessage);
+  expect(row().querySelector('.direct-chat__preview.is-unread')?.textContent).toBe('Bạn: oke123');
   await act(async () => button('Chưa đọc').click());
   expect(api.getSupportInbox).toHaveBeenLastCalledWith(0, '', true);
   await open();

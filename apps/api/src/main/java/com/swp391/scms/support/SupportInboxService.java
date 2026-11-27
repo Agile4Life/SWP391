@@ -60,10 +60,20 @@ public class SupportInboxService {
                 : tickets.findReceptionistInbox(normalized, unreadOnly, userId, ordered);
         return page.map(ticket -> {
             var latest = messages.findFirstBySupportRequestIdOrderByCreatedAtDescIdDesc(ticket.getId());
+            String senderName = latest.map(m -> {
+                User sender = m.getSender();
+                if (sender == null) return null;
+                return sender.getFullName() != null && !sender.getFullName().isBlank()
+                        ? sender.getFullName()
+                        : sender.getUsername();
+            }).orElse(null);
+            boolean mine = latest.map(m -> m.getSender() != null && userId.equals(m.getSender().getId())).orElse(false);
             return mapper.toDto(ticket).withInbox(
                     latest.map(SupportRequestMessage::getMessage).orElse(ticket.getDescription()),
                     latest.map(SupportRequestMessage::getCreatedAt).orElse(ticket.getCreatedAt()),
-                    unread(ticket.getId(), userId));
+                    unread(ticket.getId(), userId),
+                    senderName,
+                    mine);
         });
     }
 

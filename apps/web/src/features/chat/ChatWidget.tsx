@@ -13,11 +13,6 @@ import './chat-widget.css';
 // Khung hội thoại (danh sách, hội thoại, SÖL AI) chỉ tải khi mở widget lần đầu.
 const ChatPage = lazy(() => import('./ChatPage').then(module => ({ default: module.ChatPage })));
 
-const connectionLabel: Record<ChatConnection, [string, string]> = {
-  connecting: ['Đang kết nối…', 'Connecting…'], connected: ['Cập nhật trực tiếp', 'Live updates'],
-  reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Tự động đồng bộ tin nhắn', 'Auto-syncing messages'],
-};
-
 /** Ảnh đại diện nhỏ trên nút chat nổi; tự rơi về hình bóng mặc định khi ảnh lỗi. */
 function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -55,7 +50,7 @@ export function ChatWidget() {
 const MANAGER_FEED: ChatRealtimeFeed = { connection: 'disabled', tick: 0, reconnect: () => {} };
 /** Nút chat nổi cho quản lý (không có số chưa đọc và không hiện trạng thái kết nối). */
 function ManagerChatWidget() {
-  return <ChatShell unread={0} feed={MANAGER_FEED} showStatus={false} onOpen={() => {}} />;
+  return <ChatShell unread={0} feed={MANAGER_FEED} onOpen={() => {}} />;
 }
 
 /** Widget giữ một kết nối realtime duy nhất: vừa cập nhật badge chưa đọc, vừa báo cho khung chat tải lại. */
@@ -81,7 +76,7 @@ function SignedInChatWidget() {
 }
 
 /** Vỏ của nút chat nổi: nút kèm số chưa đọc, panel chat có thể kéo, mở rộng, đóng bằng Esc hoặc bấm ra ngoài. */
-function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void; showStatus?: boolean }) {
+function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
@@ -198,8 +193,6 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
           </button>
         </div>
       </header>
-      {feed && showStatus && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
-        {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
       {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label={t("Đang mở tin nhắn…", "Opening messages…")} count={4} /></div>}>
         <ChatPage embedded visible={open} realtime={feed} onPeersChange={setPeers} />
       </Suspense> : <div className="chat-widget__login"><p>{t("Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.", "Sign in to chat with receptionists, coaches and SÖL AI.")}</p><Link to="/login" className="btn-primary">{t("Đăng nhập để nhắn tin", "Sign in to send messages")}</Link></div>}

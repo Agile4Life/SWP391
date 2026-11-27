@@ -173,11 +173,11 @@ it('switches widget status, dialog and action names in both languages', async ()
   expect(host.querySelector('.chat-widget__trigger-label')!.textContent).toBe('Messages');
   await act(async () => button('Open messages').click()); await settle();
   expect(host.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('SÖL messages');
-  expect(host.querySelector('.chat-widget__status')!.textContent).toBe('Connecting…');
+  expect(host.querySelector('.chat-widget__status')).toBeNull();
   expect(button('Close messages window')).not.toBeNull();
   await act(async () => setLanguage('vi'));
   expect(host.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('Tin nhắn SÖL');
-  expect(host.querySelector('.chat-widget__status')!.textContent).toBe('Đang kết nối…');
+  expect(host.querySelector('.chat-widget__status')).toBeNull();
   expect(button('Đóng cửa sổ tin nhắn')).not.toBeNull();
 });
 
@@ -312,17 +312,11 @@ it('P2-FE-26 & P2-FE-80 & P3-FE-30 & P3-FE-32: omits nested LiquidGlassContainer
   await act(async () => { miniImg.dispatchEvent(new Event('error')); });
   expect(host.querySelector('.chat-widget__mini-avatar img')).toBeNull();
 
-  // Status banner lives outside .chat-widget__header-title so it remains visible when a thread is open
+  // Realtime status banner is omitted from the floating widget box
   await act(async () => { setStatus('reconnecting'); });
-  const statusEl = host.querySelector('.chat-widget__status.is-reconnecting')!;
-  expect(statusEl).not.toBeNull();
-  expect(statusEl.closest('.chat-widget__header-title')).toBeNull();
-
-  // Disabled status reports auto-sync copy (not outdated "Bấm làm mới")
+  expect(host.querySelector('.chat-widget__status')).toBeNull();
   await act(async () => { setStatus('disabled'); });
-  expect(host.querySelector('.chat-widget__status')?.textContent).toBe('Tự động đồng bộ tin nhắn');
-  await act(async () => setLanguage('en'));
-  expect(host.querySelector('.chat-widget__status')?.textContent).toBe('Auto-syncing messages');
+  expect(host.querySelector('.chat-widget__status')).toBeNull();
 });
 
 it('P2-FE-77: ignores non-finite stored coordinates and clamps off-screen desktop coordinates to viewport on mount', async () => {

@@ -23,13 +23,12 @@
 .support-chat__pill--escalated { background: rgb(var(--sol-accent-rgb) / .3); border-color: var(--sol-accent); color: var(--support-ink); }
 .support-chat__badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
-/* Chip chọn loại yêu cầu / trạng thái, nằm ngay trên ô soạn tin */
-.support-chat__categories { display: flex; gap: 8px; padding: 10px 16px 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -ms-overflow-style: none; }
-.support-chat__categories::-webkit-scrollbar { display: none; width: 0; height: 0; }
-.support-chat__chip { flex: 0 0 auto; white-space: nowrap; min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--support-line); background: transparent; color: var(--support-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
+/* Chip chọn loại yêu cầu / trạng thái, nằm ngay trên ô soạn tin hoặc đầu hộp thư */
+.support-chat__categories { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 4px; }
+.support-chat__chip { flex: 0 0 auto; white-space: nowrap; min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--support-line); background: transparent; color: var(--support-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
 .support-chat__chip:hover:not(:disabled) { background: rgb(var(--sol-accent-rgb) / .14); border-color: var(--sol-accent); }
 .support-chat__chip.is-selected, .support-chat__chip[aria-checked='true'] { background: var(--sol-accent); border-color: var(--sol-accent); color: #202020; }
-@media (max-width: 1024px), (pointer: coarse) { .support-chat__chip { min-height: 44px; } }
+@media (max-width: 1024px), (pointer: coarse) { .support-chat__chip { min-height: 36px; } }
 
 .support-chat__tickets { height: auto; flex: 1; min-height: 0; padding: 8px 0; }
 .support-chat__ticket-list { list-style: none; margin: 0; padding: 0; }
