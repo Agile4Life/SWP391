@@ -62,7 +62,6 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
   return (
     <section className="portal-card request-history" aria-label={t('Lịch sử xử lý yêu cầu gói tập')} data-testid="request-history">
       <div className="portal-card-header request-history__header">
-        <h2 className="portal-card-title">{t('Lịch sử xử lý yêu cầu gói tập')}</h2>
         <div className="request-history__filters">
           <input type="search" className="portal-input" aria-label={t('Tìm lịch sử gói tập', 'Search membership history')} placeholder={t('Tên, mã hội viên, mã giao dịch', 'Name, member code, transaction ID')} value={query} onChange={e => setQuery(e.target.value)} />
           <Select aria-label={t('Sắp xếp', 'Sort order')} value={order} onChange={e => setOrder(e.target.value)}>

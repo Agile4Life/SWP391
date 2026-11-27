@@ -27,7 +27,8 @@ describe('WalletTopupHistory', () => {
     await act(async () => root.render(<WalletTopupHistory />));
     const text = host.textContent ?? '';
     expect(mocks.history).toHaveBeenCalledWith(30);
-    expect(text).toContain('Lịch sử nạp tiền vào Ví SÖL');
+    expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('Lịch sử nạp tiền vào Ví SÖL');
+    expect(host.querySelector('h2')).toBeNull();
     expect(text).toContain('Thịnh Lê');
     expect(text).toContain('MEM-111');
     expect(text).toContain('Tiền mặt');
