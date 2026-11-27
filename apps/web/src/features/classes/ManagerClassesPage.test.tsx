@@ -949,6 +949,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="session-detail-students-trigger"]')!.click());
     expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Nguyễn Minh Anh');
+    const studentDialog = document.querySelector('[data-testid="session-detail-students"]')!.closest('dialog')!;
+    expect(studentDialog.querySelector('[aria-label="Đóng hộp thoại"]')).not.toBeNull();
+    expect([...studentDialog.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Đóng')).toBe(false);
   });
 
   it('shows cancellation success in a centered dialog', async () => {
