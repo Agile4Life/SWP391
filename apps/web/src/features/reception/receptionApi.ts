@@ -139,9 +139,14 @@ export interface RenewalCandidate {
   createdAt: string;
   /** Có sẵn trong SubscriptionDto: nối tới kỳ trước để xác định đúng cuối chuỗi gia hạn. */
   previousSubscriptionId?: number | null;
+  /** Quan hệ Trial bị API loại có chủ đích; chỉ dùng xác minh chuỗi, không phải lựa chọn gia hạn. */
+  excludedTrialAncestors?: RenewalChainNode[];
   /** Kỳ đang hiệu lực hôm nay: phần chưa dùng của số tiền thực trả, cũng là số tiền hoàn đề xuất khi hủy gói. */
   remainingValue?: number | null;
 }
+
+export type RenewalChainNode = Pick<RenewalCandidate,
+  'id' | 'memberId' | 'packageId' | 'previousSubscriptionId' | 'startDate' | 'endDate' | 'status'>;
 
 /** Một yêu cầu bảo lưu gói: hội viên, gói, thời gian, trạng thái, lý do và thời điểm yêu cầu. */
 export interface HoldRequestItem {

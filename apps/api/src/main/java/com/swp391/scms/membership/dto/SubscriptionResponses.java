@@ -7,6 +7,10 @@ import java.util.List;
 /** Nhóm DTO phản hồi cho gói tập. */
 public final class SubscriptionResponses {
 
+    /** Kỳ cha Trial bị ẩn có chủ đích: chỉ dữ liệu kiểm tra quan hệ, không chứa thông tin cá nhân/tài chính. */
+    public record TrialAncestorDto(Long id, Long memberId, Long packageId, Long previousSubscriptionId,
+                                   LocalDate startDate, LocalDate endDate, String status) {}
+
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */
     private SubscriptionResponses() {}
 
@@ -36,8 +40,29 @@ public final class SubscriptionResponses {
             /** Nâng cấp đang chờ thanh toán: giá trị chưa sử dụng của kỳ bị thay thế đã được khấu trừ vào giá. */
             java.math.BigDecimal creditApplied,
             /** Kỳ gói đang hoạt động hôm nay: giá trị chưa sử dụng sẽ được khấu trừ khi nâng cấp (tính từ số tiền thực trả). */
-            java.math.BigDecimal remainingValue
+            java.math.BigDecimal remainingValue,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            List<TrialAncestorDto> excludedTrialAncestors
     ) {
+        /** Giữ constructor và response cũ ngoài API candidates. */
+        public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
+                Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
+                String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
+                LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt, LocalDate paidThroughDate,
+                java.math.BigDecimal upgradeCharge, java.math.BigDecimal quotedPrice,
+                java.math.BigDecimal creditApplied, java.math.BigDecimal remainingValue) {
+            this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate, status,
+                    qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, paidThroughDate,
+                    upgradeCharge, quotedPrice, creditApplied, remainingValue, null);
+        }
+
+        /** Bổ sung metadata chỉ cho response candidates, không sửa entity hoặc quan hệ đã lưu. */
+        public SubscriptionDto withExcludedTrialAncestors(List<TrialAncestorDto> ancestors) {
+            return new SubscriptionDto(id, memberId, packageId, packageName, previousSubscriptionId, startDate,
+                    endDate, status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt,
+                    paidThroughDate, upgradeCharge, quotedPrice, creditApplied, remainingValue, List.copyOf(ancestors));
+        }
+
         /** Constructor rút gọn không có giá chốt, phần quy đổi và giá trị còn lại. */
         public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
                 Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
