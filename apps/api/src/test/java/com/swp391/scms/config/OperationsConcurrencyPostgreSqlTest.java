@@ -177,6 +177,7 @@ class OperationsConcurrencyPostgreSqlTest {
         properties.add("app.auth.otp.delivery", () -> "disabled");
         // Test tự gọi job để kiểm soát thứ tự khóa, không để cron nền chen vào dữ liệu fixture.
         properties.add("app.attendance.auto-checkout.cron", () -> "-");
+        properties.add("spring.jpa.properties.hibernate.generate_statistics", () -> true);
     }
 
     /** Dọn dẹp sau test: xóa schema của test đồng thời. */
@@ -351,7 +352,7 @@ class OperationsConcurrencyPostgreSqlTest {
         long member = member();
         long id = visit(member, LocalDateTime.now(clock).minusHours(9).withNano(0), "GRANTED", null);
         var principal = new AuthenticatedPrincipal(member, "member-test", "MEMBER");
-        var request = new CheckinRequests.SelfScan(checkins.gateQr(staff, "Test gate").qrCode());
+        var request = new CheckinRequests.SelfScan(checkins.gateQr(staff, "A1").qrCode());
         var ready = new CountDownLatch(2);
         var firstPid = new AtomicInteger();
         var secondPid = new AtomicInteger();
@@ -396,12 +397,45 @@ class OperationsConcurrencyPostgreSqlTest {
 
     /** Fixture chỉ được tạo trong schema PostgreSQL test biệt lập của lớp này. */
     private long visit(long member, LocalDateTime entered, String status, LocalDateTime ended) {
+        // Fixture GRANTED phải thỏa trigger gói hiệu lực như dữ liệu thật, không vô hiệu trigger để test.
+        if (!subscriptions.hasActiveMembership(member, LocalDate.now(clock))) {
+            createSubscription(member, "active", -30, 30);
+        }
         Long id = jdbc.queryForObject("""
                 insert into center_checkins (member_id, check_in_time, check_out_time, method, status, gate)
                 values (?, ?, ?, 'qr', ?, 'Auto-checkout test') returning id
                 """, Long.class, member, entered, ended, status);
         autoVisitIds.add(id);
         return id;
+    }
+
+    @Autowired jakarta.persistence.EntityManagerFactory entityManagerFactory;
+
+    /** Đo câu lệnh thật trên fixture nhỏ; không coi đây là benchmark tải production. */
+    @Test
+    void autoCheckoutSqlPlanAndStatementCount() {
+        long member = member();
+        LocalDateTime entered = LocalDateTime.now(clock).minusHours(9).withNano(0);
+        for (int i = 0; i < 5; i++) visit(member, entered.minusMinutes(i), "GRANTED", null);
+        LocalDateTime cutoff = LocalDateTime.now(clock).minusHours(8);
+        var plan = jdbc.queryForList("explain (analyze, buffers) select id from center_checkins "
+                + "where status='GRANTED' and check_out_time is null and check_in_time <= ? order by id", cutoff);
+        var memberPlan = jdbc.queryForList("explain (analyze, buffers) select id from center_checkins "
+                + "where member_id=? and status='GRANTED' and check_out_time is null and check_in_time <= ? order by id", member, cutoff);
+        var statistics = entityManagerFactory.unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        statistics.clear();
+        long started = System.nanoTime();
+        assertEquals(5, checkins.autoCheckoutStaleVisits());
+        long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+        long statements = statistics.getPrepareStatementCount();
+        assertEquals(11, statements, "One ID query, five row locks and five updates");
+        statistics.clear();
+        assertEquals(0, checkins.autoCheckoutStaleVisits());
+        assertEquals(1, statistics.getPrepareStatementCount(), "Repeated job only queries candidate IDs");
+        int deadlocks = jdbc.queryForObject("select deadlocks from pg_stat_database where datname=current_database()", Integer.class);
+        assertEquals(0, deadlocks);
+        System.out.println("AUTO_CHECKOUT_SQL: visits=5 statements=" + statements + " repeatStatements=1 transactionMillis="
+                + elapsedMillis + " deadlocks=" + deadlocks + " plan=" + plan + " memberPlan=" + memberPlan);
     }
 
     /** Kiểm thử: quét chờ việc hủy hoàn tất rồi từ chối QR đó dù hội viên có subscription khác. */
