@@ -355,7 +355,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       description: 'Tăng dẻo dai và cân bằng',
     });
     expect(host.querySelector('dialog[open]')?.textContent).toContain('Thành công');
-    expect(host.querySelector('dialog[open] .portal-alert--success svg')).not.toBeNull();
+    expect(host.querySelector('dialog[open] .portal-alert--success svg')).toBeNull();
     expect(document.querySelector('.sol-toast')).toBeNull();
     expect(
       [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(

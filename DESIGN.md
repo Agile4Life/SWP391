@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: khi tạo khóa học thành công, hiển thị kết quả trong hộp thoại giữa màn hình; hộp thoại đóng bằng nút × hoặc Esc.
+
 Quyết định Hộp thoại / Popup toàn portal (27/11/2026 — **ghi đè** ngoại lệ giữ nút “Đóng” đơn lẻ ngày 14/11/2026 bên dưới): mọi popup/hộp thoại đã có nút `×` ở góc trên bên phải (như `<Modal>` với `.portal-dialog__close`) **không được đặt thêm nút “Đóng” / “Close” ở phía dưới**, kể cả khi hộp thoại chỉ có một nút ở chân (thông báo kết quả, cảnh báo không thể thực hiện, hồ sơ chi tiết, trạng thái đã thanh toán, kết quả sau khi hoàn tất thao tác). Nút `×` góc phải (cùng phím `Esc` / bấm nền mờ) là lối thoát duy nhất; hộp thoại biểu mẫu hoặc xác nhận có hành động chính vẫn giữ nút `Hủy` / nhãn phủ định cạnh nút xác nhận.
 
 Quyết định Đơn từ nội bộ (27/11/2026): hai DatePicker ngày bắt đầu/kết thúc trong popup tạo đơn tại `/staff/requests` không tô dấu hôm nay, chỉ giữ dấu ngày đã chọn và focus bàn phím. Khi chưa chọn, giữ “Chọn ngày...”. Dùng `highlightToday={false}` riêng hai ô; mặc định shared DatePicker vẫn `true`. Không đổi tháng hiển thị, giá trị form, min/max, validation hoặc API.
@@ -8,7 +10,9 @@ Quyết định Receptionist — lịch sử bảo lưu (27/11/2026): `/staff/re
 
 Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
 
-Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình; lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
+Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình; thông báo thành công không có biểu tượng dấu tích, lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
+
+Quyết định Manager: hủy buổi học thành công hiển thị hộp thoại giữa màn hình với tiêu đề “Thành công” và nội dung trong khung xanh không có biểu tượng; có thể đóng bằng nút × hoặc Esc. Kết quả tạo khóa học dùng cùng kiểu khung xanh.
 
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { Modal } from '../../shared/ui/Modal';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { Select } from '../../shared/ui/Select';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
@@ -75,6 +76,7 @@ export function ManagerClassesPage() {
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
   const [reschedulingSession, setReschedulingSession] = useState<ClassSessionDto | null>(null);
   const [cancellingSession, setCancellingSession] = useState<ClassSessionDto | null>(null);
+  const [successDialog, setSuccessDialog] = useState<{ title: string; message: string } | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -281,8 +283,9 @@ export function ManagerClassesPage() {
     if (found) setDetailSession(found);
   };
 
-  const handleMutationSuccess = (message: string) => {
-    notify(message, 'success');
+  const handleMutationSuccess = (message: string, title?: string) => {
+    if (title) setSuccessDialog({ title, message });
+    else notify(message, 'success');
     setCreateModal(null);
     setEditingClass(null);
     setReschedulingSession(null);
@@ -689,7 +692,7 @@ export function ManagerClassesPage() {
           rooms={rooms}
           coaches={coaches}
           onClose={() => setCreateModal(null)}
-          onSuccess={handleMutationSuccess}
+          onSuccess={(message) => handleMutationSuccess(message, t('Tạo khóa học thành công', 'Course created successfully'))}
         />
       )}
 
@@ -716,11 +719,21 @@ export function ManagerClassesPage() {
         <CancelSessionModal
           session={cancellingSession}
           onClose={() => setCancellingSession(null)}
-          onSuccess={handleMutationSuccess}
+          onSuccess={(message) => handleMutationSuccess(message, t('Thành công', 'Success'))}
         />
       )}
 
       {confirmDialog}
+      {successDialog && <Modal
+        title={successDialog.title}
+        role="alertdialog"
+        ariaDescribedBy="class-success-message"
+        onClose={() => setSuccessDialog(null)}
+      >
+        <div className="portal-alert portal-alert--success" style={{ justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: 0 }}>
+          <p id="class-success-message" style={{ margin: '4px 0 0', fontWeight: 500, lineHeight: 1.5, color: 'inherit' }}>{successDialog.message}</p>
+        </div>
+      </Modal>}
     </div>
   );
 }
