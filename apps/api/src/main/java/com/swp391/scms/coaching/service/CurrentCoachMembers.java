@@ -89,7 +89,7 @@ public class CurrentCoachMembers {
   BigDecimal bmi=calculateBmi(heightCm,weightKg);
   if(bmi==null) bmi=recordedBmi;
   boolean canView=activeSubs.isEmpty()||activeSubs.stream()
-   .anyMatch(s->com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
+   .anyMatch(com.swp391.scms.facilities.PackageBenefits::canViewWorkoutPlan);
   String phone=m.getUser()!=null?m.getUser().getPhone():null;
   String fullName=m.getUser()!=null?m.getUser().getFullName():null;
   return new MemberOption(m.getUserId(),m.getMembershipCode(),fullName,m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canView,phone);

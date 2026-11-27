@@ -110,7 +110,22 @@ export function ManagerCatalogsPage() {
       ? { name: '', description: '' }
       : tab === 'rooms'
         ? { name: '', location: '', capacity: '10', status: 'available', tier: 'STANDARD' }
-        : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
+        : {
+            name: '',
+            description: '',
+            price: '199000',
+            durationDays: '90',
+            classCreditLimit: '3',
+            status: 'active',
+            tier: 'SILVER',
+            ptSessionsPerCycle: '0',
+            holdMaxDays: '7',
+            discountPercent: '0',
+            vipRoomAccess: 'false',
+            canViewWorkoutPlan: 'false',
+            allowsPeriodicAssessment: 'false',
+            allowsDeepAssessment: 'false',
+          };
 
   const nameMaxLength = tab === 'packages' ? 150 : 100;
 
@@ -195,6 +210,17 @@ export function ManagerCatalogsPage() {
           };
           return id == null ? catalogApi.createRoom(room) : catalogApi.updateRoom(id, room);
         }
+        const ptSessionsPerCycle = Number(f.ptSessionsPerCycle ?? 0);
+        const holdMaxDays = Number(f.holdMaxDays ?? 0);
+        const discountPercent = Number(f.discountPercent ?? 0);
+        if (!Number.isFinite(ptSessionsPerCycle) || ptSessionsPerCycle < 0 || !Number.isFinite(holdMaxDays) || holdMaxDays < 0) {
+          setFormError(staffMessage('Số buổi PT và số ngày bảo lưu không được âm.', 'PT sessions and hold days cannot be negative.'));
+          return Promise.reject(new Error('invalid_benefits'));
+        }
+        if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+          setFormError(staffMessage('Phần trăm giảm giá phải từ 0 đến 100.', 'Discount percentage must be between 0 and 100.'));
+          return Promise.reject(new Error('invalid_discount'));
+        }
         return catalogApi.savePackage(id, {
           name: trimmedName,
           description: (f.description ?? '').trim(),
@@ -203,6 +229,13 @@ export function ManagerCatalogsPage() {
           classCreditLimit: f.classCreditLimit === '' ? null : Number(f.classCreditLimit),
           status: (f.status as MembershipPackage['status']) || 'active',
           tier: (f.tier as MembershipPackage['tier']) || resolvePackageTier({ name: trimmedName }),
+          ptSessionsPerCycle,
+          holdMaxDays,
+          discountPercent,
+          vipRoomAccess: f.vipRoomAccess === 'true',
+          canViewWorkoutPlan: f.canViewWorkoutPlan === 'true',
+          allowsPeriodicAssessment: f.allowsPeriodicAssessment === 'true',
+          allowsDeepAssessment: f.allowsDeepAssessment === 'true',
         });
       },
       isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!',
@@ -232,6 +265,13 @@ export function ManagerCatalogsPage() {
           classCreditLimit: p.classCreditLimit,
           status: p.status,
           tier: resolvePackageTier(p),
+          ptSessionsPerCycle: p.ptSessionsPerCycle,
+          holdMaxDays: p.holdMaxDays,
+          discountPercent: p.discountPercent,
+          vipRoomAccess: p.vipRoomAccess,
+          canViewWorkoutPlan: p.canViewWorkoutPlan,
+          allowsPeriodicAssessment: p.allowsPeriodicAssessment,
+          allowsDeepAssessment: p.allowsDeepAssessment,
         }),
       staffMessage(`Đã cập nhật giá gói "${p.name}" thành ${vnd(nextPrice)}!`, `Updated membership "${p.name}" price to ${vnd(nextPrice)}!`),
       'quickPrice',
@@ -547,19 +587,101 @@ export function ManagerCatalogsPage() {
             )}
 
             {tab === 'packages' && (
-              <div data-i18n-managed className="portal-form-group">
-                <label className="portal-label" htmlFor="cat-credit">
-                  {t("Số buổi lớp kèm theo (để trống = không giới hạn)")}</label>
-                <input data-i18n-managed
-                  id="cat-credit"
-                  className="portal-input"
-                  type="number"
-                  min="0"
-                  placeholder={t("Vd: 2, 5, 15 hoặc để trống (không giới hạn)")}
-                  value={editing.form.classCreditLimit ?? ''}
-                  onChange={(e) => set('classCreditLimit', e.target.value)}
-                />
-              </div>
+              <>
+                <div data-i18n-managed className="portal-form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="cat-credit">
+                      {t("Số lượt khóa học (trống = không giới hạn)", "Course credits (blank = unlimited)")}
+                    </label>
+                    <input data-i18n-managed
+                      id="cat-credit"
+                      className="portal-input"
+                      type="number"
+                      min="0"
+                      placeholder={t("Vd: 4, 12, 24 hoặc để trống", "e.g. 4, 12, 24 or leave blank")}
+                      value={editing.form.classCreditLimit ?? ''}
+                      onChange={(e) => set('classCreditLimit', e.target.value)}
+                    />
+                  </div>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="cat-pt-sessions">
+                      {t("Số buổi PT 1:1 / 30 ngày", "Free 1:1 PT sessions / 30 days")}
+                    </label>
+                    <input
+                      id="cat-pt-sessions"
+                      className="portal-input"
+                      type="number"
+                      min="0"
+                      value={editing.form.ptSessionsPerCycle ?? '0'}
+                      onChange={(e) => set('ptSessionsPerCycle', e.target.value)}
+                    />
+                  </div>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="cat-hold-days">
+                      {t("Số ngày bảo lưu tối đa (0 = không bảo lưu)", "Max hold days (0 = disabled)")}
+                    </label>
+                    <input
+                      id="cat-hold-days"
+                      className="portal-input"
+                      type="number"
+                      min="0"
+                      value={editing.form.holdMaxDays ?? '0'}
+                      onChange={(e) => set('holdMaxDays', e.target.value)}
+                    />
+                  </div>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="cat-discount">
+                      {t("Giảm giá PT thêm / khóa trả phí (%)", "Extra PT & paid course discount (%)")}
+                    </label>
+                    <input
+                      id="cat-discount"
+                      className="portal-input"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editing.form.discountPercent ?? '0'}
+                      onChange={(e) => set('discountPercent', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="portal-form-group">
+                  <span className="portal-label">{t("Quyền lợi dịch vụ kèm theo", "Included service benefits")}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.form.vipRoomAccess === 'true'}
+                        onChange={(e) => set('vipRoomAccess', e.target.checked ? 'true' : 'false')}
+                      />
+                      {t("Quyền vào phòng VIP", "VIP room access")}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.form.canViewWorkoutPlan === 'true'}
+                        onChange={(e) => set('canViewWorkoutPlan', e.target.checked ? 'true' : 'false')}
+                      />
+                      {t("Xem giáo án HLV soạn", "Coach workout plan access")}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.form.allowsPeriodicAssessment === 'true'}
+                        onChange={(e) => set('allowsPeriodicAssessment', e.target.checked ? 'true' : 'false')}
+                      />
+                      {t("Đánh giá thể lực định kỳ", "Periodic fitness assessment")}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.form.allowsDeepAssessment === 'true'}
+                        onChange={(e) => set('allowsDeepAssessment', e.target.checked ? 'true' : 'false')}
+                      />
+                      {t("Đánh giá chuyên sâu (InBody)", "Deep body composition assessment")}
+                    </label>
+                  </div>
+                </div>
+              </>
             )}
 
             {(
@@ -815,6 +937,13 @@ export function ManagerCatalogsPage() {
                                     classCreditLimit: p.classCreditLimit == null ? '' : String(p.classCreditLimit),
                                     status: p.status,
                                     tier,
+                                    ptSessionsPerCycle: String(p.ptSessionsPerCycle ?? 0),
+                                    holdMaxDays: String(p.holdMaxDays ?? 0),
+                                    discountPercent: String(p.discountPercent ?? 0),
+                                    vipRoomAccess: p.vipRoomAccess ? 'true' : 'false',
+                                    canViewWorkoutPlan: p.canViewWorkoutPlan ? 'true' : 'false',
+                                    allowsPeriodicAssessment: p.allowsPeriodicAssessment ? 'true' : 'false',
+                                    allowsDeepAssessment: p.allowsDeepAssessment ? 'true' : 'false',
                                   },
                                 })
                               }

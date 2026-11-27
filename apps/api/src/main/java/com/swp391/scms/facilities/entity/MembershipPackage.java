@@ -40,6 +40,27 @@ public class MembershipPackage {
     @Column(length = 30)
     private String tier; // Hạng gói: SILVER, GOLD, PLATINUM
 
+    @Column(name = "pt_sessions_per_cycle")
+    private Integer ptSessionsPerCycle;
+
+    @Column(name = "hold_max_days")
+    private Integer holdMaxDays;
+
+    @Column(name = "discount_percent")
+    private Integer discountPercent;
+
+    @Column(name = "vip_room_access")
+    private Boolean vipRoomAccess;
+
+    @Column(name = "can_view_workout_plan")
+    private Boolean canViewWorkoutPlan;
+
+    @Column(name = "allows_periodic_assessment")
+    private Boolean allowsPeriodicAssessment;
+
+    @Column(name = "allows_deep_assessment")
+    private Boolean allowsDeepAssessment;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -94,6 +115,34 @@ public class MembershipPackage {
     public String getTier() { return tier; }
     /** Gán giá trị mới cho trường tier. */
     public void setTier(String tier) { this.tier = tier; }
+    /** Lấy giá trị trường ptSessionsPerCycle. */
+    public Integer getPtSessionsPerCycle() { return ptSessionsPerCycle; }
+    /** Gán giá trị mới cho trường ptSessionsPerCycle. */
+    public void setPtSessionsPerCycle(Integer ptSessionsPerCycle) { this.ptSessionsPerCycle = ptSessionsPerCycle; }
+    /** Lấy giá trị trường holdMaxDays. */
+    public Integer getHoldMaxDays() { return holdMaxDays; }
+    /** Gán giá trị mới cho trường holdMaxDays. */
+    public void setHoldMaxDays(Integer holdMaxDays) { this.holdMaxDays = holdMaxDays; }
+    /** Lấy giá trị trường discountPercent. */
+    public Integer getDiscountPercent() { return discountPercent; }
+    /** Gán giá trị mới cho trường discountPercent. */
+    public void setDiscountPercent(Integer discountPercent) { this.discountPercent = discountPercent; }
+    /** Lấy giá trị trường vipRoomAccess. */
+    public Boolean getVipRoomAccess() { return vipRoomAccess; }
+    /** Gán giá trị mới cho trường vipRoomAccess. */
+    public void setVipRoomAccess(Boolean vipRoomAccess) { this.vipRoomAccess = vipRoomAccess; }
+    /** Lấy giá trị trường canViewWorkoutPlan. */
+    public Boolean getCanViewWorkoutPlan() { return canViewWorkoutPlan; }
+    /** Gán giá trị mới cho trường canViewWorkoutPlan. */
+    public void setCanViewWorkoutPlan(Boolean canViewWorkoutPlan) { this.canViewWorkoutPlan = canViewWorkoutPlan; }
+    /** Lấy giá trị trường allowsPeriodicAssessment. */
+    public Boolean getAllowsPeriodicAssessment() { return allowsPeriodicAssessment; }
+    /** Gán giá trị mới cho trường allowsPeriodicAssessment. */
+    public void setAllowsPeriodicAssessment(Boolean allowsPeriodicAssessment) { this.allowsPeriodicAssessment = allowsPeriodicAssessment; }
+    /** Lấy giá trị trường allowsDeepAssessment. */
+    public Boolean getAllowsDeepAssessment() { return allowsDeepAssessment; }
+    /** Gán giá trị mới cho trường allowsDeepAssessment. */
+    public void setAllowsDeepAssessment(Boolean allowsDeepAssessment) { this.allowsDeepAssessment = allowsDeepAssessment; }
     /** Lấy giá trị trường createdBy. */
     public User getCreatedBy() { return createdBy; }
     /** Gán giá trị mới cho trường createdBy. */

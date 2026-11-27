@@ -43,19 +43,37 @@ public final class CatalogResponses {
         }
     }
 
-    /** Gói tập trả cho client: tên, mô tả, giá, số ngày, hạn mức buổi lớp, trạng thái và hạng. */
+    /** Gói tập trả cho client: tên, mô tả, giá, số ngày, hạn mức buổi lớp, trạng thái, hạng và quyền lợi chi tiết. */
     public record PackageDto(Long id, String name, String description, BigDecimal price, int durationDays,
-                             Integer classCreditLimit, String status, String tier) {
+                             Integer classCreditLimit, String status, String tier,
+                             int ptSessionsPerCycle, int holdMaxDays, int discountPercent,
+                             boolean vipRoomAccess, boolean canViewWorkoutPlan,
+                             boolean allowsPeriodicAssessment, boolean allowsDeepAssessment) {
         /** Constructor không có hạng (suy ra từ tên). */
         public PackageDto(Long id, String name, String description, BigDecimal price, int durationDays,
                           Integer classCreditLimit, String status) {
             this(id, name, description, price, durationDays, classCreditLimit, status, inferTier(name, null));
         }
 
-        /** Chuyển entity gói sang DTO. */
+        /** Constructor giữ tương thích cũ. */
+        public PackageDto(Long id, String name, String description, BigDecimal price, int durationDays,
+                          Integer classCreditLimit, String status, String tier) {
+            this(id, name, description, price, durationDays, classCreditLimit, status, tier,
+                    0, 0, 0, false, !"SILVER".equalsIgnoreCase(tier), !"SILVER".equalsIgnoreCase(tier), false);
+        }
+
+        /** Chuyển entity gói sang DTO với quyền lợi đã chuẩn hóa qua PackageBenefits. */
         public static PackageDto of(MembershipPackage p) {
-            return new PackageDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getDurationDays(),
-                    p.getClassCreditLimit(), p.getStatus(), inferTier(p.getName(), p.getTier()));
+            return new PackageDto(
+                    p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getDurationDays(),
+                    p.getClassCreditLimit(), p.getStatus(), inferTier(p.getName(), p.getTier()),
+                    com.swp391.scms.facilities.PackageBenefits.ptSessionsPerCycle(p),
+                    com.swp391.scms.facilities.PackageBenefits.holdMaxDays(p),
+                    com.swp391.scms.facilities.PackageBenefits.discountPercent(p),
+                    com.swp391.scms.facilities.PackageBenefits.hasVipRoomAccess(p),
+                    com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(p),
+                    com.swp391.scms.facilities.PackageBenefits.allowsPeriodicAssessment(p),
+                    com.swp391.scms.facilities.PackageBenefits.allowsDeepAssessment(p));
         }
 
         /**
