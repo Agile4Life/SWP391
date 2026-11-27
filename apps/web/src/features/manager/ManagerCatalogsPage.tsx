@@ -1,4 +1,4 @@
-import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { Select } from '../../shared/ui/Select';
 import { useCallback, useEffect, useState } from 'react';
@@ -55,6 +55,7 @@ export function ManagerCatalogsPage() {
   const [loadError, setLoadError] = useState<StaffMessage>('');
   const [formError, setFormError] = useState<StaffMessage>('');
   const [quickPriceError, setQuickPriceError] = useState<StaffMessage>('');
+  const [result, setResult] = useState<{ type: 'success' | 'error'; message: StaffMessage } | null>(null);
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
   const [quickPricePkg, setQuickPricePkg] = useState<{ pkg: MembershipPackage; price: string } | null>(null);
 
@@ -92,12 +93,12 @@ export function ManagerCatalogsPage() {
       setEditing(null);
       setQuickPricePkg(null);
       await load();
-      notify(successMsg, 'success');
+      setResult({ type: 'success', message: successMsg });
     } catch (err) {
       const msg = errorMessage(err, 'Thao tác thất bại.');
       if (errorTarget === 'form') setFormError(msg);
       else if (errorTarget === 'quickPrice') setQuickPriceError(msg);
-      else notify(msg, 'error');
+      else setResult({ type: 'error', message: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -863,6 +864,15 @@ export function ManagerCatalogsPage() {
         </div>
       )}
       {confirmDialog}
+      {result && <Modal
+        title={result.type === 'success' ? t('Thành công', 'Success') : t('Không thể thực hiện', 'Unable to complete')}
+        role="alertdialog"
+        ariaDescribedBy="catalog-result-message"
+        onClose={() => setResult(null)}
+      >
+        <p id="catalog-result-message" className="portal-subtitle">{t(result.message)}</p>
+        <div className="form-actions"><button type="button" className="btn-primary" onClick={() => setResult(null)}>{t('Đóng', 'Close')}</button></div>
+      </Modal>}
     </div>
   );
 }
