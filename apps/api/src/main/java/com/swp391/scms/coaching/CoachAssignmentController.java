@@ -1,12 +1,10 @@
 package com.swp391.scms.coaching;
 
-import com.swp391.scms.coaching.dto.CoachAssignmentReassignDto;
 import com.swp391.scms.coaching.service.CoachAssignmentService;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/** API cho quản lý trung tâm xem và điều chỉnh phân công HLV (giáo án, buổi PT) cho hội viên. */
+/** API chỉ đọc cho quản lý trung tâm xem phân công HLV (giáo án, PT 1:1, lớp) của hội viên. */
 @Tag(name = "Manager Coach Assignments", description = "Quản lý và theo dõi học viên đang được các HLV phụ trách (SCRUM Manager)")
 @RestController
 @RequestMapping("/api/v1/manager/coach-assignments")
@@ -55,31 +53,4 @@ public class CoachAssignmentController {
                 data
         ));
     }
-
-    /** POST /reassign: chuyển giáo án hoặc buổi PT đã chọn sang HLV khác. */
-    @Operation(summary = "Điều chuyển đúng giáo án hoặc buổi PT đã chọn; lớp học chỉ đọc")
-    @PostMapping("/reassign")
-    public ResponseEntity<ApiResponse<Void>> reassign(
-            @Valid @RequestBody CoachAssignmentReassignDto dto
-    ) {
-        coachAssignmentService.reassignStudent(dto);
-        return ResponseEntity.ok(ApiResponse.ok(
-                msg("manager.coach_assignments.reassigned"),
-                null
-        ));
-    }
-
-    /** DELETE /{planId}: hủy phân công một giáo án đang active, vẫn giữ lại lịch sử. */
-    @Operation(summary = "Hủy phân công giáo án active chưa hết hạn, giữ lịch sử")
-    @DeleteMapping("/{planId}")
-    public ResponseEntity<ApiResponse<Void>> removeAssignment(
-            @PathVariable Long planId
-    ) {
-        coachAssignmentService.removeAssignment(planId);
-        return ResponseEntity.ok(ApiResponse.ok(
-                msg("manager.coach_assignments.removed"),
-                null
-        ));
-    }
 }
-

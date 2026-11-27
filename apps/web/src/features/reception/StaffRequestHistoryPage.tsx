@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
-import { PageHeader } from '../../shared/ui/PageHeader';
 import { useStaffI18n } from '../operations/staffI18n';
 import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { WalletTopupHistory } from './WalletTopupHistory';
+import { HoldRequestHistory } from './HoldRequestHistory';
 import { PortalSectionTabs } from '../portal/PortalSectionTabs';
 
 /**
@@ -14,7 +14,10 @@ export function StaffRequestHistoryPage() {
   const { t, lang } = useStaffI18n();
   const { pathname } = useLocation();
   const [params] = useSearchParams();
-  const tab = params.get('tab') === 'wallet' ? 'wallet' : 'membership';
+  const role = getCurrentUser()?.role;
+  const canViewHolds = role === 'STAFF';
+  const requestedTab = params.get('tab');
+  const tab = requestedTab === 'wallet' ? 'wallet' : requestedTab === 'holds' && canViewHolds ? 'holds' : 'membership';
   const tabLink = (value: string) => {
     const next = new URLSearchParams(params);
     next.set('tab', value);
@@ -23,8 +26,8 @@ export function StaffRequestHistoryPage() {
   const tabs = [
     { to: tabLink('membership'), label: 'Lịch sử xử lý yêu cầu gói tập', en: 'Membership request history' },
     { to: tabLink('wallet'), label: 'Lịch sử nạp tiền vào Ví SÖL', en: 'SÖL Wallet top-up history' },
+    ...(canViewHolds ? [{ to: tabLink('holds'), label: 'Lịch sử bảo lưu gói tập', en: 'Membership hold history' }] : []),
   ];
-  const role = getCurrentUser()?.role;
   // Chỉ quản lý và nhân viên có quyền xem.
   const hasAccess = useMemo(() => role === 'MANAGER' || role === 'STAFF', [role]);
   if (!hasAccess) {
@@ -43,10 +46,10 @@ export function StaffRequestHistoryPage() {
     <>
       <PortalSectionTabs label={t('Lịch sử giao dịch', 'Transaction history')} tabs={tabs} pathname={pathname} lang={lang} activeTo={tabLink(tab)} />
       <div data-i18n-managed className="portal-container reception-history-page">
-        <PageHeader title={t("Lịch sử giao dịch")} />
-        {/* Giữ cả hai bảng mounted để chuyển tab/Back không tải lại hay mất bộ lọc hiện có. */}
+        {/* Giữ các bảng mounted để chuyển tab/Back không tải lại hay mất bộ lọc hiện có. */}
         <div data-history-panel="membership" hidden={tab !== 'membership'}><MembershipRequestHistory /></div>
         <div data-history-panel="wallet" hidden={tab !== 'wallet'}><WalletTopupHistory /></div>
+        {canViewHolds && <div data-history-panel="holds" hidden={tab !== 'holds'}><HoldRequestHistory /></div>}
       </div>
     </>
   );

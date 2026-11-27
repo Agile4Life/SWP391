@@ -30,14 +30,40 @@
 
 .checkout-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 28px;
   align-items: start;
 }
 
+.checkout-layout > *,
+.checkout-container .stack,
+.checkout-container .stack > * {
+  min-width: 0;
+}
+
 @media (max-width: 992px) {
   .checkout-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.checkout-kyc-uploads {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.checkout-kyc-uploads--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkout-kyc-uploads > * {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .checkout-kyc-uploads--two {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

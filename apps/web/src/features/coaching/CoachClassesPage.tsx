@@ -447,22 +447,29 @@ export function CoachClassesPage() {
             <div className="kv-row"><span>{t("Hình thức")}</span><strong>{selectedPt.paymentMethod === 'package_quota' ? t('Quyền lợi gói tập') : t('Hội viên trả phí')}</strong></div>
             {selectedPt.notes && <div className="kv-row"><span>{t("Ghi chú của học viên")}</span><strong>{selectedPt.notes}</strong></div>}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 20 }}>
-            <div>
-              {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
-                <button data-i18n-managed
-                  type="button"
-                  className="btn-danger"
-                  onClick={() => {
-                    setCancelPtError(null);
-                    setCancelPtReason('');
-                    setCancellingPt(selectedPt);
-                  }}
-                  data-testid="cancel-pt-btn"
-                >
-                  {t("Hủy buổi kèm 1:1")}</button>
-              )}
-            </div>
+          <div className="mcal__dialog-actions">
+            {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
+              <button data-i18n-managed
+                type="button"
+                className="btn-danger"
+                onClick={() => {
+                  setCancelPtError(null);
+                  setCancelPtReason('');
+                  setCancellingPt(selectedPt);
+                }}
+                data-testid="cancel-pt-btn"
+              >
+                {t("Hủy buổi kèm 1:1")}</button>
+            )}
+            {selectedPt.status?.toLowerCase() !== 'cancelled' && (
+              <Link
+                to={`/coach/pt-attendance?date=${selectedPt.bookingDate}&search=${encodeURIComponent(selectedPt.memberName || '')}`}
+                className="btn-primary"
+                data-testid="pt-attendance-btn"
+              >
+                {t("Điểm danh buổi này", "Take attendance")}
+              </Link>
+            )}
           </div>
         </Modal>
       )}
@@ -543,8 +550,8 @@ export function CoachClassesPage() {
           {allStudentsLoading ? (
             <LoadingSkeleton label={t("Đang tải danh sách học viên phụ trách…")} variant="cards" count={4} />
           ) : allStudentsError ? (
-            <div data-i18n-managed className="coach-error-box" role="alert">
-              <p>{t(allStudentsError)}</p>
+            <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+              <span>{t(allStudentsError)}</span>
               <button type="button" className="btn-secondary btn-sm" onClick={() => void loadAssignedStudents()}>
                 {t("Thử lại", "Retry")}
               </button>

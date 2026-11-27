@@ -275,3 +275,29 @@ it('jumps directly to the requested ticketId from notification URL even if it is
   await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar')?.textContent).toContain('Phiếu cũ từ thông báo'));
   expect(supportApi.getSupportMessages).toHaveBeenCalledWith(99);
 });
+
+it('shows a retry button in the reconnecting banner and resubscribes on click', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 1 });
+  let onState!: (state: 'connecting' | 'connected' | 'reconnecting' | 'disabled') => void;
+  vi.mocked(subscribeSupport).mockImplementation((_onChange, status) => {
+    onState = status;
+    return () => {};
+  });
+  await render();
+  // Hộp thư hội viên (không ticketId) và phiếu đang chọn đều subscribe; nút Thử lại chỉ dựng lại kết nối của phiếu.
+  await vi.waitFor(() => expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(2));
+  const callsBeforeRetry = vi.mocked(subscribeSupport).mock.calls.length;
+
+  await act(async () => { onState('reconnecting'); });
+  const banner = host.querySelector('.support-chat__connection')!;
+  expect(banner).not.toBeNull();
+  const retryBtn = banner.querySelector<HTMLButtonElement>('button')!;
+  expect(retryBtn.textContent).toBe('Thử lại');
+
+  await act(async () => setLanguage('en'));
+  expect(retryBtn.textContent).toBe('Retry');
+
+  await act(async () => { retryBtn.click(); });
+  expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(callsBeforeRetry + 1);
+  expect(host.querySelector('.support-chat__connection')).toBeNull();
+});

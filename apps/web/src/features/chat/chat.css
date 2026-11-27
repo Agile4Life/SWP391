@@ -4,6 +4,8 @@
 .direct-chat__intro { color: var(--portal-muted, #a8a8a8); margin: 12px 0 0; }
 .direct-chat__connection { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .direct-chat__connection-label { display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--portal-muted, #a8a8a8); }
+.direct-chat__connection.is-reconnecting,
+.direct-chat__connection-label.is-reconnecting { color: var(--portal-warning, #fcd89a); font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(252, 211, 77, 0.32); background: rgba(245, 158, 11, 0.12); }
 .direct-chat__workspace { position: relative; display: grid; grid-template-columns: minmax(280px, 350px) minmax(0, 1fr); border: 1px solid rgba(255, 255, 255, 0.1); background: #212328; color: #f5f5f5; border-radius: 18px; overflow: hidden; min-height: 620px; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35); }
 .direct-chat__inbox { position: relative; min-width: 0; border-right: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; }
 .direct-chat__inbox-heading { padding: 18px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -109,8 +111,14 @@
 .direct-chat .direct-chat__send-btn[aria-busy="true"] { opacity: .72; }
 .direct-chat__sending-dot { position: absolute; left: 9px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
-.direct-chat__error { font-size: .82rem; line-height: 1.5; padding: 10px 16px; color: #ff6b6b; overflow-wrap: anywhere; }
+.direct-chat__error { margin: 0; font-size: .82rem; line-height: 1.5; padding: 10px 16px; color: #ff6b6b; overflow-wrap: anywhere; }
 .direct-chat__error p { margin: 0; }
+div.direct-chat__error { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 20px; background: rgba(239, 68, 68, 0.1); border-bottom: 1px solid rgba(252, 165, 165, 0.24); color: #fca5a5; }
+div.direct-chat__error > p { flex: 1 1 160px; }
+div.direct-chat__error .direct-chat__link { flex-shrink: 0; min-width: 44px; justify-content: flex-end; padding: 0 6px; }
+.direct-chat__contacts div.direct-chat__error { padding: 10px 14px; border: 1px solid rgba(252, 165, 165, 0.24); border-radius: 10px; }
+.support-chat__closed .direct-chat__error { padding: 4px 0; }
+.direct-chat__compose .direct-chat__error { padding: 8px 4px 0; }
 .direct-chat__empty { padding: 28px 20px; font-size: 13.5px; line-height: 1.65; color: #a8a8a8; text-align: center; }
 .direct-chat__muted { font-size: 12.5px; line-height: 1.5; color: #a8a8a8; margin: 0 0 8px; }
 .direct-chat__placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; background: #212328; }
@@ -172,6 +180,7 @@
 @media (prefers-reduced-motion: reduce) { .direct-chat *, .direct-chat *::before, .direct-chat *::after { transition: none !important; } }
 
 .direct-chat__notice { display: grid; gap: 6px; margin: 0 18px 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(var(--sol-accent-rgb) / .4); background: rgb(var(--sol-accent-rgb) / .12); color: #f5f5f5; font-size: 13px; line-height: 1.55; }
+.direct-chat__contacts .direct-chat__notice { margin: 0 0 12px; }
 .direct-chat__notice strong { font-size: 14px; }
 .direct-chat__notice .direct-chat__link { justify-self: start; }
 .direct-chat__notice span, .direct-chat__notice strong { color: inherit; }
@@ -223,8 +232,14 @@
 :root[data-theme='light'] .direct-chat__search .portal-label,
 :root[data-theme='light'] .direct-chat__react-trigger,
 :root[data-theme='light'] .direct-chat .direct-chat__input:disabled { color: var(--portal-muted, #68645f); }
+:root[data-theme='light'] .direct-chat__connection.is-reconnecting,
+:root[data-theme='light'] .direct-chat__connection-label.is-reconnecting { color: var(--portal-warning, #805400); border-color: #f5deb0; background: #fef8eb; }
 :root[data-theme='light'] .direct-chat__link { color: var(--sol-accent-text); }
+:root[data-theme='light'] .direct-chat__notice .direct-chat__link { color: var(--chat-glass-ink, var(--portal-paper, #202020)); }
 :root[data-theme='light'] .direct-chat__error { color: var(--portal-danger, #a33030); }
+:root[data-theme='light'] div.direct-chat__error { background: #fdf0ef; border-bottom-color: #f3c4bf; color: var(--portal-danger, #a33030); }
+:root[data-theme='light'] .direct-chat__contacts div.direct-chat__error { border-color: #f3c4bf; }
+:root[data-theme='light'] div.direct-chat__error .direct-chat__link { color: var(--portal-danger, #a33030); }
 :root[data-theme='light'] .direct-chat__preview.is-unread { color: var(--portal-paper, #202020); }
 :root[data-theme='light'] .direct-chat__person:hover,
 :root[data-theme='light'] .direct-chat__person.is-selected { background: var(--portal-raised, #f5f5f3); }

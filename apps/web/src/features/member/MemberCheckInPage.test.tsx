@@ -102,3 +102,15 @@ it('ignores stale history responses when switching filters rapidly and adapts Ch
   expect(host.textContent).toContain('Cổng Hôm Nay');
   expect(host.textContent).not.toContain('Cổng 30 Ngày Cũ');
 });
+it('styles history load error with qr-checkin-error class', async () => {
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    const s = String(url);
+    if (s.includes('/subscriptions')) {
+      return Promise.resolve(new Response(JSON.stringify({ success: true, data: { status: 'active', endDate: '2099-12-31' } })));
+    }
+    return Promise.reject(new Error('offline'));
+  }));
+  await render();
+  const errorEl = host.querySelector('p.qr-checkin-error[role="alert"]');
+  expect(errorEl).not.toBeNull();
+});

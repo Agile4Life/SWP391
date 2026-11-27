@@ -1,13 +1,56 @@
-import { act } from 'react';
+import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
 import { Select } from './Select';
+import { setLanguage } from '../i18n/language';
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host = document.createElement('div'); document.body.append(host); root = createRoot(host); });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+
+it.each([undefined, true])('keeps the existing today marker by default (%s) without selecting a value', async highlightToday => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-15T03:00:00Z')); setLanguage('vi');
+  const onChange = vi.fn();
+  await act(async () => root.render(<DatePicker value="" highlightToday={highlightToday} onChange={onChange} />));
+  await act(async () => host.querySelector('button')!.click());
+  expect(host.querySelector('.ldp-day-cell.is-today')?.getAttribute('data-date')).toBe('2026-11-15');
+  expect(host.querySelector('.ldp-day-cell.is-today')?.getAttribute('aria-pressed')).toBe('false');
+  expect(host.querySelector('.ldp-day-cell.is-selected')).toBeNull();
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it('can hide the today marker while preserving placeholder, month, keyboard focus and explicit selection', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-15T03:00:00Z')); setLanguage('vi');
+  const onChange = vi.fn();
+  function Controlled() {
+    const [value, setValue] = useState('');
+    return <DatePicker value={value} highlightToday={false} onChange={event => { onChange(event); setValue(event.target.value); }} />;
+  }
+  await act(async () => root.render(<Controlled />));
+  const trigger = host.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')!;
+  expect(trigger.textContent).toContain('Chọn ngày...');
+  await act(async () => trigger.click());
+  expect(host.querySelector('.ldp-title')?.textContent).toContain('Tháng 11, 2026');
+  expect(host.querySelector('.ldp-day-cell.is-today')).toBeNull();
+  const today = host.querySelector('[data-date="2026-11-15"]')!;
+  expect(today.getAttribute('aria-current')).toBe('date');
+  expect(today.getAttribute('aria-pressed')).toBe('false');
+  expect(host.querySelector('.ldp-day-cell.is-selected')).toBeNull();
+  const day16 = host.querySelector<HTMLButtonElement>('[data-date="2026-11-16"]')!;
+  await act(async () => { day16.focus(); day16.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })); });
+  const day17 = host.querySelector<HTMLButtonElement>('[data-date="2026-11-17"]')!;
+  expect(document.activeElement).toBe(day17); expect(onChange).not.toHaveBeenCalled();
+  await act(async () => day17.click());
+  expect(onChange).toHaveBeenCalledExactlyOnceWith({ target: { value: '2026-11-17' } });
+  expect(trigger.textContent).toContain('17/11/2026'); expect(document.activeElement).toBe(trigger);
+  await act(async () => trigger.click());
+  expect(host.querySelector('.ldp-day-cell.is-selected')?.getAttribute('data-date')).toBe('2026-11-17');
+  expect(host.querySelector('.ldp-day-cell.is-today')).toBeNull();
+  await act(async () => host.querySelector<HTMLButtonElement>('.btn-clear')!.click());
+  expect(trigger.textContent).toContain('Chọn ngày...');
+});
 it('associates a date label with the visible trigger and preserves the submitted value', async () => {
   await act(async () => root.render(<form><label htmlFor="session-date">Ngày học</label><DatePicker id="session-date" name="custom-date" data-field="sessionDate" aria-label="Ngày buổi học" aria-invalid="true" value="2026-10-31" onChange={() => {}} /></form>));
   const trigger = host.querySelector('button')!;

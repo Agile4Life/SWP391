@@ -605,9 +605,20 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 .portal-v2 .app-main {
+  --portal-gutter: 24px;
   position: relative;
   min-width: 0;
   min-height: 0;
+}
+
+.portal-v2 .app-main > .pwa-status:not(:empty) {
+  margin: 8px var(--portal-gutter, 8px) 12px;
+}
+
+@media (min-width: 768px) {
+  .portal-v2 .app-main > .pwa-status:not(:empty) {
+    margin: 64px var(--portal-gutter, 24px) 12px;
+  }
 }
 
 /* Desktop: không còn hàng tiêu đề riêng; cụm thao tác nổi ở góc phải, nội dung trang bắt đầu ngay từ đầu. */
@@ -953,8 +964,8 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 @media (min-width: 768px) {
-  .portal-backdrop:has(> .chat-widget) .portal-v2 .portal-container {
-    padding-bottom: 84px;
+  .portal-v2 .portal-container {
+    padding-bottom: 96px;
   }
 }
 
@@ -1337,6 +1348,25 @@ html:root .portal-logo.portal-logo--mark {
 
 .portal-v2 #portal-main:has(> .portal-section-tabs) .portal-header:first-child .portal-header__actions {
   align-self: center;
+}
+
+/* Khi thanh PWA hoặc toast fallback đẩy nội dung xuống dưới topbar nổi, tiêu đề và thanh tab không cần chừa chỗ cho topbar nữa. */
+@media (min-width: 768px) {
+  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) #portal-main .portal-header:first-child,
+  .portal-v2 #portal-main:has(> .sol-toast) .portal-header:first-child {
+    min-height: 0;
+    padding-right: 0;
+  }
+
+  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) #portal-main .portal-header:first-child .portal-header__actions,
+  .portal-v2 #portal-main:has(> .sol-toast) .portal-header:first-child .portal-header__actions {
+    align-self: center;
+  }
+
+  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) .portal-section-tabs,
+  .portal-v2 #portal-main:has(> .sol-toast) > .portal-section-tabs {
+    max-width: calc(100% - 2 * var(--portal-gutter));
+  }
 }
 
 /* Số đếm trong tab cấp 2 (vd. "Lịch sử điểm danh 3"). */
@@ -1792,6 +1822,12 @@ html:root .portal-logo.portal-logo--mark {
   color: var(--portal-paper);
 }
 
+.portal-v2 .portal-alert--warning {
+  background: #f59e0b1a;
+  border-color: #fbbf2459;
+  color: var(--portal-warning, #fcd89a);
+}
+
 .portal-v2 .seg-group {
   flex-wrap: wrap;
 }
@@ -1971,6 +2007,7 @@ html:root .portal-logo.portal-logo--mark {
     padding-inline: 18px;
   }
 
+  .portal-v2 .app-main,
   .portal-v2 #portal-main {
     --portal-gutter: 18px;
   }
@@ -1981,6 +2018,13 @@ html:root .portal-logo.portal-logo--mark {
 
   .portal-search-trigger {
     width: 180px;
+  }
+}
+
+@media (min-width: 768px) {
+  .portal-v2 .portal-container.portal-route-error,
+  .portal-v2 .portal-route-error {
+    padding-right: max(24px, var(--portal-topbar-width, 0px));
   }
 }
 
@@ -2035,6 +2079,7 @@ html:root .portal-logo.portal-logo--mark {
     align-self: center;
   }
 
+  .portal-v2 .app-main,
   .portal-v2 #portal-main {
     --portal-gutter: 8px;
   }

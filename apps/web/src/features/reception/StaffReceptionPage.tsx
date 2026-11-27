@@ -555,7 +555,7 @@ export function StaffReceptionPage() {
               `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}.`,
             ),
         'success',
-        { record: true, destination: '/staff/reception-history' },
+        { silent: true, record: true, destination: '/staff/reception-history' },
       );
       await loadUnpaidCourses();
     } catch (err: unknown) {
@@ -656,7 +656,7 @@ export function StaffReceptionPage() {
     setTrialRejectError(null);
     try {
       await receptionApi.rejectTrial(rejectingTrial.id, reason);
-      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'info', { record: true });
+      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'success', { record: true });
       setRejectingTrial(null);
       if (inspectingTrial?.id === rejectingTrial.id) setInspectingTrial(null);
       await loadPendingTrials();
@@ -828,7 +828,7 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true, destination: '/staff/reception-history' });
+      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { silent: true, record: true, destination: '/staff/reception-history' });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();
@@ -915,8 +915,8 @@ export function StaffReceptionPage() {
                 { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
                 { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
               ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
-                <div key={queue.key} role="alert" className="form-error">
-                  {t(queue.error)}{' '}
+                <div key={queue.key} role="alert" className="portal-alert portal-alert--error" style={{ marginBottom: 0 }}>
+                  <span>{t(queue.error)}</span>
                   <button type="button" className="btn-secondary btn-sm" aria-label={queue.label}
                     disabled={queue.loading} onClick={() => void queue.retry()}>{t('Thử lại', 'Retry')}</button>
                 </div>
@@ -1108,8 +1108,8 @@ export function StaffReceptionPage() {
               {(todoFilter === 'all' || todoFilter === 'pt') && (loadingPt ? (
                   <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
                 ) : ptError ? (
-                  <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
+                  <div data-i18n-managed role="alert" className="portal-alert portal-alert--error" style={{ marginBottom: 0 }}>
+                    <span>{t(ptError)}</span>
                     <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
                   </div>
                 ) : (
@@ -1370,7 +1370,6 @@ export function StaffReceptionPage() {
                   disabled={isSearching}
                   aria-invalid={searchError ? true : undefined}
                   aria-describedby={searchError ? 'reception-search-error' : undefined}
-                  autoFocus
                 />
               </div>
               <button type="submit" className="btn-primary" disabled={isSearching}>
@@ -1606,7 +1605,12 @@ export function StaffReceptionPage() {
                   {t('Gói hiện tại còn hạn. Vui lòng chọn kỳ gia hạn hợp lệ.', 'The current membership is still valid. Please choose an eligible renewal period.')}
                 </p>
               )}
-              {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
+              {offersError && (
+                <div role="alert" className="portal-alert portal-alert--error" style={{ marginTop: 8, marginBottom: 0 }}>
+                  <span>{t(offersError)}</span>
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button>
+                </div>
+              )}
               {!selectedPending && !loadingOffers && selectedMember && !offersError && packages.length === 0 && (
                 <p data-i18n-managed>{t("Hiện không có gói tập đang hoạt động.")}</p>
               )}

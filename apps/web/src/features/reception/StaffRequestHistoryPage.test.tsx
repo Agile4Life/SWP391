@@ -9,7 +9,9 @@ import { setLanguage } from '../../shared/i18n/language';
 const mocks = vi.hoisted(() => ({
   requestHistory: vi.fn(),
   topupHistory: vi.fn(),
+  holds: vi.fn(),
 }));
+vi.mock('../member/holdApi', () => ({ listHolds: mocks.holds }));
 
 vi.mock('./receptionApi', async (original) => ({
   ...await original<typeof import('./receptionApi')>(),
@@ -32,6 +34,7 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     root = createRoot(host);
     mocks.requestHistory.mockReset().mockResolvedValue([]);
     mocks.topupHistory.mockReset().mockResolvedValue([]);
+    mocks.holds.mockReset().mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -42,12 +45,14 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['', '?tab=membership', '?tab=wallet', '?tab=invalid'])('opens the correct history panel for %s', async search => {
+  it.each(['', '?tab=membership', '?tab=wallet', '?tab=holds', '?tab=invalid'])('opens the correct history panel for %s', async search => {
     vi.mocked(getCurrentUser).mockReturnValue({ id: 's1', name: 'Staff', identifier: 's1', role: 'STAFF' });
     await act(async () => root.render(<MemoryRouter initialEntries={['/staff/reception-history' + search]}><StaffRequestHistoryPage /></MemoryRouter>));
     const walletActive = search === '?tab=wallet';
-    expect(host.querySelector('[data-history-panel="membership"]')?.hasAttribute('hidden')).toBe(walletActive);
+    expect(host.querySelector('[data-history-panel="membership"]')?.hasAttribute('hidden')).toBe(walletActive || search === '?tab=holds');
     expect(host.querySelector('[data-history-panel="wallet"]')?.hasAttribute('hidden')).toBe(!walletActive);
+    expect(host.querySelector('[data-history-panel="holds"]')?.hasAttribute('hidden')).toBe(search !== '?tab=holds');
+    expect(host.querySelectorAll('h1, h2')).toHaveLength(0);
     expect(host.querySelectorAll('.portal-section-tab.active')).toHaveLength(1);
   });
 
@@ -82,6 +87,7 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     expect(host.textContent).toContain('Không có quyền truy cập');
     expect(mocks.requestHistory).not.toHaveBeenCalled();
     expect(mocks.topupHistory).not.toHaveBeenCalled();
+    expect(mocks.holds).not.toHaveBeenCalled();
   });
 
   it.each(['STAFF', 'MANAGER'] as const)('renders both membership request history and wallet top-up history for %s', async (role) => {
@@ -118,7 +124,7 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     await act(async () => root.render(<MemoryRouter><StaffRequestHistoryPage /></MemoryRouter>));
 
     expect(host.querySelector('[data-testid="reception-history-forbidden-guard"]')).toBeNull();
-    expect(host.textContent).toContain('Lịch sử giao dịch');
+    expect(host.querySelectorAll('h1, h2')).toHaveLength(0);
     expect(host.querySelector('[data-testid="request-history"]')?.textContent).toContain('GOLD 3 THÁNG');
     expect(host.querySelector('[data-testid="wallet-topup-history"]')?.textContent).toContain('500.000');
   });
@@ -129,5 +135,31 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     await act(async () => root.render(<MemoryRouter><StaffRequestHistoryPage /></MemoryRouter>));
     expect(host.querySelector('[data-testid="request-history"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="wallet-topup-history"]')).not.toBeNull();
+  });
+
+  it('preserves hold filters through tab changes and Back/Forward without refetching', async () => {
+    vi.mocked(getCurrentUser).mockReturnValue({ id: 's1', name: 'Staff', identifier: 's1', role: 'STAFF' });
+    const router = createMemoryRouter([{ path: '/staff/reception-history', element: <StaffRequestHistoryPage /> }], { initialEntries: ['/staff/reception-history?tab=holds&source=notice'] });
+    await act(async () => root.render(<RouterProvider router={router} />));
+    const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Trạng thái bảo lưu"]')!;
+    await act(async () => trigger.click());
+    await act(async () => [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(el => el.textContent === 'Từ chối')!.click());
+    await act(async () => host.querySelector<HTMLAnchorElement>('a[href*="tab=wallet"]')!.click());
+    await act(async () => router.navigate(-1));
+    expect(host.querySelector('[data-history-panel="holds"]')?.hasAttribute('hidden')).toBe(false);
+    expect(trigger.textContent).toContain('Từ chối');
+    expect(router.state.location.search).toContain('source=notice');
+    await act(async () => router.navigate(1));
+    expect(host.querySelector('[data-history-panel="wallet"]')?.hasAttribute('hidden')).toBe(false);
+    expect(mocks.holds).toHaveBeenCalledTimes(1);
+    expect(mocks.holds).toHaveBeenCalledWith('ALL');
+  });
+
+  it('does not expose or fetch holds for Manager because the endpoint is Receptionist-only', async () => {
+    vi.mocked(getCurrentUser).mockReturnValue({ id: 'm1', name: 'Manager', identifier: 'm1', role: 'MANAGER' });
+    await act(async () => root.render(<MemoryRouter initialEntries={['/staff/reception-history?tab=holds']}><StaffRequestHistoryPage /></MemoryRouter>));
+    expect(host.querySelector('a[href*="tab=holds"]')).toBeNull();
+    expect(host.querySelector('[data-history-panel="membership"]')?.hasAttribute('hidden')).toBe(false);
+    expect(mocks.holds).not.toHaveBeenCalled();
   });
 });

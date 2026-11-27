@@ -97,3 +97,22 @@ it('P1-FE-25: verifies signed callback once and polls subsequent pending updates
   expect(api.getVnpayStatus).toHaveBeenCalledWith('POLL01');
   expect(host.textContent).toContain('Thanh toán thành công');
 });
+
+it('constrains result card, wraps actions in form-actions, and sets ARIA roles on pending/failed notices', async () => {
+  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({
+    reference: 'PEND01', paymentId: 1, subscriptionId: 2, amount: 500000, status: 'pending',
+    expiresAt: '2026-11-03T12:15:00', destination: '/member/packages',
+  });
+  await render('?vnp_TxnRef=PEND01');
+  const card = host.querySelector<HTMLElement>('section.portal-card');
+  expect(card?.style.maxWidth).toBe('640px');
+  expect(host.querySelector('.form-actions a.btn-primary')).not.toBeNull();
+  expect(host.querySelector('.hold-notice--info[role="status"]')).not.toBeNull();
+
+  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({
+    reference: 'FAIL01', paymentId: 1, subscriptionId: 2, amount: 500000, status: 'failed',
+    expiresAt: '2026-11-03T12:15:00', destination: '/member/packages',
+  });
+  await render('?vnp_TxnRef=FAIL01');
+  expect(host.querySelector('.hold-notice--warn[role="alert"]')).not.toBeNull();
+});

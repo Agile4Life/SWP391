@@ -204,3 +204,18 @@ it('P3-FE-30: localizes category prefix [Thiết bị]/[Gói tập] in English m
   await act(async () => (host.querySelector('[data-support-ticket="9"]') as HTMLButtonElement).click());
   await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar-subject')?.textContent).toBe('[Membership] Gia hạn hội viên'));
 });
+
+it('strips trailing periods from escalationReason so escalation notice never renders a double period', async () => {
+  const escalated = {
+    ...ticket,
+    escalatedAt: '2026-10-25T09:00:00',
+    escalatedByName: 'Lễ tân Hà',
+    escalationReason: 'Khách yêu cầu hoàn tiền.',
+  } as supportApi.SupportTicket;
+  vi.mocked(supportApi.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(escalated);
+  await openTicket();
+  const note = host.querySelector('[data-testid="escalation-info"]')?.textContent ?? '';
+  expect(note).toContain('— Khách yêu cầu hoàn tiền.');
+  expect(note).not.toContain('..');
+});

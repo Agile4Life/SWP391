@@ -271,9 +271,9 @@ export function MemberHoldPage() {
     <div data-i18n-managed className="portal-container member-hold">
       <PageHeader title={t('Bảo lưu gói tập', 'Membership hold')} />
       {loading ? <LoadingSkeleton label={t('Đang tải thông tin bảo lưu', 'Loading hold information')} /> : loadError ? (
-        <div className="portal-card" role="alert">
-          <p>{t(loadError)}</p>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t('Thử lại', 'Retry')}</button>
+        <div className="portal-alert portal-alert--error" role="alert">
+          <span>{t(loadError)}</span>
+          <button type="button" className="btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button>
         </div>
       ) : !subscription || !policy ? (
         <EmptyState icon="clock" title={t('Chưa có gói để bảo lưu', 'No membership to put on hold')}
@@ -341,7 +341,7 @@ export function MemberHoldPage() {
           )}
 
           {policy.alreadyUsed && status !== 'PENDING' && status !== 'APPROVED' && (
-            <div className="portal-card hold-notice hold-notice--info" role="status">{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</div>
+            <p className="hold-notice hold-notice--info" role="status" style={{ marginBottom: 20 }}>{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</p>
           )}
 
           {canRequest && (

@@ -25,7 +25,7 @@ export interface CoachAssignmentStudent {
   status: string;
   /** Id giáo án, id buổi PT kế tiếp (PT_1_1) hoặc id lớp. */
   referenceId: number;
-  /** Số buổi PT sắp tới được gộp vào dòng PT_1_1. */
+  /** Số buổi sắp tới: buổi PT gộp vào dòng PT_1_1, hoặc buổi còn lại của lớp ghi danh cả khóa. */
   sessionCount?: number | null;
 }
 
@@ -62,17 +62,7 @@ export interface CoachAssignmentData {
   stats: CoachAssignmentSummaryStats;
 }
 
-/** Yêu cầu điều chuyển: hội viên, HLV cũ/mới, id giáo án hoặc buổi PT, loại và lý do. */
-export interface ReassignStudentRequest {
-  memberId: number;
-  fromCoachId: number;
-  toCoachId: number;
-  referenceId: number;
-  assignmentType: 'TRAINING_PLAN' | 'PT_1_1';
-  reason?: string;
-}
-
-/** Gom các hàm API phân công HLV. */
+/** Gom các hàm API phân công HLV (chỉ đọc). */
 export const coachAssignmentsApi = {
   // Lấy tổng quan phân công theo HLV, từ khóa, loại và sắp xếp.
   getOverview: (params?: { coachId?: number; search?: string; type?: string; sortBy?: string; sortDir?: string }) => {
@@ -85,18 +75,5 @@ export const coachAssignmentsApi = {
     const qs = query.toString();
     return apiFetch<CoachAssignmentData>(`/manager/coach-assignments${qs ? `?${qs}` : ''}`);
   },
-
-  // Điều chuyển học viên sang HLV khác.
-  reassignStudent: (body: ReassignStudentRequest) =>
-    apiFetch<void>('/manager/coach-assignments/reassign', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // Kết thúc phân công giáo án đang hoạt động.
-  removeAssignment: (planId: number) =>
-    apiFetch<void>(`/manager/coach-assignments/${planId}`, {
-      method: 'DELETE',
-    }),
 };
 

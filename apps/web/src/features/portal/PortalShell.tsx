@@ -161,7 +161,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const closeNotifications = useCallback((restoreFocus: boolean | unknown = true) => {
     setDialog(null);
     if (restoreFocus !== false && !suppressNotificationFocusRef.current) {
-      notificationTrigger.current?.focus();
+      (notificationTrigger.current ?? document.querySelector<HTMLElement>('.member-notification-bell'))?.focus();
     }
     suppressNotificationFocusRef.current = false;
   }, []);
@@ -178,10 +178,11 @@ function PortalShellContent({ user }: { user: UserSession }) {
     // Ghi nhận thao tác nhấn ra ngoài hộp thông báo ở pha capture trước khi popover gọi onClose().
     const onOutsidePointerDown = (event: Event) => {
       const panel = document.getElementById('portal-notifications');
+      const trigger = notificationTrigger.current ?? document.querySelector<HTMLElement>('.member-notification-bell');
       if (
         event.target instanceof Node &&
         !panel?.contains(event.target) &&
-        !notificationTrigger.current?.contains(event.target)
+        !trigger?.contains(event.target)
       ) {
         suppressNotificationFocusRef.current = true;
       }
@@ -416,6 +417,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
 
   useEffect(() => {
     if (canReceiveNotifications && location.state?.openNotifications) {
+      notificationTrigger.current = notificationTrigger.current ?? document.querySelector<HTMLElement>('.member-notification-bell');
       setDialog('notifications');
       navigate(location.pathname, { replace: true, state: null });
     }
@@ -653,7 +655,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {walletError && (
             <div className="portal-alert" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
               <span>{t(walletError)}</span>
-              <button type="button" className="btn-secondary btn-sm" onClick={refreshWallet} disabled={walletLoading}>
+              <button type="button" className="btn-secondary btn-sm" style={{ flexShrink: 0, whiteSpace: 'nowrap' }} onClick={refreshWallet} disabled={walletLoading}>
                 {t('Thử lại', 'Retry')}
               </button>
             </div>

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -85,45 +84,4 @@ class CoachAssignmentControllerTest {
 
         verify(coachAssignmentService).getOverview(null, "gym", "PT_1_1", "totalStudentsCount", "desc");
     }
-
-    /** Kiểm thử: chuyển HLV thành công. */
-    @Test
-    @DisplayName("POST /api/v1/manager/coach-assignments/reassign transfers student")
-    void testReassign() throws Exception {
-        CoachAssignmentReassignDto dto = new CoachAssignmentReassignDto(
-                100L, 10L, 20L, 888L, "TRAINING_PLAN", "HLV đổi ca làm"
-        );
-
-        mockMvc.perform(post("/api/v1/manager/coach-assignments/reassign")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk());
-
-        verify(coachAssignmentService).reassignStudent(any(CoachAssignmentReassignDto.class));
-    }
-
-    /** Kiểm thử: chuyển HLV bắt buộc có lý do. */
-    @Test
-    @DisplayName("POST /api/v1/manager/coach-assignments/reassign rejects a blank reason")
-    void testReassignRequiresReason() throws Exception {
-        CoachAssignmentReassignDto dto = new CoachAssignmentReassignDto(100L, 10L, 20L, 888L, "TRAINING_PLAN", "  ");
-
-        mockMvc.perform(post("/api/v1/manager/coach-assignments/reassign")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest());
-
-        verify(coachAssignmentService, never()).reassignStudent(any());
-    }
-
-    /** Kiểm thử: gỡ phân công thành công. */
-    @Test
-    @DisplayName("DELETE /api/v1/manager/coach-assignments/{planId} removes assignment")
-    void testRemove() throws Exception {
-        mockMvc.perform(delete("/api/v1/manager/coach-assignments/123"))
-                .andExpect(status().isOk());
-
-        verify(coachAssignmentService).removeAssignment(123L);
-    }
 }
-

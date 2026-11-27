@@ -377,7 +377,7 @@ export function MemberCoachBookingView({
 
   // Xác nhận đặt lịch PT và xử lý lỗi hiển thị theo mã lỗi.
   async function handleConfirmBooking() {
-    if (!selectedCoach || !modalSlot) return;
+    if (!selectedCoach || !modalSlot || hasNoPackage) return;
     setSubmitting(true);
     setError('');
     setBookingError('');
@@ -513,28 +513,19 @@ export function MemberCoachBookingView({
 
       {error && (
         <div
-          className="portal-card"
+          className="portal-alert portal-alert--error"
           role="alert"
-          style={{
-            borderColor: 'color-mix(in srgb, var(--portal-danger) 45%, transparent)',
-            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
-            padding: 14,
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 10,
-          }}
+          style={{ marginBottom: 0, flexWrap: 'wrap' }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-            <strong style={{ color: 'var(--portal-danger)' }}>{memberRenderMessage(error)}</strong>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, flex: '1 1 220px', minWidth: 0 }}>
+            <strong>{memberRenderMessage(error)}</strong>
             {errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && (
-              <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>
+              <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>
                 {memberText("Đăng ký / Kích hoạt gói tập")}
               </button>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <button
               type="button"
               className="btn-secondary btn-sm"
@@ -555,7 +546,7 @@ export function MemberCoachBookingView({
               className="btn-secondary btn-sm"
               aria-label={memberText("Đóng thông báo lỗi", "Dismiss error")}
               onClick={() => setError('')}
-              style={{ padding: '2px 8px', fontSize: 12 }}
+              style={{ minWidth: 44, minHeight: 44, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
               ✕
             </button>
@@ -586,8 +577,8 @@ export function MemberCoachBookingView({
                 textTransform: 'uppercase',
                 padding: '3px 10px',
                 borderRadius: 99,
-                background: 'var(--portal-salmon)',
-                color: 'var(--portal-on-accent)',
+                background: 'var(--sol-accent)',
+                color: 'var(--portal-rank-ink, #202020)',
               }}
             >
               {quotaError
@@ -849,11 +840,11 @@ export function MemberCoachBookingView({
                   gap: 4,
                   border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border-strong)',
                   background: isSelected
-                    ? 'var(--portal-salmon)'
+                    ? 'var(--sol-accent)'
                     : 'var(--portal-surface)',
-                  color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
+                  color: isSelected ? 'var(--portal-rank-ink, #202020)' : 'var(--portal-paper)',
                   boxShadow: isSelected
-                    ? '0 4px 12px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
+                    ? '0 4px 12px rgb(var(--sol-accent-rgb) / 0.32)'
                     : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
                 }}
                 title={memberText(`Còn trống: ${slotSummary} (Nhấn để đặt lịch)`, `Available: ${slotSummary} (Click to book)`)}
@@ -866,7 +857,7 @@ export function MemberCoachBookingView({
                 <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', opacity: isSelected ? 0.92 : 0.85 }}>
                   {slotRange}
                 </span>
-                <small style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-salmon)' }}>
+                <small style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--portal-rank-ink, #202020)' : 'var(--portal-salmon)' }}>
                   {memberText("Còn trống", "Available")}
                 </small>
               </button>
@@ -1014,9 +1005,9 @@ export function MemberCoachBookingView({
                           ? '1px solid transparent'
                           : '1px solid var(--portal-border)',
                         background: isSelected
-                          ? 'var(--portal-salmon)'
+                          ? 'var(--sol-accent)'
                           : 'var(--portal-surface)',
-                        color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
+                        color: isSelected ? 'var(--portal-rank-ink, #202020)' : 'var(--portal-paper)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -1025,7 +1016,7 @@ export function MemberCoachBookingView({
                         cursor: 'pointer',
                         flexShrink: 0,
                         boxShadow: isSelected
-                          ? '0 6px 16px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
+                          ? '0 6px 16px rgb(var(--sol-accent-rgb) / 0.32)'
                           : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
                         transition: 'transform 180ms ease, border-color 180ms ease',
                       }}
@@ -1034,7 +1025,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 13,
                           fontWeight: 700,
-                          color: isSelected ? 'color-mix(in srgb, var(--portal-on-accent) 85%, transparent)' : 'var(--portal-muted)',
+                          color: isSelected ? 'color-mix(in srgb, var(--portal-rank-ink, #202020) 85%, transparent)' : 'var(--portal-muted)',
                           lineHeight: 1,
                           display: 'flex',
                           alignItems: 'center',
@@ -1048,7 +1039,7 @@ export function MemberCoachBookingView({
                               width: 5,
                               height: 5,
                               borderRadius: '50%',
-                              background: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-salmon)',
+                              background: isSelected ? 'var(--portal-rank-ink, #202020)' : 'var(--portal-salmon)',
                             }}
                             title={memberText("Hôm nay")}
                           />
@@ -1058,7 +1049,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 24,
                           fontWeight: 800,
-                          color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-paper)',
+                          color: isSelected ? 'var(--portal-rank-ink, #202020)' : 'var(--portal-paper)',
                           lineHeight: 1.1,
                         }}
                       >
@@ -1068,7 +1059,7 @@ export function MemberCoachBookingView({
                         style={{
                           fontSize: 12,
                           fontWeight: 500,
-                          color: isSelected ? 'color-mix(in srgb, var(--portal-on-accent) 80%, transparent)' : 'var(--portal-muted)',
+                          color: isSelected ? 'color-mix(in srgb, var(--portal-rank-ink, #202020) 80%, transparent)' : 'var(--portal-muted)',
                           lineHeight: 1,
                         }}
                       >
@@ -1261,8 +1252,8 @@ export function MemberCoachBookingView({
                         width: 44,
                         height: 44,
                         borderRadius: '50%',
-                        background: hasEnded ? 'var(--portal-raised)' : 'var(--portal-salmon)',
-                        color: hasEnded ? 'var(--portal-paper)' : 'var(--portal-on-accent)',
+                        background: hasEnded ? 'var(--portal-raised)' : 'var(--sol-accent)',
+                        color: hasEnded ? 'var(--portal-paper)' : 'var(--portal-rank-ink, #202020)',
                         border: hasEnded ? '1px solid var(--portal-border-strong)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -1372,11 +1363,11 @@ export function MemberCoachBookingView({
       {modalSlot && selectedCoach && (
         <Modal
           title={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   borderRadius: '50%',
                   background: 'color-mix(in srgb, var(--portal-salmon) 20%, var(--portal-surface))',
                   display: 'inline-flex',
@@ -1385,7 +1376,7 @@ export function MemberCoachBookingView({
                   flexShrink: 0,
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -1398,37 +1389,37 @@ export function MemberCoachBookingView({
                   <circle cx="16" cy="18" r="1.2" fill="var(--portal-salmon)"></circle>
                 </svg>
               </span>
-              <span style={{ fontSize: 22, fontWeight: 750, color: 'var(--portal-paper)', fontFamily: 'inherit' }}>
+              <span style={{ fontSize: 18, fontWeight: 750, color: 'var(--portal-paper)', fontFamily: 'inherit' }}>
                 {memberText("Xác nhận đặt lịch")}</span>
             </span>
           }
           onClose={() => setModalSlot(null)}
           busy={submitting}
         >
-          <div style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gap: 12 }}>
             {/* Thẻ thông tin HLV và buổi tập */}
             <div
               style={{
-                padding: '16px 20px',
-                borderRadius: 18,
+                padding: '12px 14px',
+                borderRadius: 14,
                 background: 'color-mix(in srgb, var(--portal-salmon) 6%, var(--portal-surface))',
                 border: '1px solid color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-border))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 16,
+                gap: 12,
                 flexWrap: 'wrap',
               }}
             >
               {/* Huấn luyện viên */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 200, flex: '1 1 auto' }}>
-                <div style={{ position: 'relative', width: 62, height: 62, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 180, flex: '1 1 auto' }}>
+                <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
                   <img
                     src={selectedCoach.avatarUrl || coachIllustration(selectedCoach.specialization, selectedCoach.fullName)}
                     alt={selectedCoach.fullName}
                     style={{
-                      width: 62,
-                      height: 62,
+                      width: 48,
+                      height: 48,
                       borderRadius: '50%',
                       objectFit: 'cover',
                       border: '2px solid var(--portal-surface)',
@@ -1440,12 +1431,12 @@ export function MemberCoachBookingView({
                       position: 'absolute',
                       bottom: 0,
                       right: 0,
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       borderRadius: '50%',
-                      background: 'var(--portal-salmon)',
+                      background: 'var(--sol-accent)',
                       border: '2px solid var(--portal-surface)',
-                      color: 'var(--portal-on-accent)',
+                      color: 'var(--portal-rank-ink, #202020)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1457,12 +1448,12 @@ export function MemberCoachBookingView({
                   </div>
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 1 }}>
                     {memberText("Huấn luyện viên")}</div>
-                  <div style={{ fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 15, fontWeight: 750, color: 'var(--portal-paper)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {selectedCoach.fullName}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
                     {selectedCoach.specialization || memberText('Huấn luyện cá nhân', 'Personal training')}
                   </div>
                 </div>
@@ -1523,16 +1514,16 @@ export function MemberCoachBookingView({
 
             {/* Khu vực chọn phương thức thanh toán */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0, marginBottom: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                   <line x1="1" y1="10" x2="23" y2="10"></line>
                 </svg>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper)' }}>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 750, color: 'var(--portal-paper)' }}>
                   {memberText("Phương thức thanh toán")}</h4>
               </div>
 
-              <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 10 }}>
+              <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 8 }}>
                 {/* Lựa chọn 1: Gói tập */}
                 <div
                   ref={quotaRadioRef}
@@ -1556,9 +1547,9 @@ export function MemberCoachBookingView({
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: 12,
-                    padding: '14px 16px',
-                    borderRadius: 14,
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 12,
                     border: paymentMethod === 'package_quota'
                       ? '1.5px solid var(--portal-salmon)'
                       : '1px solid var(--portal-border)',
@@ -1674,9 +1665,9 @@ export function MemberCoachBookingView({
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: 12,
-                    padding: '14px 16px',
-                    borderRadius: 14,
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 12,
                     border: paymentMethod === 'hourly_pay'
                       ? '1.5px solid var(--portal-salmon)'
                       : '1px solid var(--portal-border)',
@@ -1751,25 +1742,25 @@ export function MemberCoachBookingView({
 
             {/* Khu vực ghi chú */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0, marginBottom: 6 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                 </svg>
-                <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper)' }}>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 750, color: 'var(--portal-paper)' }}>
                   {memberText("Ghi chú")}</h4>
               </div>
               <div
                 style={{
                   position: 'relative',
-                  borderRadius: 14,
+                  borderRadius: 12,
                   border: '1px solid var(--portal-border)',
                   background: 'color-mix(in srgb, var(--portal-salmon) 4%, var(--portal-surface))',
-                  padding: '12px 14px 28px',
+                  padding: '8px 12px 22px',
                 }}
               >
                 <textarea
                   className="portal-textarea"
-                  rows={3}
+                  rows={2}
                   placeholder={memberText("Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ...", "Example: Focus on core and back, mild previous knee pain...")}
                   value={notes}
                   maxLength={200}
@@ -1782,14 +1773,14 @@ export function MemberCoachBookingView({
                     resize: 'none',
                     fontFamily: 'inherit',
                     color: 'var(--portal-paper)',
-                    lineHeight: 1.5,
+                    lineHeight: 1.45,
                   }}
                 />
                 <div
                   style={{
                     position: 'absolute',
-                    bottom: 8,
-                    right: 14,
+                    bottom: 6,
+                    right: 12,
                     fontSize: 12,
                     color: 'var(--portal-muted)',
                     fontWeight: 500,
@@ -1801,14 +1792,18 @@ export function MemberCoachBookingView({
             </div>
 
             {hasNoPackage && (
-              <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div
+                className="hold-notice hold-notice--warn"
+                role="alert"
+                style={{ fontSize: 13, fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}
+              >
                 <span><strong>{memberText("Bạn chưa có gói tập đang hoạt động.")}</strong>{memberText(" Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.")}</span>
-                <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>{memberText("Đăng ký gói tập")}</button>
+                <button type="button" className="btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={() => navigate('/member/packages')}>{memberText("Đăng ký gói tập")}</button>
               </div>
             )}
 
-            {bookingError && (
-              <div className="form-error" role="alert" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            {bookingError && !(hasNoPackage && errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') && (
+              <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 0, flexWrap: 'wrap' }}>
                 <span>{memberRenderMessage(bookingError)}</span>
                 {errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && (
                   <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>{memberText("Đăng ký / Kích hoạt gói tập")}</button>
@@ -1817,7 +1812,7 @@ export function MemberCoachBookingView({
             )}
 
             {/* Các nút hành động cuối hộp thoại */}
-            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
+            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 4 }}>
               <button
                 type="button"
                 className="btn-secondary"
@@ -1828,8 +1823,8 @@ export function MemberCoachBookingView({
               </button>
               <button
                 type="button"
-                className="btn-primary"
-                disabled={submitting}
+                className={hasNoPackage ? 'btn-secondary' : 'btn-primary'}
+                disabled={submitting || hasNoPackage}
                 onClick={() => void handleConfirmBooking()}
               >
                 <span>
@@ -1891,8 +1886,8 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
-              {paymentModalBooking.paymentStatus === 'pending' ? (
+            {paymentModalBooking.paymentStatus === 'pending' && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
                 <VnpayPayButton
                   target={{ coachBookingId: paymentModalBooking.id }}
                   onPaid={() => {
@@ -1903,16 +1898,8 @@ export function MemberCoachBookingView({
                     window.dispatchEvent(new CustomEvent('wallet-updated'));
                   }}
                 />
-              ) : (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setPaymentModalBooking(null)}
-                >
-                  {memberText("Đóng", "Close")}
-                </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

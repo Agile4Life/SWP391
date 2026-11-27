@@ -1,10 +1,10 @@
 import { staffMessage, useStaffI18n, type StaffMessage, staffNotify as notify } from '../operations/staffI18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
-import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { centerNowParts, formatCenterDate, formatCenterTime, parseCenterTime } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
@@ -13,12 +13,9 @@ import {
   type CoachClassSession,
   type CoachSessionHistoryItem,
 } from './attendanceApi';
-import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { formatSlotLabel } from '../schedule/slots';
-import { addIsoDays, coachSessionEvents, isoDayToUtcMs, mondayOfIso, ptBookingEvents } from './coachTimetable';
+import { addIsoDays } from './coachTimetable';
 import { coachingError } from './coachingApi';
-import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
-import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './coach-attendance.css';
 
 /** Số ngày ân hạn sửa điểm danh sau buổi học (khớp `SessionCompletionScheduler.GRACE_DAYS`). */
@@ -78,11 +75,11 @@ export interface AttendanceHistoryRecord {
   students: AttendanceStudent[];
 }
 
-type AttendanceTab = 'timetable' | 'attendance' | 'attendance-history';
+type AttendanceTab = 'sessions-list' | 'attendance' | 'attendance-history';
 
 /**
- * Quản lý buổi học (`/coach/attendance`): thời khóa biểu và lịch sử điểm danh.
- * Bấm một buổi trên thời khóa biểu mở trang riêng `/coach/attendance/:sessionId` để điểm danh buổi đó.
+ * Quản lý buổi học (`/coach/attendance`): danh sách buổi dạy lớp nhóm & lịch sử điểm danh.
+ * Trang riêng `/coach/attendance/:sessionId` dùng để điểm danh buổi cụ thể.
  */
 export function CoachAttendancePage() {
   const { sessionId } = useParams();
@@ -91,17 +88,16 @@ export function CoachAttendancePage() {
 
 function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const { t } = useStaffI18n();
-  const navigate = useNavigate();
   const sessionMode = routeSessionId !== undefined;
-  const [activeTab, setActiveTab] = useState<AttendanceTab>(sessionMode ? 'attendance' : 'timetable');
+  const [activeTab, setActiveTab] = useState<AttendanceTab>(sessionMode ? 'attendance' : 'sessions-list');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
-  const [ptBookings, setPtBookings] = useState<CoachBookingDto[]>([]);
+  const [sessionFilter, setSessionFilter] = useState<'ALL' | 'TODAY' | 'PENDING' | 'UPCOMING'>('ALL');
+  const [sessionSearch, setSessionSearch] = useState('');
   const selectedSessionId: number | null = sessionMode && Number.isInteger(Number(routeSessionId)) ? Number(routeSessionId) : null;
   const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
   const [rosterError, setRosterError] = useState<StaffMessage | null>(null);
   const [rosterAttempt, setRosterAttempt] = useState(0);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState<boolean>(true);
   const [rosterLoading, setRosterLoading] = useState<boolean>(sessionMode);
   const [saving, setSaving] = useState<boolean>(false);
   const [now, setNow] = useState<Date>(() => new Date());
@@ -112,8 +108,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [sessionsError, setSessionsError] = useState<StaffMessage | null>(null);
   const [sessionsAttempt, setSessionsAttempt] = useState(0);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
-  const [weekStart, setWeekStart] = useState(() => mondayOfIso(centerNowParts().date));
-  const [classFilter, setClassFilter] = useState('ALL');
   const [confirm, confirmDialog] = useConfirm();
   const showCenterNotification = useCallback(
     (msg: StaffMessage = staffMessage('Cập nhật thành công', 'Updated successfully')) => notify(msg, 'success'),
@@ -121,7 +115,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   );
 
   const mountedRef = useRef(true);
-  const weekStartInitializedRef = useRef(false);
   const savingRef = useRef(false);
   const openingEditRef = useRef(false);
   const historyReqIdRef = useRef(0);
@@ -142,6 +135,42 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [history, setHistory] = useState<AttendanceHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState<boolean>(true);
   const [historyError, setHistoryError] = useState(false);
+  const [historyFrom, setHistoryFrom] = useState(() => addIsoDays(centerNowParts().date, -30));
+  const [historyTo, setHistoryTo] = useState(() => centerNowParts().date);
+  const [historySearch, setHistorySearch] = useState('');
+
+  const historyDatePresets = [
+    { id: 'today', label: t('Hôm nay', 'Today'), days: 0 },
+    { id: '7d', label: t('7 ngày qua', 'Last 7 days'), days: 7 },
+    { id: '14d', label: t('14 ngày qua', 'Last 14 days'), days: 14 },
+    { id: '30d', label: t('30 ngày qua', 'Last 30 days'), days: 30 },
+  ];
+
+  const applyHistoryPreset = (days: number) => {
+    const todayDate = centerNowParts().date;
+    setHistoryFrom(days === 0 ? todayDate : addIsoDays(todayDate, -days));
+    setHistoryTo(todayDate);
+  };
+
+  const isHistoryPresetActive = (days: number) => {
+    const todayDate = centerNowParts().date;
+    const targetFrom = days === 0 ? todayDate : addIsoDays(todayDate, -days);
+    return historyFrom === targetFrom && historyTo === todayDate;
+  };
+
+  const filteredHistory = useMemo(() => {
+    return history.filter((record) => {
+      if (historyFrom && record.sessionDate < historyFrom) return false;
+      if (historyTo && record.sessionDate > historyTo) return false;
+      if (historySearch.trim()) {
+        const query = historySearch.toLowerCase().trim();
+        const matchName = record.className.toLowerCase().includes(query);
+        const matchRoom = (record.roomName ?? '').toLowerCase().includes(query);
+        if (!matchName && !matchRoom) return false;
+      }
+      return true;
+    });
+  }, [history, historyFrom, historyTo, historySearch]);
   const loadHistory = useCallback(async () => {
     const reqId = ++historyReqIdRef.current;
     setHistoryLoading(true);
@@ -163,38 +192,15 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   }, []);
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
-  // Load danh sách buổi học & buổi PT 1:1 của HLV
+  // Load danh sách buổi học của HLV
   useEffect(() => {
     let mounted = true;
     const fetchSessions = async () => {
-      setSessionsLoading(true);
       setSessionsError(null);
       try {
-        const [data, ptData] = await Promise.all([
-          attendanceApi.getCoachSessions(),
-          getCoachSchedule().catch(() => []),
-        ]);
+        const data = await attendanceApi.getCoachSessions();
         if (mounted) {
           setSessions(data);
-          setPtBookings(ptData);
-          if (!weekStartInitializedRef.current) {
-            weekStartInitializedRef.current = true;
-            const allActiveDates: string[] = [
-              ...data.map((s) => s.sessionDate),
-              ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate),
-            ];
-            if (allActiveDates.length > 0) {
-              // Chỉ tự căn tuần gần hôm nay nhất 1 lần lúc khởi tạo để focus/visibility refresh không giật tuần đang xem.
-              const withStudents = data.filter((s) => (s.bookedCount ?? 0) > 0);
-              const poolDates = withStudents.length > 0
-                ? [...withStudents.map((s) => s.sessionDate), ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate)]
-                : allActiveDates;
-              const todayMs = isoDayToUtcMs(centerNowParts().date);
-              const distance = (d: string) => Math.abs(isoDayToUtcMs(d) - todayMs);
-              const preferred = poolDates.reduce((best, d) => (distance(d) < distance(best) ? d : best), poolDates[0]);
-              setWeekStart(mondayOfIso(preferred));
-            }
-          }
         }
       } catch (err) {
         if (mounted) {
@@ -204,7 +210,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         }
       } finally {
         if (mounted) {
-          setSessionsLoading(false);
           setSessionsLoaded(true);
         }
       }
@@ -464,13 +469,70 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     return { present, absent, total, rate };
   }, [students]);
 
+  const recordedSessionIds = useMemo(() => new Set(history.map((h) => Number(h.sessionId))), [history]);
+
+  const sessionCounts = useMemo(() => {
+    const today = centerNowParts(now).date;
+    let all = 0;
+    let todayCount = 0;
+    let pending = 0;
+    let upcoming = 0;
+    for (const s of sessions) {
+      if (s.status?.toLowerCase() === 'cancelled') continue;
+      all++;
+      const isRecorded = recordedSessionIds.has(s.id);
+      const startDt = parseCenterTime(`${s.sessionDate}T${s.startTime}`);
+      const hasStarted = Boolean(startDt && startDt.getTime() <= now.getTime());
+      if (s.sessionDate === today) todayCount++;
+      if (hasStarted && !isRecorded) pending++;
+      if (!hasStarted) upcoming++;
+    }
+    return { all, today: todayCount, pending, upcoming };
+  }, [sessions, recordedSessionIds, now]);
+
+  const filteredSessions = useMemo(() => {
+    const today = centerNowParts(now).date;
+    return sessions
+      .filter((session) => {
+        if (session.status?.toLowerCase() === 'cancelled') {
+          if (sessionFilter !== 'ALL') return false;
+        }
+        const isRecorded = recordedSessionIds.has(session.id);
+        const startDt = parseCenterTime(`${session.sessionDate}T${session.startTime}`);
+        const hasStarted = Boolean(startDt && startDt.getTime() <= now.getTime());
+
+        if (sessionFilter === 'TODAY' && session.sessionDate !== today) {
+          return false;
+        }
+        if (sessionFilter === 'PENDING') {
+          if (isRecorded || !hasStarted) return false;
+        }
+        if (sessionFilter === 'UPCOMING') {
+          if (hasStarted) return false;
+        }
+        if (sessionSearch.trim()) {
+          const query = sessionSearch.toLowerCase().trim();
+          const matchName = session.className.toLowerCase().includes(query);
+          const matchRoom = (session.roomName ?? '').toLowerCase().includes(query);
+          const matchDiscipline = (session.disciplineName ?? '').toLowerCase().includes(query);
+          if (!matchName && !matchRoom && !matchDiscipline) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const dtA = `${a.sessionDate}T${a.startTime}`;
+        const dtB = `${b.sessionDate}T${b.startTime}`;
+        return dtA.localeCompare(dtB);
+      });
+  }, [sessions, recordedSessionIds, now, sessionFilter, sessionSearch]);
+
   if (sessionMode && sessionsLoaded && !sessionsError && !activeSession) {
     return (
       <div data-i18n-managed className="coach-attendance-page portal-container">
         <PageHeader title={t("Điểm danh buổi học")} />
         <div className="portal-card" role="alert">
           <p>{t("Không tìm thấy buổi học này trong lịch dạy của bạn.")}</p>
-          <Link to="/coach/attendance" className="btn-secondary">{t("Quay lại thời khóa biểu")}</Link>
+          <Link to="/coach/attendance" className="btn-secondary">{t("Quay lại danh sách buổi học", "Back to sessions list")}</Link>
         </div>
       </div>
     );
@@ -478,10 +540,11 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   const tabs: { id: AttendanceTab; label: string; count?: number }[] = sessionMode
     ? [
-        { id: 'attendance', label: t("Điểm danh buổi học") },
+        { id: 'attendance', label: t("Điểm danh buổi học", "Session attendance") },
+        { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
       ]
     : [
-        { id: 'timetable', label: t("Thời khóa biểu") },
+        { id: 'sessions-list', label: t("Điểm danh", "Attendance"), count: sessionCounts.all },
         { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
       ];
 
@@ -493,10 +556,20 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             ? t('Điểm danh lớp nhóm', 'Group class attendance')
             : t('Điểm danh buổi học')
         }
-        actions={sessionMode ? <Link to="/coach/attendance" className="btn-secondary">{t("Quay lại thời khóa biểu")}</Link> : undefined}
+        actions={
+          sessionMode ? (
+            <Link to="/coach/attendance" className="btn-secondary">
+              {t("Quay lại danh sách buổi học", "Back to sessions list")}
+            </Link>
+          ) : (
+            <Link to="/coach/classes" className="btn-secondary">
+              {t("Xem lịch dạy & học viên →", "View schedule & classes →")}
+            </Link>
+          )
+        }
       />
 
-      {/* Quản lý buổi học: thời khóa biểu + lịch sử điểm danh. Trang một buổi: điểm danh. */}
+      {/* Quản lý buổi học: danh sách buổi dạy + lịch sử điểm danh. Trang một buổi: điểm danh. */}
       <div className="portal-tabs attendance-nav-tabs" role="tablist">
         {tabs.map((tab) => (
           <button
@@ -513,74 +586,174 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         ))}
       </div>
 
-      {sessionsError && (sessionMode || activeTab === 'timetable') && (
+      {/* =========================================================================
+          TAB 1: DANH SÁCH BUỔI LỚP NHÓM CẦN ĐIỂM DANH (Dạng thẻ danh sách đơn giản, giống PT 1:1)
+          ========================================================================= */}
+      {!sessionMode && activeTab === 'sessions-list' && (
+        <div data-i18n-managed className="attendance-sessions-list-section" style={{ marginTop: 16 }}>
+          {/* Toolbar lọc kết quả & tìm kiếm */}
+          <div className="pt-filter-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <div className="portal-tabs" role="tablist" aria-label={t("Lọc danh sách buổi học", "Filter class sessions")} style={{ margin: 0 }}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sessionFilter === 'ALL'}
+                className={`portal-tab ${sessionFilter === 'ALL' ? 'active' : ''}`}
+                onClick={() => setSessionFilter('ALL')}
+              >
+                <span>{t("Tất cả", "All")}</span>
+                <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{sessionCounts.all}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sessionFilter === 'TODAY'}
+                className={`portal-tab ${sessionFilter === 'TODAY' ? 'active' : ''}`}
+                onClick={() => setSessionFilter('TODAY')}
+              >
+                <span>{t("Hôm nay", "Today")}</span>
+                <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{sessionCounts.today}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sessionFilter === 'PENDING'}
+                className={`portal-tab ${sessionFilter === 'PENDING' ? 'active' : ''}`}
+                onClick={() => setSessionFilter('PENDING')}
+              >
+                <span>{t("Chưa điểm danh", "Pending")}</span>
+                <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{sessionCounts.pending}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sessionFilter === 'UPCOMING'}
+                className={`portal-tab ${sessionFilter === 'UPCOMING' ? 'active' : ''}`}
+                onClick={() => setSessionFilter('UPCOMING')}
+              >
+                <span>{t("Sắp diễn ra", "Upcoming")}</span>
+                <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{sessionCounts.upcoming}</span>
+              </button>
+            </div>
+
+            <div className="pt-search-box" style={{ display: 'flex', alignItems: 'center', minWidth: 260, flex: '1 1 300px', maxWidth: 440 }}>
+              <input
+                type="search"
+                className="portal-input"
+                style={{ width: '100%' }}
+                placeholder={t("Tìm theo tên lớp, phòng hoặc bộ môn…", "Search by class, room or discipline…")}
+                aria-label={t("Tìm theo tên lớp, phòng hoặc bộ môn", "Search by class, room or discipline")}
+                value={sessionSearch}
+                onChange={(e) => setSessionSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {!sessionsLoaded ? (
+            <LoadingSkeleton label={t("Đang tải danh sách buổi học…", "Loading sessions…")} count={3} />
+          ) : sessionsError ? (
+            <div data-i18n-managed className="coach-error-box" role="alert">
+              <p>{t(sessionsError)}</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>
+                {t("Thử lại", "Retry")}
+              </button>
+            </div>
+          ) : filteredSessions.length === 0 ? (
+            <div data-i18n-managed className="attendance-empty-state">
+              <p>
+                {sessionSearch.trim() || sessionFilter !== 'ALL'
+                  ? t("Không tìm thấy buổi học phù hợp với bộ lọc.", "No class sessions match the filter.")
+                  : t("Hiện bạn chưa có buổi dạy lớp nhóm nào.", "You have no scheduled group class sessions.")}
+              </p>
+            </div>
+          ) : (
+            <div data-i18n-managed className="history-cards-grid">
+              {filteredSessions.map((session) => {
+                const isCancelled = session.status?.toLowerCase() === 'cancelled';
+                const hasRecorded = recordedSessionIds.has(session.id);
+                const startDt = parseCenterTime(`${session.sessionDate}T${session.startTime}`);
+                const notStarted = Boolean(startDt && startDt.getTime() > now.getTime());
+
+                return (
+                  <div data-i18n-managed key={session.id} className="history-record-card" data-testid={`session-row-${session.id}`}>
+                    <div className="history-card-header">
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                          <h4 className="history-class-name" style={{ margin: 0 }}>{session.className}</h4>
+                          {session.disciplineName && (
+                            <span className="badge badge-info" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                              {session.disciplineName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="history-meta-sub">
+                          <span>{t("Phòng: ")}{session.roomName}</span>
+                          <span>•</span>
+                          <span>{formatSlotLabel(session.startTime, session.endTime)}</span>
+                          <span>•</span>
+                          <span>{t("Ngày: ")}{formatCenterDate(session.sessionDate)}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isCancelled ? (
+                          <span className="session-status-badge is-cancelled">{t("Đã hủy", "Cancelled")}</span>
+                        ) : hasRecorded ? (
+                          <span className="session-status-badge is-saved">{t("Đã điểm danh", "Attendance recorded")}</span>
+                        ) : notStarted ? (
+                          <span
+                            className="session-status-badge"
+                            style={{
+                              background: 'rgba(59, 130, 246, 0.15)',
+                              color: 'var(--portal-info, #3b82f6)',
+                              border: '1px solid rgba(59, 130, 246, 0.4)',
+                            }}
+                          >
+                            {t("Sắp diễn ra", "Upcoming")}
+                          </span>
+                        ) : (
+                          <span className="session-status-badge is-pending">{t("Chưa điểm danh", "Attendance pending")}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="history-stat-row">
+                      <div className="stat-pill">
+                        <span className="stat-label">{t("Sĩ số đã đăng ký:", "Enrolled capacity:")}</span>
+                        <span className="stat-num">{session.bookedCount} / {session.capacity} {t("học viên", "students")}</span>
+                      </div>
+                    </div>
+
+                    <div className="history-actions-row">
+                      {!isCancelled && (
+                        hasRecorded ? (
+                          <Link to={`/coach/attendance/${session.id}`} className="btn-secondary btn-sm">
+                            {t("Xem / Sửa điểm danh", "View / edit attendance")}
+                          </Link>
+                        ) : notStarted ? (
+                          <span className="muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
+                            {t('Điểm danh khi bắt đầu', 'Take attendance once started')}
+                          </span>
+                        ) : (
+                          <Link to={`/coach/attendance/${session.id}`} className="btn-primary btn-sm">
+                            {t("Điểm danh buổi này", "Take attendance")}
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {sessionsError && sessionMode && (
         <div data-i18n-managed className="coach-error-box" role="alert">
           {t(sessionsError)}{' '}
           <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>{t("Thử lại")}</button>
         </div>
-      )}
-
-      {/* Chọn buổi học trên thời khóa biểu tuần */}
-      {!sessionsError && !sessionMode && activeTab === 'timetable' && (
-        <WeeklyTimetable
-          label={t("Thời khóa biểu buổi dạy cần điểm danh")}
-          weekStart={weekStart}
-          events={[
-            ...(classFilter === 'PT_1ON1'
-              ? []
-              : coachSessionEvents(
-                  sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
-                  'attendance',
-                  new Set(history.map((h) => Number(h.sessionId))),
-                  now,
-                )),
-            ...(classFilter === 'ALL' || classFilter === 'PT_1ON1'
-              ? ptBookingEvents(ptBookings, now)
-              : []),
-          ]}
-          loading={!sessionsLoaded}
-          onWeekChange={(iso) => {
-            weekStartInitializedRef.current = true;
-            setWeekStart(mondayOfIso(iso));
-          }}
-          onEventClick={(id) => {
-            if (id.startsWith('pt-')) {
-              navigate('/coach/pt-attendance');
-              return;
-            }
-            navigate(`/coach/attendance/${id}`);
-          }}
-          emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
-          toolbar={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div className="attendance-class-filter">
-                <Select
-                  className="portal-select"
-                  value={classFilter}
-                  onChange={(e) => setClassFilter(e.target.value)}
-                  aria-label={t("Lọc theo lớp", "Filter by class")}
-                >
-                  <option value="ALL">{t("Tất cả lớp", "All classes")}</option>
-                  {ptBookings.length > 0 && <option value="PT_1ON1">{t("Buổi PT 1:1", "1:1 PT session")}</option>}
-                  {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
-                    <option data-i18n-managed key={name} value={name}>{name}</option>
-                  ))}
-                </Select>
-              </div>
-              <RefreshButton
-                label={t("Làm mới thời khóa biểu", "Refresh timetable") as string}
-                onClick={() => setSessionsAttempt((n) => n + 1)}
-                disabled={sessionsLoading}
-              />
-            </div>
-          }
-          legend={[
-            { tone: 'open', label: t('Sắp diễn ra') },
-            { tone: 'full', label: t('Đã diễn ra, chưa điểm danh') },
-            { tone: 'mine', label: t('Đã điểm danh / Buổi PT 1:1', 'Attended / 1:1 PT session') },
-            { tone: 'cancelled', label: t('Đã hủy') },
-          ]}
-        />
       )}
 
       {/* Thông tin buổi học (trang điểm danh một buổi) */}
@@ -655,8 +828,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       )}
 
       {rosterError && sessionMode && (
-        <div data-i18n-managed className="coach-error-box" role="alert">
-          <p>{t(rosterError)}</p>
+        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+          <span>{t(rosterError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setRosterAttempt((n) => n + 1)}>
             {t("Thử lại", "Retry")}
           </button>
@@ -796,33 +969,72 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           ========================================================================= */}
       {activeTab === 'attendance-history' && (
         <div data-i18n-managed className="attendance-history-section">
-          <div className="history-header-bar">
-            <div>
-              <h3 className="section-title">{t("Lịch sử các buổi đã điểm danh")}</h3>
+          <div className="history-header-bar" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h3 className="section-title">{t("Lịch sử các buổi đã điểm danh")}</h3>
+                <p className="section-desc">{t("Danh sách các buổi học lớp nhóm đã lưu điểm danh.", "List of group class sessions with saved attendance.")}</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div className="history-presets-bar" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {historyDatePresets.map((preset) => {
+                    const active = isHistoryPresetActive(preset.days);
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className={`btn-sm ${active ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ fontSize: '0.8rem', padding: '4px 10px', height: 'auto', borderRadius: 20 }}
+                        onClick={() => applyHistoryPreset(preset.days)}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label className="portal-label" htmlFor="history-from" style={{ margin: 0, whiteSpace: 'nowrap', fontSize: '0.88rem' }}>{t('Từ ngày', 'From')}</label>
+                  <DatePicker id="history-from" max={historyTo || undefined} value={historyFrom} onChange={(e) => setHistoryFrom(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label className="portal-label" htmlFor="history-to" style={{ margin: 0, whiteSpace: 'nowrap', fontSize: '0.88rem' }}>{t('Đến ngày', 'To')}</label>
+                  <DatePicker id="history-to" min={historyFrom || undefined} value={historyTo} onChange={(e) => setHistoryTo(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+              <input
+                type="search"
+                className="portal-input"
+                style={{ width: '100%' }}
+                placeholder={t("Tìm theo tên lớp, phòng…", "Search by class, room…")}
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+              />
             </div>
           </div>
 
           {historyLoading && history.length === 0 ? (
             <LoadingSkeleton label={t("Đang tải lịch sử điểm danh…", "Loading attendance history…")} count={4} />
           ) : historyError ? (
-            <div data-i18n-managed className="coach-error-box" role="alert">
-              <p>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</p>
+            <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+              <span>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</span>
               <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>
                 {t("Thử lại", "Retry")}
               </button>
             </div>
-          ) : history.length === 0 ? (
+          ) : filteredHistory.length === 0 ? (
             <div data-i18n-managed className="attendance-empty-state">
               <p>
-                {t(
-                  `Chưa có buổi nào được điểm danh trong tháng ${Number(centerNowParts().date.slice(5, 7))}.`,
-                  `No sessions recorded in month ${Number(centerNowParts().date.slice(5, 7))}.`,
-                )}
+                {historySearch.trim() || historyFrom || historyTo
+                  ? t("Không tìm thấy buổi học nào phù hợp trong khoảng thời gian này.", "No class sessions found matching this date range.")
+                  : t("Chưa có buổi nào được điểm danh.", "No class sessions have been recorded.")}
               </p>
             </div>
           ) : (
             <div data-i18n-managed className="history-cards-grid">
-              {history.map((record) => {
+              {filteredHistory.map((record) => {
                 const rate =
                   record.totalStudents > 0
                     ? Math.round((record.presentCount / record.totalStudents) * 100)
