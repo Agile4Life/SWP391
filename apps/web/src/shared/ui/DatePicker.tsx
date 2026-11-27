@@ -15,6 +15,8 @@ export interface DatePickerProps {
   disabled?: boolean;
   required?: boolean;
   placeholder?: string;
+  /** Chỉ tắt dấu hôm nay khi màn hình cần phân biệt rõ với ngày người dùng đã chọn. */
+  highlightToday?: boolean;
   className?: string;
   style?: React.CSSProperties;
   'data-field'?: string;
@@ -70,6 +72,7 @@ export function DatePicker({
   disabled = false,
   required = false,
   placeholder,
+  highlightToday = true,
   className = '',
   style,
   'data-field': dataField,
@@ -559,7 +562,7 @@ export function DatePicker({
                 'ldp-day-cell',
                 d.isCurrentMonth ? 'is-current-month' : 'is-other-month',
                 d.isSelected ? 'is-selected' : '',
-                d.isToday ? 'is-today' : '',
+                d.isToday && highlightToday ? 'is-today' : '',
                 d.isDisabled ? 'is-disabled' : '',
               ]
                 .filter(Boolean)
