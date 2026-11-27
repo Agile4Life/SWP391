@@ -25,6 +25,18 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     Page<SupportRequest> findInbox(@Param("status") String status, @Param("unreadOnly") boolean unreadOnly,
             @Param("escalatedOnly") boolean escalatedOnly, @Param("userId") Long userId, Pageable pageable);
 
+    @Query(value = "select r " + INBOX_FILTER + """
+        and (lower(r.member.user.fullName) like lower(concat('%', :search, '%'))
+          or lower(r.subject) like lower(concat('%', :search, '%')))
+        order by coalesce((select max(m.createdAt) from SupportRequestMessage m where m.supportRequest = r), r.createdAt) desc, r.id desc
+        """, countQuery = "select count(r) " + INBOX_FILTER + """
+        and (lower(r.member.user.fullName) like lower(concat('%', :search, '%'))
+          or lower(r.subject) like lower(concat('%', :search, '%')))
+        """)
+    Page<SupportRequest> searchInbox(@Param("status") String status, @Param("unreadOnly") boolean unreadOnly,
+            @Param("escalatedOnly") boolean escalatedOnly, @Param("userId") Long userId,
+            @Param("search") String search, Pageable pageable);
+
     default Page<SupportRequest> findReceptionistInbox(String status, boolean unreadOnly, Long userId, Pageable pageable) {
         return findInbox(status, unreadOnly, false, userId, pageable);
     }

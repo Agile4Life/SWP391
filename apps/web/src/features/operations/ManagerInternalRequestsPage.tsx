@@ -61,6 +61,7 @@ export function ManagerInternalRequestsPage() {
   // Bộ lọc
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
 
   // Hộp thoại duyệt đơn
   const [reviewTarget, setReviewTarget] = useState<StaffInternalRequestDto | null>(null);
@@ -99,14 +100,16 @@ export function ManagerInternalRequestsPage() {
     return requests.filter((r) => r.status === 'PENDING').length;
   }, [requests]);
 
-  // Đơn sau khi lọc theo trạng thái và loại.
+  // Đơn sau khi lọc theo trạng thái, loại và nội dung tìm kiếm.
   const filteredRequests = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('vi');
     return requests.filter((r) => {
       const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
       const matchType = typeFilter === 'ALL' || r.requestType === typeFilter;
-      return matchStatus && matchType;
+      const matchSearch = !query || [r.userFullName, r.userEmail, r.title].some(value => value?.toLocaleLowerCase('vi').includes(query));
+      return matchStatus && matchType && matchSearch;
     });
-  }, [requests, statusFilter, typeFilter]);
+  }, [requests, statusFilter, typeFilter, search]);
 
   // Mở hộp duyệt đơn với ghi chú mặc định theo ngôn ngữ hiện tại.
   function handleOpenApprove(r: StaffInternalRequestDto) {
@@ -269,7 +272,6 @@ export function ManagerInternalRequestsPage() {
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          justifyContent: 'space-between',
           alignItems: 'center',
           gap: 16,
           background: 'var(--portal-surface)',
@@ -279,6 +281,15 @@ export function ManagerInternalRequestsPage() {
           marginBottom: 24,
         }}
       >
+        <input
+          type="search"
+          className="portal-input"
+          aria-label={t('Tìm đơn nội bộ', 'Search internal requests')}
+          placeholder={t('Tìm nhân sự hoặc tiêu đề', 'Search staff or subject')}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{ flex: '1 1 240px', minWidth: 180, maxWidth: 320 }}
+        />
         {/* Các tab trạng thái */}
         <div className="portal-tabs" role="tablist" aria-label={t("Lọc trạng thái đơn nội bộ", "Filter internal request status")} style={{ marginBottom: 0 }}>
           {[
@@ -309,7 +320,7 @@ export function ManagerInternalRequestsPage() {
         </div>
 
         {/* Bộ lọc loại đơn */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
           <label htmlFor="manager-request-type-filter" style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</label>
           <Select
             id="manager-request-type-filter"
@@ -371,7 +382,7 @@ export function ManagerInternalRequestsPage() {
               : t("Không có đơn từ nào cần xử lý")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
             {requests.length > 0
-              ? t('Hãy thử chọn trạng thái hoặc loại đơn khác.', 'Try choosing a different status or request type.')
+              ? t('Hãy thử từ khóa, trạng thái hoặc loại đơn khác.', 'Try a different search, status or request type.')
               : t("Không có đơn từ cần duyệt.")}</span>
         </div>
       ) : (

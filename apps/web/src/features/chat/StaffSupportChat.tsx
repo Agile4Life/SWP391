@@ -10,6 +10,7 @@ import { ChatComposer } from './ChatComposer';
 import { HeaderAction, SupportHeader, SupportTranscript } from './SupportChatParts';
 import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, SUPPORT_UNREAD_EVENT, isAccessDenied, localizedSubject, supportBubbles, supportError, uniqueMessages } from './supportChat';
 import '../member/member-support.css';
+import './chat.css';
 import './support-chat.css';
 
 /** Trạng thái của phiếu hỗ trợ. */
@@ -29,6 +30,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
   const [pages, setPages] = useState(0);
   const [filter, setFilter] = useState<'' | Status>('');
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<ChatError | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -51,7 +53,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
   const selection = useRef<number | null>(null);
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
-  const listQuery = useRef<{ page: number; filter: '' | Status; unreadOnly: boolean }>({ page: 0, filter: '', unreadOnly: false });
+  const listQuery = useRef<{ page: number; filter: '' | Status; unreadOnly: boolean; search: string }>({ page: 0, filter: '', unreadOnly: false, search: '' });
   const readCursors = useRef(new Map<number, number>());
   const detailInFlight = useRef(new Map<number, Promise<void>>());
   const detailDirty = useRef(new Set<number>());
@@ -65,24 +67,24 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
 
   // Tải danh sách phiếu theo trang và trạng thái hiện tại; trang vượt quá thì lùi về trang cuối, chỉ lần gọi mới nhất được dùng.
   const loadList = useCallback(async (background = false) => {
-    const { page: target, filter: status, unreadOnly: unread } = listQuery.current;
+    const { page: target, filter: status, unreadOnly: unread, search: query } = listQuery.current;
     const generation = ++listGeneration.current;
     // Lần gọi này còn hiệu lực không (component còn sống và chưa có lần gọi mới hơn).
     const current = () => alive.current && generation === listGeneration.current;
     if (!background) setLoading(true);
     try {
-      const fetchPage = (value: number) => getSupportInbox(value, status, unread);
+      const fetchPage = (value: number) => query ? getSupportInbox(value, status, unread, query) : getSupportInbox(value, status, unread);
       let result = await fetchPage(target);
       if (!current()) return;
       const last = Math.max(0, result.totalPages - 1);
       if (target > last) {
         // Trang hiện tại không còn (phiếu vừa được xử lý xong): lùi về trang cuối rồi đọc lại.
-        listQuery.current = { page: last, filter: status, unreadOnly: unread }; setPage(last);
+        listQuery.current = { page: last, filter: status, unreadOnly: unread, search: query }; setPage(last);
         result = await fetchPage(last);
         if (!current()) return;
       }
       setTickets(result.content); setPages(result.totalPages); setListError(null);
-      if (status === '' && !unread) {
+      if (status === '' && !unread && !query) {
         const nextUnread = result.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0);
         onUnreadCountChange?.(nextUnread);
         window.dispatchEvent(new CustomEvent(SUPPORT_UNREAD_EVENT, { detail: nextUnread }));
@@ -179,10 +181,21 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
   }
   // Đổi trang hoặc bộ lọc trạng thái rồi tải lại danh sách.
   function changeQuery(nextPage: number, nextFilter: '' | Status, unread = unreadOnly) {
-    listQuery.current = { page: nextPage, filter: nextFilter, unreadOnly: unread };
+    listQuery.current = { ...listQuery.current, page: nextPage, filter: nextFilter, unreadOnly: unread };
     setPage(nextPage); setFilter(nextFilter); setUnreadOnly(unread); listScroll.current = 0;
     void loadList();
   }
+
+  useEffect(() => {
+    if (!split || !manager) return;
+    const query = search.trim();
+    if (query === listQuery.current.search) return;
+    const timer = window.setTimeout(() => {
+      listQuery.current = { ...listQuery.current, page: 0, search: query };
+      setPage(0); listScroll.current = 0; void loadList();
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search, split, manager, loadList]);
 
   // Lễ tân chỉ xử lý phiếu chưa chuyển cấp; sau khi chuyển lên quản lý thì lễ tân chỉ đọc, quản lý xử lý tiếp.
   const canAct = !!ticket && (manager ? !!ticket.escalatedAt : !ticket.escalatedAt);
@@ -272,7 +285,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
       ) : tickets.length === 0 ? (
         <div className="portal-card support-split__empty-card">
           <p className="support-split__empty-title" style={{ margin: 0 }}>
-            {manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}
+            {search.trim() ? t('Không tìm thấy khiếu nại phù hợp.', 'No matching complaints found.') : manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}
           </p>
         </div>
       ) : (
@@ -423,6 +436,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
     return (
       <div data-i18n-managed className={`support-split${selected !== null ? ' has-selection' : ''}`}>
         <div className="support-split__filterbar">
+          {manager && <input type="search" className="portal-input support-split__search" aria-label={t('Tìm khiếu nại', 'Search complaints')} placeholder={t('Tìm hội viên hoặc chủ đề', 'Search member or subject')} value={search} onChange={event => setSearch(event.target.value)} />}
           <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo trạng thái', 'Filter by status')} style={{ marginBottom: 0 }}>
             {statusFilters.map((tab) => {
               const isActive = filter === tab.key;

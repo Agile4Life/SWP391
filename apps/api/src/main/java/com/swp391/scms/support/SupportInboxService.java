@@ -48,6 +48,12 @@ public class SupportInboxService {
     @Transactional(readOnly = true)
     public Page<SupportRequestDto> inbox(Long userId, String role, String status,
                                          boolean unreadOnly, Pageable pageable) {
+        return inbox(userId, role, status, unreadOnly, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SupportRequestDto> inbox(Long userId, String role, String status,
+                                         boolean unreadOnly, String search, Pageable pageable) {
         requireStaffActor(userId, role);
         String normalized = status == null || status.isBlank() ? null : status.trim().toLowerCase(Locale.ROOT);
         if (normalized != null && !Set.of("open", "in_progress", "resolved", "closed").contains(normalized)) {
@@ -55,7 +61,10 @@ public class SupportInboxService {
         }
         // Sắp xếp toàn bộ hộp thư tại DB trước phân trang, không nhận sort riêng từ client.
         Pageable ordered = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        Page<SupportRequest> page = "CENTER_MANAGER".equals(role)
+        String query = search == null ? "" : search.trim();
+        Page<SupportRequest> page = !query.isEmpty()
+                ? tickets.searchInbox(normalized, unreadOnly, "CENTER_MANAGER".equals(role), userId, query, ordered)
+                : "CENTER_MANAGER".equals(role)
                 ? tickets.findInbox(normalized, unreadOnly, true, userId, ordered)
                 : tickets.findReceptionistInbox(normalized, unreadOnly, userId, ordered);
         return page.map(ticket -> {

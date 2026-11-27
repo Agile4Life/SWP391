@@ -118,9 +118,12 @@ public class SupportRequestController {
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "false") boolean unreadOnly,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<SupportRequestDto> requests = ("RECEPTIONIST".equals(principal.role()) || "CENTER_MANAGER".equals(principal.role())) && inboxService != null
-                ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, sanitizePageable(pageable))
+                ? (search == null || search.isBlank()
+                    ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, sanitizePageable(pageable))
+                    : inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, search, sanitizePageable(pageable)))
                 : supportRequestService.getAllRequests(status, sanitizePageable(pageable), principal.role());
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
@@ -129,7 +132,7 @@ public class SupportRequestController {
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<Page<SupportRequestDto>> getAllRequests(AuthenticatedPrincipal principal,
                                                               String status, Pageable pageable) {
-        return getAllRequests(principal, status, false, pageable);
+        return getAllRequests(principal, status, false, null, pageable);
     }
 
     /** PATCH /{id}/status: đổi trạng thái hoặc người phụ trách phiếu. */

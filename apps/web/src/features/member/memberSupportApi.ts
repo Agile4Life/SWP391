@@ -62,8 +62,8 @@ export const sendSupportMessage = (id: number, message: string, clientMessageId?
 export const getSupportTicket = (id: number) => apiFetch<SupportTicket>(`/support/requests/${id}`);
 
 /** Lấy hộp thư phiếu của nhân sự, lọc theo trạng thái. */
-export const getSupportInbox = (page = 0, status = '', unreadOnly?: boolean) =>
-  apiFetch<TicketPage>(`/support/requests?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}${unreadOnly === undefined ? '' : `&unreadOnly=${unreadOnly}`}`);
+export const getSupportInbox = (page = 0, status = '', unreadOnly?: boolean, search = '') =>
+  apiFetch<TicketPage>(`/support/requests?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}${unreadOnly === undefined ? '' : `&unreadOnly=${unreadOnly}`}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ''}`);
 
 /** Chỉ xác nhận đến tin đã tải thành công; server giữ con trỏ riêng cho từng lễ tân. */
 export const markSupportRead = (id: number, lastMessageId: number) =>

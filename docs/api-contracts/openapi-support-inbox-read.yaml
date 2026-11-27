@@ -20,6 +20,10 @@ paths:
         Center Manager keeps existing escalated-ticket visibility and listing behavior; unreadOnly is ignored.
       parameters:
         - in: query
+          name: search
+          description: Search member name or ticket subject before pagination, respecting the actor's visibility.
+          schema: {type: string}
+        - in: query
           name: status
           schema:
             type: string

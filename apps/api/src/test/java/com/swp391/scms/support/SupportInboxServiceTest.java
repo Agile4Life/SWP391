@@ -86,6 +86,15 @@ class SupportInboxServiceTest {
     }
 
     @Test
+    void managerSearchKeepsEscalationAndStatusFiltersBeforePagination() {
+        when(access.requireActor(5L, "CENTER_MANAGER")).thenReturn(user);
+        when(tickets.searchInbox("open", false, true, 5L, "An", PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of()));
+        assertTrue(service.inbox(5L, "CENTER_MANAGER", "open", false, " An ", PageRequest.of(0, 20)).isEmpty());
+        verify(tickets).searchInbox("open", false, true, 5L, "An", PageRequest.of(0, 20));
+    }
+
+    @Test
     void rejectsInactiveActorBeforeTicketLookup() {
         when(access.requireActor(2L, "RECEPTIONIST"))
                 .thenThrow(new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null));
