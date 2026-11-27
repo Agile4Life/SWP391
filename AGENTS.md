@@ -29,6 +29,8 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 
 ## Bất biến nghiệp vụ và kiến trúc dữ liệu
 
+- **Giới hạn bộ môn theo slot:** mỗi ngày và slot có tối đa 2 bộ môn khác nhau có buổi `scheduled` thuộc lớp `active`; lớp không hoạt động, buổi đã hủy và PT 1:1 không tính. Tạo, dời lịch, đổi bộ môn hoặc kích hoạt lớp phải chặn bộ môn thứ ba (`409 SCHEDULING_SLOT_DISCIPLINE_LIMIT`) tại service và trigger PostgreSQL; availability phải báo trước giới hạn này. Không tự động sửa hoặc xóa lịch đã tồn tại.
+
 - **Code-First & ORM Polymorphism bắt buộc:** Toàn bộ bảng, cột, khóa và quan hệ định nghĩa qua Java Entity; chuyển đổi CSDL không viết lại DDL thủ công mà dùng Hibernate ORM đẩy thẳng (`ddl-auto: update`).
 - **Trigger đa hình:** Các trigger nghiệp vụ bắt buộc (capacity, trùng phòng/HLV, chống trùng ngày & slot giữa các lớp cùng bộ môn qua `trg_sessions_check_discipline_conflict` trong `scms_check_session_conflict`, trùng lịch hai chiều lớp nhóm ↔ PT 1:1 và ràng buộc 5 slot cố định qua hàm `scms_is_valid_schedule_slot` / lỗi `trg_schedule_invalid_slot`) được nạp tự động qua `DatabaseTriggerProvider` và `PostgreSqlTriggerProvider` sau Hibernate. Chỉ hỗ trợ Supabase PostgreSQL; không tạo adapter cho database khác.
 - **CI bắt buộc:** `DatabasePolicyTest`, `DatabaseProfilesTest` và `scripts/test-database-config.ps1` kiểm tra chính sách database. `db/databaseschema.sql` và ba migration V1–V3 là tài liệu lịch sử; không sửa hoặc chạy chúng để triển khai, không thêm migration DDL mới.

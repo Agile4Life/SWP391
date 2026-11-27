@@ -462,6 +462,20 @@ class PostgreSqlDatabaseIntegrationTest {
         session(otherDisciplineClass, "07:00", "09:30", "scheduled");
     }
 
+    @Test
+    void slotDisciplineLimitRejectsThirdSportAndReleasesCancelledSlot() {
+        long first = gymClass(10, coach(), room(), discipline());
+        long second = gymClass(10, coach(), room(), discipline());
+        long third = gymClass(10, coach(), room(), discipline());
+        session(first, 53, "07:00", "09:30", "scheduled");
+        session(second, 53, "07:00", "09:30", "scheduled");
+        var conflict = assertThrows(DataIntegrityViolationException.class, () -> session(third, 53, "07:00", "09:30", "scheduled"));
+        assertConstraintViolation(conflict, "23P01", "trg_sessions_slot_discipline_limit");
+        session(third, 53, "09:45", "12:15", "scheduled");
+        jdbc.update("update class_sessions set status = 'cancelled' where class_id = ?", second);
+        session(third, 53, "07:00", "09:30", "scheduled");
+    }
+
     /** Kiểm thử: trigger chồng lịch hội viên từ chối ghi danh hai lớp nhóm khác bộ môn trùng ngày và slot. */
     @Test
     void memberClassOverlapTriggerRejectsConflictingEnrollments() {

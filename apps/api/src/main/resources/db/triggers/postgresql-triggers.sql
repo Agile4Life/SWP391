@@ -111,9 +111,11 @@ BEGIN
     INTO session_coach_id, session_room_id, session_discipline_id, session_class_status
     FROM classes WHERE id = NEW.class_id FOR SHARE;
 
+    -- ponytail: một khóa chung bảo vệ giới hạn hai bộ môn; tách theo ngày/slot nếu đo thấy tranh chấp cao.
     FOR lock_key IN
         SELECT DISTINCT hashtextextended(current_schema() || ':' || resource_key, 0)
         FROM unnest(ARRAY[
+            'slot-discipline-limit',
             'coach:' || session_coach_id::TEXT,
             'room:' || session_room_id::TEXT,
             'discipline:' || session_discipline_id::TEXT
@@ -155,6 +157,20 @@ BEGIN
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_discipline_conflict';
     END IF;
 
+    IF COALESCE(session_class_status, 'active') = 'active' AND (
+        SELECT COUNT(DISTINCT existing_class.discipline_id)
+        FROM class_sessions existing_session
+        JOIN classes existing_class ON existing_class.id = existing_session.class_id
+        WHERE existing_session.id <> NEW.id
+          AND existing_session.session_date = NEW.session_date
+          AND NEW.start_time < existing_session.end_time AND NEW.end_time > existing_session.start_time
+          AND existing_session.status = 'scheduled' AND existing_class.status = 'active'
+          AND existing_class.discipline_id <> session_discipline_id
+    ) >= 2 THEN
+        RAISE EXCEPTION 'trg_sessions_slot_discipline_limit'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_slot_discipline_limit';
+    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -187,6 +203,7 @@ BEGIN
     FOR lock_key IN
         SELECT DISTINCT hashtextextended(current_schema() || ':' || resource_key, 0)
         FROM unnest(ARRAY[
+            'slot-discipline-limit',
             'coach:' || NEW.coach_id::TEXT,
             'room:' || NEW.room_id::TEXT,
             'discipline:' || NEW.discipline_id::TEXT
@@ -242,6 +259,25 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Bộ môn này đã có lớp học khác trùng khung giờ.'
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_discipline_conflict';
+    END IF;
+
+    IF NEW.status = 'active'
+       AND (OLD.discipline_id IS DISTINCT FROM NEW.discipline_id
+            OR (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'active'))
+       AND EXISTS (
+        SELECT 1 FROM class_sessions my_session
+        WHERE my_session.class_id = NEW.id AND my_session.status = 'scheduled'
+          AND my_session.session_date >= business_date
+          AND (SELECT COUNT(DISTINCT other_class.discipline_id)
+               FROM class_sessions other_session JOIN classes other_class ON other_class.id = other_session.class_id
+               WHERE other_session.class_id <> NEW.id
+                 AND other_session.session_date = my_session.session_date
+                 AND my_session.start_time < other_session.end_time AND my_session.end_time > other_session.start_time
+                 AND other_session.status = 'scheduled' AND other_class.status = 'active'
+                 AND other_class.discipline_id <> NEW.discipline_id) >= 2
+    ) THEN
+        RAISE EXCEPTION 'trg_sessions_slot_discipline_limit'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_slot_discipline_limit';
     END IF;
 
     RETURN NEW;

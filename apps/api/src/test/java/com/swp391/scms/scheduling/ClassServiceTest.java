@@ -1151,6 +1151,61 @@ class ClassServiceTest {
 
     /** Kiểm thử: thông báo trùng lịch cùng bộ môn liệt kê đủ mọi thứ bị trùng (VI và EN). */
     @Test
+    void availabilityRejectsThirdDisciplineInTheSameSlotButAllowsSecond() {
+        Discipline yoga = new Discipline(); org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L); yoga.setName("Yoga");
+        Discipline gym = new Discipline(); org.springframework.test.util.ReflectionTestUtils.setField(gym, "id", 2L); gym.setName("Gym");
+        Discipline boxing = new Discipline(); org.springframework.test.util.ReflectionTestUtils.setField(boxing, "id", 3L); boxing.setName("Boxing");
+        LocalDate day = LocalDate.of(2026, 12, 14);
+        var existing = new java.util.ArrayList<ClassSession>();
+        for (Discipline d : java.util.List.of(gym, boxing)) {
+            GymClass c = new GymClass(); c.setDiscipline(d); c.setStatus("active");
+            ClassSession s = new ClassSession(); s.setGymClass(c); s.setStatus("scheduled"); s.setSessionDate(day);
+            s.setStartTime(ScheduleSlot.SLOT_1.startTime()); s.setEndTime(ScheduleSlot.SLOT_1.endTime()); existing.add(s);
+        }
+        // Dữ liệu cũ lệch giờ nhưng vẫn chồng lên Slot 1 phải được tính vào giới hạn.
+        existing.get(0).setStartTime(LocalTime.of(7, 30));
+        existing.get(0).setEndTime(LocalTime.of(9, 0));
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        Room freeRoom = new Room(); org.springframework.test.util.ReflectionTestUtils.setField(freeRoom, "id", 40L); freeRoom.setStatus("available"); freeRoom.setCapacity(20);
+        when(rooms.findAll()).thenReturn(java.util.List.of(freeRoom));
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of(activeCoach(50L)));
+        when(sessions.findScheduledSessionsBetweenDates(day, day)).thenReturn(existing);
+        var request = new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                1L, day, day, java.util.List.of("MONDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+        var result = service.checkRecurringAvailability(request);
+        assertThat(result.selectedSlotConflictCode()).isEqualTo("SCHEDULING_SLOT_DISCIPLINE_LIMIT");
+        assertThat(result.selectedSlotAvailable()).isFalse();
+        existing.get(1).setStatus("cancelled");
+        assertThat(service.checkRecurringAvailability(request).selectedSlotAvailable()).isTrue();
+    }
+
+    @Test
+    void createRecurringClassRejectsThirdDisciplineBeforeSaving() {
+        Discipline yoga = new Discipline(); org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L); yoga.setName("Yoga");
+        LocalDate day = LocalDate.of(2026, 12, 14);
+        var existing = new java.util.ArrayList<ClassSession>();
+        for (long id : java.util.List.of(2L, 3L)) {
+            Discipline d = new Discipline(); org.springframework.test.util.ReflectionTestUtils.setField(d, "id", id);
+            GymClass c = new GymClass(); c.setDiscipline(d); c.setStatus("active");
+            ClassSession s = new ClassSession(); s.setGymClass(c); s.setStatus("scheduled"); s.setSessionDate(day);
+            s.setStartTime(ScheduleSlot.SLOT_1.startTime()); s.setEndTime(ScheduleSlot.SLOT_1.endTime()); existing.add(s);
+        }
+        existing.get(0).setStartTime(LocalTime.of(7, 30));
+        existing.get(0).setEndTime(LocalTime.of(9, 0));
+        Room room = new Room(); org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 30L); room.setStatus("available"); room.setCapacity(20);
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(20L)).thenReturn(Optional.of(activeCoach(20L)));
+        when(rooms.findById(30L)).thenReturn(Optional.of(room));
+        when(sessions.searchSessions(day, day, null, null)).thenReturn(existing);
+        var request = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga", 1L, 20L, 30L, 10, "all", "", java.math.BigDecimal.ZERO,
+                day, day, java.util.List.of("MONDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+        assertThatThrownBy(() -> service.createRecurringClass(request)).isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_SLOT_DISCIPLINE_LIMIT");
+        org.mockito.Mockito.verify(gymClasses, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
     @DisplayName("checkRecurringAvailability lists every conflicting weekday, not only the first date")
     void checkRecurringAvailability_disciplineConflictListsAllWeekdays() {
         var messageSource = new org.springframework.context.support.ResourceBundleMessageSource();
