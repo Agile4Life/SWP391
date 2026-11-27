@@ -250,14 +250,16 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
         {showTickets ? <span className="support-chat__ticketbar-subject">{t('Phiếu của tôi', 'My tickets')}</span>
           : ticket ? <><span className="support-chat__ticketbar-subject">{displaySubject(ticket.subject)}</span>
             <span className={`support-chat__pill support-chat__pill--${ticket.status}`}>{statusPair ? t(...statusPair) : ticket.status}</span></>
-            : <span className="support-chat__ticketbar-subject">{t('Yêu cầu mới', 'New request')}</span>}
+            : null}
       </p>
       <div className="support-chat__tools">
+        {(!newMode || showTickets) && (
+          <button type="button" data-i18n-managed className="support-chat__tool" aria-label={t('Yêu cầu mới', 'New request')} title={t('Yêu cầu mới', 'New request')} onClick={() => selectTicket(null)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+        )}
         <button type="button" data-i18n-managed className="support-chat__tool" aria-pressed={showTickets} aria-label={t('Phiếu của tôi', 'My tickets')} title={t('Phiếu của tôi', 'My tickets')} disabled={ticketsLoading && tickets.length === 0} onClick={() => setShowTickets(value => !value)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-        </button>
-        <button type="button" data-i18n-managed className="support-chat__tool" aria-label={t('Yêu cầu mới', 'New request')} title={t('Yêu cầu mới', 'New request')} disabled={newMode && !showTickets} onClick={() => selectTicket(null)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
       </div>
     </div>
@@ -283,8 +285,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
         {ticketsLoading ? <div className="direct-chat__transcript"><LoadingSkeleton label={t('Đang tải hỗ trợ…', 'Loading support…')} count={3} /></div>
           : <SupportTranscript label={t('Lịch sử hỗ trợ', 'Support history')} bubbles={bubbles} pending={pending} loading={!newMode && messagesLoading && messages.length === 0} fallbackName={t('Nhân viên', 'Staff')}
             empty={newMode
-              ? <div className="direct-chat__empty direct-chat__ai-intro"><span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true"><SupportIcon /></span>
-                <p><strong>{t('Hỗ trợ & Khiếu nại', 'Support & Tickets')}</strong> {t('Chọn loại yêu cầu rồi nhắn nội dung. Lễ tân sẽ phản hồi ngay tại đây.', 'Pick a request type and write your message. The front desk will reply right here.')}</p></div>
+              ? <div className="direct-chat__empty direct-chat__ai-intro"><span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true"><SupportIcon /></span></div>
               : <p className="direct-chat__empty">{t('Chưa có tin nhắn. Hãy bắt đầu trao đổi.', 'No messages yet. Start a conversation.')}</p>} />}
       </>}
     {!showTickets && (closed

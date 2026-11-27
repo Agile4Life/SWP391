@@ -48,7 +48,10 @@ it('opens as a chat with category chips and no ticket form when the member has n
   await render();
   expect(host.querySelector('#support-subject')).toBeNull();
   expect(host.querySelector('#support-description')).toBeNull();
-  expect(host.textContent).toContain('Lễ tân sẽ phản hồi ngay tại đây');
+  expect(host.textContent).toContain('Gửi yêu cầu tới lễ tân và theo dõi phản hồi');
+  expect(host.textContent).not.toContain('Yêu cầu mới');
+  expect(button('Yêu cầu mới')).toBeNull();
+  expect(button('Phiếu của tôi')).not.toBeNull();
   expect([...host.querySelectorAll('[role="radio"]')].map(chip => chip.textContent)).toEqual(['Gói tập', 'Thiết bị', 'Lịch học', 'Khác']);
   expect(host.querySelector('[role="radio"][aria-checked="true"]')?.textContent).toBe('Gói tập');
 });
