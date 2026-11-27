@@ -138,6 +138,7 @@ export function CreateClassOrSessionModal({
   const toggleReason = (key: string) => setOpenReason((prev) => (prev === key ? null : key));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const activeCountByDiscipline = useMemo(() => {
     const map = new Map<number, number>();
@@ -161,6 +162,13 @@ export function CreateClassOrSessionModal({
     return disciplines[0]?.id ? String(disciplines[0].id) : '';
   });
   const [name, setName] = useState(draft?.name ?? '');
+  const normalizedName = name.trim().toLocaleLowerCase('vi-VN');
+  const duplicateName = normalizedName !== '' && classes.some(
+    (course) => course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName,
+  );
+  const displayedNameError = duplicateName
+    ? t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')
+    : nameError;
   const [level, setLevel] = useState(draft?.level ?? 'all');
   const [price, setPrice] = useState(draft?.price ?? '150000');
   const [description, setDescription] = useState(draft?.description ?? '');
@@ -373,6 +381,7 @@ export function CreateClassOrSessionModal({
     setStep(1);
     setMaxStep(1);
     setError(null);
+    setNameError(null);
     setDisciplineId(
       prefill?.disciplineId && disciplines.some((d) => d.id === prefill.disciplineId)
         ? String(prefill.disciplineId)
@@ -406,6 +415,7 @@ export function CreateClassOrSessionModal({
    */
   const canLeaveStep = (from: WizardStep): boolean => {
     if (from === 1) {
+      if (displayedNameError) return false;
       const step1Error = validateWizardStep1({ name, disciplineId, price }, t);
       if (step1Error) {
         setError(step1Error);
@@ -492,6 +502,10 @@ export function CreateClassOrSessionModal({
   const handleCreate = async () => {
     if (busy) return;
     setError(null);
+    if (displayedNameError) {
+      setStep(1);
+      return;
+    }
     const step1Error = validateWizardStep1({ name, disciplineId, price }, t);
     if (step1Error) {
       setError(step1Error);
@@ -525,12 +539,18 @@ export function CreateClassOrSessionModal({
       clearClassWizardDraft();
       onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
     } catch (err) {
+      const isDuplicateName = err instanceof ApiError && err.code === 'SCHEDULING_DUPLICATE_CLASS_NAME';
       const isConflict =
         (err instanceof ApiError && err.status === 409) ||
         (typeof err === 'object' &&
           err !== null &&
           'status' in err &&
           (err as { status?: number }).status === 409);
+      if (isDuplicateName) {
+        setNameError(errorMessage(err, t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')));
+        setStep(1);
+        return;
+      }
       if (isConflict) {
         setNeedsStep3Recheck(true);
       }
@@ -737,13 +757,17 @@ export function CreateClassOrSessionModal({
                 className="portal-input"
                 maxLength={CLASS_NAME_MAX_LENGTH}
                 value={name}
+                aria-invalid={Boolean(displayedNameError)}
+                aria-describedby={displayedNameError ? 'cls-name-error' : undefined}
                 onChange={(e) => {
                   setName(e.target.value);
                   setError(null);
+                  setNameError(null);
                 }}
                 placeholder={t('Ví dụ: Yoga Phục hồi sáng', 'e.g. Morning Restorative Yoga')}
                 required
               />
+              {displayedNameError && <p id="cls-name-error" className="portal-field-error" role="alert">{displayedNameError}</p>}
               {name.length >= 120 && (
                 <p className="class-wizard__hint">
                   {t(
@@ -1388,6 +1412,7 @@ export function CreateClassOrSessionModal({
 
 interface EditClassModalProps {
   gymClass: ClassItem;
+  classes: ClassItem[];
   disciplines: Discipline[];
   rooms: Room[];
   coaches: CoachUser[];
@@ -1404,7 +1429,7 @@ function normalizeEditableClassStatus(raw: string): EditableClassStatus {
 }
 
 /** Hộp thoại chỉnh sửa khóa học (kiểm tra xung đột phòng/HLV/PT/cùng bộ môn và sức chứa phòng). */
-export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose, onSuccess }: EditClassModalProps) {
+export function EditClassModal({ gymClass, classes, disciplines, rooms, coaches, onClose, onSuccess }: EditClassModalProps) {
   const { t } = useI18n();
   const [name, setName] = useState(gymClass.name);
   const [disciplineId, setDisciplineId] = useState(String(gymClass.disciplineId));
@@ -1416,6 +1441,13 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
   const [description, setDescription] = useState(gymClass.description ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const normalizedName = name.trim().toLocaleLowerCase('vi-VN');
+  const duplicateName = normalizedName !== '' && normalizedName !== gymClass.name.trim().toLocaleLowerCase('vi-VN')
+    && classes.some((course) => course.id !== gymClass.id && course.name.trim().toLocaleLowerCase('vi-VN') === normalizedName);
+  const displayedNameError = duplicateName
+    ? t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')
+    : nameError;
 
   const currentRoomMissing = useMemo(
     () => !rooms.some((r) => r.id === gymClass.roomId),
@@ -1476,6 +1508,7 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (displayedNameError) return;
     if (!name.trim()) {
       setError(t('Tên khóa học không được để trống.', 'Course name is required.'));
       return;
@@ -1517,7 +1550,11 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
       });
       onSuccess(t('Đã cập nhật khóa học thành công.', 'Course updated successfully.'));
     } catch (err) {
-      setError(errorMessage(err, t('Không thể cập nhật khóa học.', 'Could not update course.')));
+      if (err instanceof ApiError && err.code === 'SCHEDULING_DUPLICATE_CLASS_NAME') {
+        setNameError(errorMessage(err, t('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 'Course name already exists. Please choose another name.')));
+      } else {
+        setError(errorMessage(err, t('Không thể cập nhật khóa học.', 'Could not update course.')));
+      }
     } finally {
       setBusy(false);
     }
@@ -1551,12 +1588,16 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
             className="portal-input"
             maxLength={CLASS_NAME_MAX_LENGTH}
             value={name}
+            aria-invalid={Boolean(displayedNameError)}
+            aria-describedby={displayedNameError ? 'edit-cls-name-error' : undefined}
             onChange={(e) => {
               setName(e.target.value);
               setError(null);
+              setNameError(null);
             }}
             required
           />
+          {displayedNameError && <p id="edit-cls-name-error" className="portal-field-error" role="alert">{displayedNameError}</p>}
         </div>
         <div className="portal-form-grid-2">
           <div className="portal-form-group">

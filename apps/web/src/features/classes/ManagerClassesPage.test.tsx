@@ -1180,6 +1180,57 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector('dialog[role="alertdialog"]')).toBeNull();
   });
 
+  it('shows a duplicate name below the field and prevents advancing', async () => {
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    const input = document.querySelector<HTMLInputElement>('#cls-name')!;
+    await act(async () => setInputValue(input, '  full body strength 101  '));
+    expect(document.querySelector('#cls-name-error')?.textContent).toContain('Tên khóa học đã tồn tại');
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-1"]')).not.toBeNull();
+    await act(async () => setInputValue(input, 'Một tên khác'));
+    expect(document.querySelector('#cls-name-error')).toBeNull();
+  });
+
+  it('returns to the course name when the server rejects a duplicate', async () => {
+    vi.mocked(classesApi.createRecurringClass).mockRejectedValueOnce(
+      new ApiError('Tên khóa học đã tồn tại. Vui lòng chọn tên khác.', 409, 'SCHEDULING_DUPLICATE_CLASS_NAME'),
+    );
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Yoga'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-submit-btn"]')!.click());
+    expect(document.querySelector<HTMLInputElement>('#cls-name')?.value).toBe('Yoga');
+    const input = document.querySelector<HTMLInputElement>('#cls-name')!;
+    const error = document.querySelector('#cls-name-error');
+    expect(error?.textContent).toContain('Tên khóa học đã tồn tại');
+    expect(input.getAttribute('aria-describedby')).toBe('cls-name-error');
+    expect(input.parentElement?.contains(error)).toBe(true);
+    await act(async () => setInputValue(input, 'Yoga mới'));
+    expect(document.querySelector('#cls-name-error')).toBeNull();
+  });
+
+  it('rejects another course name while editing without rejecting its own name', async () => {
+    await renderPage();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3].click());
+    const row = host.querySelector('tbody tr')!;
+    await act(async () => [...row.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Sửa')!.click());
+    const input = document.querySelector<HTMLInputElement>('#edit-cls-name')!;
+    expect(document.querySelector('#edit-cls-name-error')).toBeNull();
+    await act(async () => setInputValue(input, '  boxing cơ bản '));
+    expect(document.querySelector('#edit-cls-name-error')?.textContent).toContain('Tên khóa học đã tồn tại');
+    await act(async () => document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(classesApi.updateClass).not.toHaveBeenCalled();
+    await act(async () => setInputValue(input, 'Tên mới'));
+    expect(document.querySelector('#edit-cls-name-error')).toBeNull();
+  });
+
   it('P0-05: aligns EditClassModal and ClassListTable statuses to active, inactive, and archived without cancelled', async () => {
     vi.mocked(classesApi.getClasses).mockResolvedValue([
       {
