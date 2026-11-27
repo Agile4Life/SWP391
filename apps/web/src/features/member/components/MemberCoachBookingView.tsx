@@ -694,13 +694,6 @@ export function MemberCoachBookingView({
           >
             {hasNoPackage ? memberText("Đăng ký gói tập ngay") : memberText("Nâng cấp gói tập")}
           </button>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => navigate('/member/invoices')}
-            style={{ fontSize: 12 }}
-          >
-            {memberText("Lịch sử hóa đơn")}</button>
         </div>
       </div>
 
@@ -779,20 +772,31 @@ export function MemberCoachBookingView({
                     }}
                   />
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.fullName}
-                      </h4>
-                      {/* Luôn giữ chỗ cho nhãn để thẻ không đổi kích thước khi chọn HLV khác. */}
-                      <span
-                        aria-hidden={!isSelected}
-                        style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: 'var(--portal-salmon)', visibility: isSelected ? 'visible' : 'hidden' }}
-                      >
-                        {memberText("Đang chọn")}</span>
+                    <h4
+                      title={c.fullName}
+                      style={{
+                        margin: 0,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {c.fullName}
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 3 }}>
+                      <p style={{ margin: 0, fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
+                        {c.specialization || memberText("Huấn luyện cá nhân")}
+                      </p>
+                      {isSelected && (
+                        <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: 'var(--portal-salmon)' }}>
+                          {memberText("Đang chọn")}
+                        </span>
+                      )}
                     </div>
-                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
-                      {c.specialization || memberText("Huấn luyện cá nhân")}
-                    </p>
                     <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {c.bio || memberText("Chuyên gia huấn luyện thể hình và phục hồi thể lực.")}
                     </p>

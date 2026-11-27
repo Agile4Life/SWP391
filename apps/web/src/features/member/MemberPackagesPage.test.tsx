@@ -414,14 +414,16 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('[role="dialog"]')?.textContent).toMatch(/1\.234\.000/);
   });
 
-  it('sends the member to the dedicated hold page to file a pause request', async () => {
+  it('keeps check-in QR card link and omits 1:1 booking and manage membership buttons in current package banner', async () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active]);
 
     await render();
 
-    const link = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Bảo lưu gói tập'));
-    expect(link?.getAttribute('href')).toBe('/member/hold');
+    const qrLink = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Xem thẻ QR Check-in'));
+    expect(qrLink?.getAttribute('href')).toBe('/member/card');
+    expect(host.textContent).not.toContain('Đặt lịch HLV 1:1');
+    expect(host.textContent).not.toContain('Quản lý gói');
   });
 
   it('does not offer package cancellation request for active membership', async () => {
