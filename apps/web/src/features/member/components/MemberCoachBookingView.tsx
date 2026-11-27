@@ -694,13 +694,6 @@ export function MemberCoachBookingView({
           >
             {hasNoPackage ? memberText("Đăng ký gói tập ngay") : memberText("Nâng cấp gói tập")}
           </button>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => navigate('/member/invoices')}
-            style={{ fontSize: 12 }}
-          >
-            {memberText("Lịch sử hóa đơn")}</button>
         </div>
       </div>
 
