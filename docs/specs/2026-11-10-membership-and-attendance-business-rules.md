@@ -179,9 +179,10 @@ Có ba lớp, từ cổng trung tâm đến từng buổi.
 
 ### 2.2 Check-out
 
-- Nhân viên check-out một lượt vào; hội viên tự check-out bằng cách quét QR cổng.
+- Hội viên chỉ cần check-in; không bắt buộc hội viên hoặc lễ tân check-out thủ công. Endpoint và UI thủ công được giữ trong giai đoạn chuyển tiếp này.
 - Không check-out bản ghi `DENIED` hoặc bản ghi đã có giờ ra.
-- **Tự đóng phiên treo:** lượt `GRANTED` chưa check-out quá **8 giờ** bị đóng tự động với ghi chú `SYSTEM_AUTO_CHECKOUT` (giờ ra = giờ vào + 4 giờ, hoặc hiện tại nếu sớm hơn). Chạy lúc hội viên quét lại và bằng job 03:00 hằng ngày.
+- **Tự đóng phiên đủ 8 giờ:** chọn lượt `GRANTED`, chưa có giờ ra và `checkInTime <= now - 8 giờ`. Scheduler kiểm tra mỗi phút theo `Asia/Ho_Chi_Minh`; lần check-in tiếp theo cũng dùng cùng quy tắc. Sau khi khóa và kiểm tra lại phiên, lưu `checkOutTime = checkInTime + 8 giờ`, ghi chú `SYSTEM_AUTO_CHECKOUT`; không dùng giờ job chạy và không ghi đè phiên đã đóng.
+- Đây là giờ kết thúc phiên theo quy tắc, **không phải bằng chứng thời gian rời trung tâm thực tế**. Phiên quá hạn còn mở sau restart/gián đoạn được xử lý ở lần chạy sau; không sửa lại lịch sử đã có giờ ra.
 
 ### 2.3 Lịch sử và chuỗi ngày tập
 

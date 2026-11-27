@@ -20,7 +20,7 @@ const NEW_DRAFT = 'new';
  * Hỗ trợ & Khiếu nại của hội viên dưới dạng một cuộc trò chuyện với lễ tân.
  * Tin nhắn đầu tiên tạo phiếu (loại yêu cầu chọn bằng chip phía trên ô soạn), các tin sau gửi vào phiếu đang mở.
  */
-export function MemberSupportChat({ onBack, active = true }: { onBack: () => void; active?: boolean }) {
+export function MemberSupportChat({ onBack, active = true, ticketId }: { onBack: () => void; active?: boolean; ticketId?: number | null }) {
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [page, setPage] = useState(0);
@@ -49,6 +49,8 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const listRequest = useRef(0);
   const messagesRequest = useRef(0);
   const firstLoad = useRef(true);
+  const requestedTicketId = useRef<number | null>(ticketId ?? null);
+  const ticketsRef = useRef<SupportTicket[]>([]);
   const loadingMoreRef = useRef(false);
   const sendingIds = useRef(new Set<string>());
   const closingIds = useRef(new Set<number>());
@@ -89,12 +91,34 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     try {
       const result = await getMySupportTickets(targetPage);
       if (!current()) return;
-      setTickets(previous => append ? [...previous, ...result.content.filter(item => !previous.some(old => old.id === item.id))] : result.content);
+      setTickets(previous => {
+        const next = append ? [...previous, ...result.content.filter(item => !previous.some(old => old.id === item.id))] : result.content;
+        ticketsRef.current = next;
+        return next;
+      });
       setPage(targetPage); setTotalPages(result.totalPages); setTicketsError(null);
       if (firstLoad.current) {
         firstLoad.current = false;
-        // Mở thẳng phiếu gần nhất để hội viên thấy phản hồi ngay, giống mở một cuộc trò chuyện.
-        if (result.content[0] && selection.current == null) selectTicket(result.content[0]);
+        const requested = requestedTicketId.current;
+        const matched = requested != null ? result.content.find(item => item.id === requested) : undefined;
+        if (matched) {
+          selectTicket(matched);
+        } else if (requested != null) {
+          const targetTicket = await getSupportTicket(requested).catch(() => null);
+          if (alive.current && targetTicket) {
+            setTickets(previous => {
+              const next = [targetTicket, ...previous.filter(item => item.id !== targetTicket.id)];
+              ticketsRef.current = next;
+              return next;
+            });
+            selectTicket(targetTicket);
+          } else if (alive.current && result.content[0] && selection.current == null) {
+            selectTicket(result.content[0]);
+          }
+        } else if (result.content[0] && selection.current == null) {
+          // Mở thẳng phiếu gần nhất để hội viên thấy phản hồi ngay, giống mở một cuộc trò chuyện.
+          selectTicket(result.content[0]);
+        }
       }
     } catch (cause) { if (current()) setTicketsError(supportError(cause)); }
     finally {
@@ -106,6 +130,26 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
   }, [selectTicket]);
   useEffect(() => { void loadTickets(0); }, [loadTickets]);
+
+  // Khi người dùng bấm thông báo tới một ticketId cụ thể sau khi đã mở trang.
+  useEffect(() => {
+    requestedTicketId.current = ticketId ?? null;
+    if (ticketId == null || firstLoad.current || selection.current === ticketId) return;
+    const matched = ticketsRef.current.find(item => item.id === ticketId);
+    if (matched) {
+      selectTicket(matched);
+      return;
+    }
+    void getSupportTicket(ticketId).then(targetTicket => {
+      if (!alive.current || requestedTicketId.current !== ticketId) return;
+      setTickets(previous => {
+        const next = [targetTicket, ...previous.filter(item => item.id !== targetTicket.id)];
+        ticketsRef.current = next;
+        return next;
+      });
+      selectTicket(targetTicket);
+    }).catch(() => {});
+  }, [ticketId, selectTicket]);
 
   // Tải tin nhắn của một phiếu (silent thì không hiện trạng thái tải).
   const loadMessages = useCallback(async (id: number, silent = false) => {
@@ -125,6 +169,30 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     if (selectedId == null) return;
     void loadMessages(selectedId);
   }, [selectedId, loadMessages]);
+
+  // Kênh realtime toàn bộ phiếu của hội viên: luôn cập nhật danh sách phiếu ngay cả khi đang ở màn Yêu cầu mới hoặc Phiếu của tôi.
+  useEffect(() => {
+    let disposed = false, running = false, dirty = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const live = () => !disposed && alive.current;
+    async function refreshList() {
+      timer = undefined;
+      if (!live() || document.visibilityState === 'hidden') return;
+      if (running) { dirty = true; return; }
+      running = true;
+      await loadTickets(0);
+      running = false;
+      if (dirty && live()) { dirty = false; scheduleList(); }
+    }
+    function scheduleList() {
+      if (!live() || timer) return;
+      timer = setTimeout(() => { void refreshList(); }, 80);
+    }
+    const unsubscribe = subscribeSupport(scheduleList, state => {
+      if (live() && selection.current == null) setConnection(state);
+    });
+    return () => { disposed = true; clearTimeout(timer); unsubscribe(); };
+  }, [loadTickets]);
 
   // Phản hồi của lễ tân và đổi trạng thái phiếu đến qua realtime; luôn đọc lại dữ liệu chuẩn từ máy chủ.
   useEffect(() => {
@@ -237,11 +305,13 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
             : <span className="support-chat__ticketbar-subject">{t('Yêu cầu mới', 'New request')}</span>}
       </p>
       <div className="support-chat__tools">
+        {(!newMode || showTickets) && (
+          <button type="button" data-i18n-managed className="support-chat__tool" aria-label={t('Yêu cầu mới', 'New request')} title={t('Yêu cầu mới', 'New request')} onClick={() => selectTicket(null)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+        )}
         <button type="button" data-i18n-managed className="support-chat__tool" aria-pressed={showTickets} aria-label={t('Phiếu của tôi', 'My tickets')} title={t('Phiếu của tôi', 'My tickets')} disabled={ticketsLoading && tickets.length === 0} onClick={() => setShowTickets(value => !value)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-        </button>
-        <button type="button" data-i18n-managed className="support-chat__tool" aria-label={t('Yêu cầu mới', 'New request')} title={t('Yêu cầu mới', 'New request')} disabled={newMode && !showTickets} onClick={() => selectTicket(null)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
       </div>
     </div>
@@ -267,8 +337,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
         {ticketsLoading ? <div className="direct-chat__transcript"><LoadingSkeleton label={t('Đang tải hỗ trợ…', 'Loading support…')} count={3} /></div>
           : <SupportTranscript label={t('Lịch sử hỗ trợ', 'Support history')} bubbles={bubbles} pending={pending} loading={!newMode && messagesLoading && messages.length === 0} fallbackName={t('Nhân viên', 'Staff')}
             empty={newMode
-              ? <div className="direct-chat__empty direct-chat__ai-intro"><span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true"><SupportIcon /></span>
-                <p><strong>{t('Hỗ trợ & Khiếu nại', 'Support & Tickets')}</strong> {t('Chọn loại yêu cầu rồi nhắn nội dung. Lễ tân sẽ phản hồi ngay tại đây.', 'Pick a request type and write your message. The front desk will reply right here.')}</p></div>
+              ? <div className="direct-chat__empty direct-chat__ai-intro"><span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true"><SupportIcon /></span></div>
               : <p className="direct-chat__empty">{t('Chưa có tin nhắn. Hãy bắt đầu trao đổi.', 'No messages yet. Start a conversation.')}</p>} />}
       </>}
     {!showTickets && (closed

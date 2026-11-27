@@ -93,11 +93,35 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
   it('renders manager review page with pending requests and approve/reject actions', async () => {
     await render();
 
-    expect(host.textContent).toContain('Duyệt đơn từ nội bộ');
+    expect(host.textContent).toContain('Đơn từ & Khiếu nại');
+    expect(host.textContent).toContain('Đơn từ nội bộ');
+    expect(host.textContent).toContain('Khiếu nại chuyển lên');
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Phê duyệt đơn');
     expect(host.textContent).toContain('Từ chối đơn');
+  });
+
+  it('searches internal requests by staff or title while respecting status filters', async () => {
+    await render();
+    const input = host.querySelector<HTMLInputElement>('[aria-label="Tìm đơn nội bộ"]')!;
+    const change = async (value: string) => act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await change('minh quân');
+    expect(host.textContent).not.toContain('Nguyễn Minh Quân');
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(b => b.textContent === 'Tất cả')!.click());
+    expect(host.textContent).toContain('Nguyễn Minh Quân');
+    expect(host.textContent).not.toContain('Xin nghỉ phép cá nhân');
+    await change('nghỉ phép');
+    expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
+    expect(host.textContent).not.toContain('Nguyễn Minh Quân');
+    await change('không tồn tại');
+    expect(host.textContent).toContain('Không có đơn từ nào khớp');
+    await change('');
+    expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
+    expect(host.textContent).toContain('Nguyễn Minh Quân');
   });
 
   it('blocks overdue approval but keeps rejection available', async () => {

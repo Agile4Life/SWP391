@@ -284,6 +284,15 @@
   display: grid;
   gap: 8px;
 }
+.mcal__students-scroll {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.mcal__student-row {
+  padding: 10px 12px;
+}
 .mcal__overflow-row {
   display: flex;
   align-items: center;

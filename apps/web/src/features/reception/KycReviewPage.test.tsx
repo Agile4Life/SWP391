@@ -27,6 +27,35 @@ describe('KycReviewPage', () => {
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent === label)!;
 
+  it('previews both KYC photos without an original-image link and preserves zoom, close and focus', async () => {
+    mocks.list.mockResolvedValue([submission]);
+    await render();
+    const photos = [...host.querySelectorAll<HTMLButtonElement>('button.kyc-card__image')];
+    for (const [index, photo] of photos.entries()) {
+      photo.focus();
+      await act(async () => photo.click());
+      const dialog = host.querySelector<HTMLDialogElement>('dialog')!;
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(dialog.querySelector('.document-lightbox__img')?.getAttribute('src'))
+        .toBe(index === 0 ? submission.frontImageUrl : submission.backImageUrl);
+      expect(dialog.querySelector('.document-lightbox__img')?.getAttribute('alt')).toBeTruthy();
+      expect(dialog.querySelector('a[target="_blank"]')).toBeNull();
+      expect(dialog.textContent).not.toContain('Mở ảnh gốc');
+      const zoom = dialog.querySelector<HTMLButtonElement>('.document-lightbox__actions button')!;
+      zoom.focus();
+      await act(async () => zoom.click());
+      expect(dialog.querySelector('.is-zoomed')).not.toBeNull();
+      await act(async () => zoom.click());
+      expect(dialog.querySelector('.is-zoomed')).toBeNull();
+      await act(async () => {
+        if (index === 0) dialog.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+        else dialog.querySelector<HTMLButtonElement>('.portal-dialog__close')!.click();
+      });
+      expect(host.querySelector('.document-lightbox')).toBeNull();
+      expect(document.activeElement).toBe(photo);
+    }
+  });
+
   it('shows the readable number and both photos and confirms before approving a submission', async () => {
     mocks.list.mockResolvedValue([submission]);
     mocks.approve.mockResolvedValue(null);

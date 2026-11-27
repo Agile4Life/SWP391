@@ -22,11 +22,15 @@ public class SupportRealtimeService {
         support.requireTicket(id, actor.id(), actor.role());
         return realtime.supportSession(actor.id(), "scms:support:ticket:" + id);
     }
-    /** Phiên realtime của hộp thư chung: chỉ lễ tân và quản lý trung tâm. */
+    /** Phiên realtime của hộp thư chung (lễ tân/quản lý) hoặc danh sách phiếu riêng của hội viên. */
     public ChatRealtimeSession inbox(AuthenticatedPrincipal actor) {
         support.requireActor(actor.id(), actor.role());
-        if (!"CENTER_MANAGER".equals(actor.role()) && !"RECEPTIONIST".equals(actor.role()))
-            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
-        return realtime.supportSession(actor.id(), "scms:support:inbox");
+        if ("CENTER_MANAGER".equals(actor.role()) || "RECEPTIONIST".equals(actor.role())) {
+            return realtime.supportSession(actor.id(), "scms:support:inbox");
+        }
+        if ("MEMBER".equals(actor.role())) {
+            return realtime.supportSession(actor.id(), "scms:support:member:" + actor.id());
+        }
+        throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
     }
 }

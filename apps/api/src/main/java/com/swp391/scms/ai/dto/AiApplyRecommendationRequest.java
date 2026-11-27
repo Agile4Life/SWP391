@@ -22,9 +22,6 @@ public class AiApplyRecommendationRequest {
     @JsonAlias("class_id")
     private Long classId;
 
-    @JsonAlias("coach_id")
-    private Long coachId;
-
     private String goal;
 
     @Valid
@@ -47,10 +44,6 @@ public class AiApplyRecommendationRequest {
     public Long getClassId() { return classId; }
     /** Gán giá trị mới cho trường classId. */
     public void setClassId(Long classId) { this.classId = classId; }
-    /** Lấy giá trị trường coachId. */
-    public Long getCoachId() { return coachId; }
-    /** Gán giá trị mới cho trường coachId. */
-    public void setCoachId(Long coachId) { this.coachId = coachId; }
     /** Lấy giá trị trường goal. */
     public String getGoal() { return goal; }
     /** Gán giá trị mới cho trường goal. */

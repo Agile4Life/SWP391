@@ -62,7 +62,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/staff/reception', label: 'Quầy lễ tân & check-in', icon: 'card', roles: ['STAFF'], tabs: [
     { to: '/staff/reception', label: 'Quầy lễ tân', en: 'Front desk' },
     { to: '/staff/check-in', label: 'Check-in', en: 'Check-in' },
-    { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
   ] },
   { to: '/staff/kyc', label: 'Duyệt hồ sơ & bảo lưu', icon: 'shield', roles: ['STAFF'], tabs: [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
@@ -70,6 +69,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/reception-history', label: 'Lịch sử', icon: 'history', roles: ['STAFF'] },
   { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'file', roles: ['STAFF', 'COACH'] },
+  { to: '/messages', label: 'Tin nhắn', icon: 'inbox', roles: ['STAFF'] },
   { to: '/admin/users', label: 'Tài khoản & phân quyền', icon: 'users', roles: ['ADMIN'] },
   { to: '/admin/audit-logs', label: 'Nhật ký & lấp đầy', icon: 'chart', roles: ['ADMIN'] },
   { to: '/admin/payments', label: 'Đối soát thanh toán', icon: 'receipt', roles: ['ADMIN'] },
@@ -77,8 +77,8 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/manager/classes', label: 'Lớp học & xếp lịch', icon: 'calendar', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/coach-assignments', label: 'Phân công HLV', icon: 'users', roles: ['MANAGER'] },
-  // Khiếu nại chuyển lên nằm trong khung Tin nhắn (Hỗ trợ & Khiếu nại), sidebar chỉ còn đơn nội bộ.
-  { to: '/manager/requests', label: 'Duyệt đơn từ nội bộ', icon: 'inbox', roles: ['MANAGER'] },
+  // Đơn từ nội bộ và khiếu nại chuyển lên gộp chung trong /manager/requests.
+  { to: '/manager/requests', label: 'Đơn từ & Khiếu nại', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'badge', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ cá nhân', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
@@ -111,6 +111,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/coach/training-plans': 'Training plans',
   '/staff/reception': 'Front desk & check-in',
   '/staff/requests': 'Internal requests',
+  '/messages': 'Messages',
   '/admin/users': 'Accounts & permissions',
   '/admin/audit-logs': 'Audit & occupancy',
   '/admin/payments': 'Payment reconciliation',
@@ -120,7 +121,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/manager/coach-assignments': 'Coach assignments',
   '/staff/kyc': 'Identity & holds',
   '/staff/reception-history': 'History',
-  '/manager/requests': 'Review internal requests',
+  '/manager/requests': 'Requests & Tickets',
   '/manager/staff-accounts': 'Staff accounts',
   '/member/profile': 'My profile',
 };

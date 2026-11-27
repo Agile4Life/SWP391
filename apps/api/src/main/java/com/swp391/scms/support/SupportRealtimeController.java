@@ -32,9 +32,9 @@ public class SupportRealtimeController {
     public ResponseEntity<ApiResponse<ChatRealtimeSession>> ticket(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedPrincipal actor) {
         return response(service.ticket(id, actor));
     }
-    /** POST /realtime-session: mở kênh realtime của hộp thư hỗ trợ cho lễ tân và quản lý. */
+    /** POST /realtime-session: mở kênh realtime của hộp thư hỗ trợ cho lễ tân, quản lý và danh sách phiếu của hội viên. */
     @PostMapping("/realtime-session")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
     public ResponseEntity<ApiResponse<ChatRealtimeSession>> inbox(@AuthenticationPrincipal AuthenticatedPrincipal actor) {
         return response(service.inbox(actor));
     }

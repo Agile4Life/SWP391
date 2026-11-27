@@ -42,7 +42,7 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * Gợi ý giáo án bằng AI cho HLV/quản lý: lấy hồ sơ và số đo hội viên, xu hướng cân nặng, giáo án hiện tại; gọi
+ * Gợi ý giáo án bằng AI cho HLV: lấy hồ sơ và số đo hội viên, xu hướng cân nặng, giáo án hiện tại; gọi
  * AI ngoài transaction; đọc kết quả JSON một cách chịu lỗi; lưu nhật ký và có thể áp dụng thành giáo án thật.
  */
 @Service
@@ -203,28 +203,19 @@ public class AiRecommendationService {
             }
             String memberName = member.getUser() != null ? member.getUser().getFullName() : null;
 
-            boolean isManagerCaller = "CENTER_MANAGER".equalsIgnoreCase(callerRole) || "Manager".equalsIgnoreCase(callerRole);
-            Coach callerCoach = (!isManagerCaller && callerUserId != null && coachRepository != null)
+            // Chỉ HLV (có hồ sơ HLV) được lập kế hoạch, và chỉ cho hội viên mình đang phụ trách (fail-closed).
+            Coach coach = (callerUserId != null && coachRepository != null)
                     ? coachRepository.findById(callerUserId).orElse(null)
                     : null;
-            // HLV (không phải quản lý) bắt buộc có hồ sơ HLV và chỉ lập kế hoạch cho hội viên đang được phân
-            // công cho mình (fail-closed khi thiếu hồ sơ HLV).
-            if (!isManagerCaller) {
-                if (callerCoach == null) {
-                    throw new ForbiddenException(
-                            "FORBIDDEN", "error.forbidden", null,
-                            "Coach profile is required to generate workout plans");
-                }
-                if (currentCoachMembers != null) {
-                    currentCoachMembers.requireCoachOf(callerCoach.getUserId(), member.getUserId());
-                } else if (coachMemberAccess != null) {
-                    coachMemberAccess.requireCoachOf(callerCoach.getUserId(), member.getUserId());
-                }
+            if (coach == null) {
+                throw new ForbiddenException(
+                        "FORBIDDEN", "error.forbidden", null,
+                        "Coach profile is required to generate workout plans");
             }
-            Coach coach = callerCoach;
-            if (isManagerCaller && request.getCoachId() != null && coachRepository != null) {
-                coach = coachRepository.findById(request.getCoachId())
-                        .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.getCoachId()));
+            if (currentCoachMembers != null) {
+                currentCoachMembers.requireCoachOf(coach.getUserId(), member.getUserId());
+            } else if (coachMemberAccess != null) {
+                coachMemberAccess.requireCoachOf(coach.getUserId(), member.getUserId());
             }
 
             List<MemberProgressLog> progressLogs = readProgressLogs(member.getUserId());
@@ -328,7 +319,7 @@ public class AiRecommendationService {
 
         boolean callerIsCoach = "COACH".equalsIgnoreCase(currentUserRole) || "Coach".equalsIgnoreCase(currentUserRole);
         Long logCoachId = log.getCoach() != null ? log.getCoach().getUserId() : null;
-        if (callerIsCoach && (currentUserId == null || logCoachId == null || !currentUserId.equals(logCoachId))) {
+        if (!callerIsCoach || currentUserId == null || logCoachId == null || !currentUserId.equals(logCoachId)) {
             throw new ForbiddenException(
                     "FORBIDDEN", "coaching.plan.not_owner", null,
                     "You can only apply your own AI workout recommendations");
@@ -368,13 +359,8 @@ public class AiRecommendationService {
                 ? request.getItems()
                 : parseOrBuildStructuredItems(savedContentRoot, log.getMember(), null);
 
-        Long targetCoachId = callerIsCoach
-                ? (currentUserId != null ? currentUserId : logCoachId)
-                : (request != null && request.getCoachId() != null ? request.getCoachId() : logCoachId);
-
         TrainingPlanCreateDto createDto = new TrainingPlanCreateDto();
         createDto.setMemberId(log.getMember().getUserId());
-        createDto.setCoachId(targetCoachId);
         if (request != null) {
             createDto.setClassId(request.getClassId());
         }

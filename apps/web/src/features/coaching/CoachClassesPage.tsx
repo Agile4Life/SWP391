@@ -379,7 +379,7 @@ export function CoachClassesPage() {
             )}
           </div>
           <div className="mcal__dialog-actions">
-            {selectedClassSession.status === 'scheduled' && (
+            {selectedClassSession.status === 'scheduled' && selectedClassSession.sessionDate >= centerNowParts().date && (
               <button
                 type="button"
                 className="btn-danger"
@@ -393,9 +393,15 @@ export function CoachClassesPage() {
               </button>
             )}
             {selectedClassSession.status?.toLowerCase() !== 'cancelled' && (
-              <Link to={`/coach/attendance/${selectedClassSession.id}`} className="btn-primary">
-                {t("Điểm danh buổi này", "Take attendance")}
-              </Link>
+              selectedClassSession.sessionDate < centerNowParts().date ? (
+                <span className="muted" style={{ fontStyle: 'italic', fontSize: '0.88rem' }}>
+                  {t("Buổi học đã kết thúc", "Session has ended")}
+                </span>
+              ) : (
+                <Link to={`/coach/attendance/${selectedClassSession.id}`} className="btn-primary">
+                  {t("Điểm danh buổi này", "Take attendance")}
+                </Link>
+              )
             )}
           </div>
         </Modal>
@@ -447,22 +453,35 @@ export function CoachClassesPage() {
             <div className="kv-row"><span>{t("Hình thức")}</span><strong>{selectedPt.paymentMethod === 'package_quota' ? t('Quyền lợi gói tập') : t('Hội viên trả phí')}</strong></div>
             {selectedPt.notes && <div className="kv-row"><span>{t("Ghi chú của học viên")}</span><strong>{selectedPt.notes}</strong></div>}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 20 }}>
-            <div>
-              {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
-                <button data-i18n-managed
-                  type="button"
-                  className="btn-danger"
-                  onClick={() => {
-                    setCancelPtError(null);
-                    setCancelPtReason('');
-                    setCancellingPt(selectedPt);
-                  }}
-                  data-testid="cancel-pt-btn"
+          <div className="mcal__dialog-actions">
+            {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && selectedPt.bookingDate >= centerNowParts().date && (
+              <button data-i18n-managed
+                type="button"
+                className="btn-danger"
+                onClick={() => {
+                  setCancelPtError(null);
+                  setCancelPtReason('');
+                  setCancellingPt(selectedPt);
+                }}
+                data-testid="cancel-pt-btn"
+              >
+                {t("Hủy buổi kèm 1:1")}</button>
+            )}
+            {selectedPt.status?.toLowerCase() !== 'cancelled' && (
+              selectedPt.bookingDate < centerNowParts().date ? (
+                <span className="muted" style={{ fontStyle: 'italic', fontSize: '0.88rem' }}>
+                  {t("Buổi tập đã kết thúc", "Session has ended")}
+                </span>
+              ) : (
+                <Link
+                  to={`/coach/pt-attendance?date=${selectedPt.bookingDate}&search=${encodeURIComponent(selectedPt.memberName || '')}`}
+                  className="btn-primary"
+                  data-testid="pt-attendance-btn"
                 >
-                  {t("Hủy buổi kèm 1:1")}</button>
-              )}
-            </div>
+                  {t("Điểm danh buổi này", "Take attendance")}
+                </Link>
+              )
+            )}
           </div>
         </Modal>
       )}

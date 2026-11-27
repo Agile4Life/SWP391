@@ -19,15 +19,12 @@ describe('aiApi errors', () => {
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('[]')));expect(await aiApi.getCoachMembers()).toEqual([]);
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({message:'Denied'}),{status:403})));await expect(aiApi.getCoachMembers()).rejects.toThrow('Denied');
  });
-  it('sends coach_id only when a manager chooses the responsible coach', async () => {
+  it('never sends coach_id: the server uses the signed-in coach', async () => {
     const fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: { id: 5, status: 'active' } }))));
     vi.stubGlobal('fetch', fetch);
-    const base = { memberId: 8, title: 'Plan', goal: 'Goal', startDate: '2026-11-03', endDate: '2026-11-30', items: [] };
-    await aiApi.saveTrainingPlan({ ...base, coachId: 12 });
-    await aiApi.saveTrainingPlan(base);
-    const bodies = (fetch.mock.calls as unknown as Array<[string, RequestInit]>).map(([, init]) => JSON.parse(String(init.body)));
-    expect(bodies[0].coach_id).toBe(12);
-    expect(bodies[1]).not.toHaveProperty('coach_id');
+    await aiApi.saveTrainingPlan({ memberId: 8, title: 'Plan', goal: 'Goal', startDate: '2026-11-03', endDate: '2026-11-30', items: [] });
+    const [, init] = (fetch.mock.calls as unknown as Array<[string, RequestInit]>)[0];
+    expect(JSON.parse(String(init.body))).not.toHaveProperty('coach_id');
   });
   it('persists rest seconds when creating a plan and keeps exercise IDs on edit', async () => {
     const fetch=vi.fn(()=>Promise.resolve(new Response(JSON.stringify({data:{id:5,status:'active'}}))));vi.stubGlobal('fetch',fetch);
@@ -37,7 +34,7 @@ describe('aiApi errors', () => {
     expect(bodies[0].items[0].rest_seconds).toBe(0);expect(bodies[1].items[0]).toMatchObject({id:501,sets:5,reps:8,restSeconds:90});
   });
 
-  it('forwards coach_id and duration_weeks on AI workout generation and loads member AI recommendation history', async () => {
+  it('forwards duration_weeks on AI workout generation and loads member AI recommendation history', async () => {
     const fetch = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: { id: 77, memberId: 8, modelName: 'test', goal: 'Strength', analysis: 'OK', items: [{ dayOfWeek: 1, exerciseName: 'Plank', durationMinutes: 5 }] },
@@ -47,14 +44,13 @@ describe('aiApi errors', () => {
       })));
     vi.stubGlobal('fetch', fetch);
 
-    await aiApi.generateWorkoutPlan({ memberId: 8, coachId: 21, durationWeeks: 6, additionalRequirements: 'Ưu tiên core' });
+    await aiApi.generateWorkoutPlan({ memberId: 8, durationWeeks: 6, additionalRequirements: 'Ưu tiên core' });
     const history = await aiApi.getMemberRecommendations(8);
 
     const [genUrl, genInit] = fetch.mock.calls[0] as [string, RequestInit];
     expect(genUrl).toBe('/api/v1/ai/generate-workout-plan');
     expect(JSON.parse(String(genInit.body))).toEqual({
       member_id: 8,
-      coach_id: 21,
       additional_requirements: 'Ưu tiên core',
       duration_weeks: 6,
     });

@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Nghiệp vụ giáo án: HLV/quản lý tạo, sửa, kích hoạt, áp dụng lại, xóa giáo án; hội viên xem giáo án đang áp
+ * Nghiệp vụ giáo án: HLV tạo, sửa, kích hoạt, áp dụng lại, xóa giáo án (quản lý chỉ xem); hội viên xem giáo án đang áp
  * dụng (trừ hạng Silver). Mỗi cặp hội viên - HLV chỉ có một giáo án đang áp dụng, giáo án bị thay thế vào lịch
  * sử.
  */
@@ -91,19 +91,15 @@ public class TrainingPlanService {
                 : memberRepository.findById(dto.getMemberId()))
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
 
-        Long targetCoachId = dto.getCoachId() != null ? dto.getCoachId() : currentUserId;
-        if (targetCoachId == null) {
-            throw new BadRequestException("COACH_REQUIRED", "coaching.plan.coach_required", null,
-                    "Coach ID is required");
-        }
-        if (isCoach(currentUserRole) && currentUserId != null && !currentUserId.equals(targetCoachId)) {
+        // Chỉ HLV soạn giáo án, luôn cho chính mình; quản lý không còn soạn hộ (đã bỏ phân công).
+        if (!isCoach(currentUserRole) || currentUserId == null) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
-                    "Coaches can only create training plans for themselves");
+                    "Only coaches can create training plans");
         }
-        if (isCoach(currentUserRole)) requirePersonalPlanEligibility(currentUserId, member.getUserId());
+        requirePersonalPlanEligibility(currentUserId, member.getUserId());
 
-        Coach coach = coachRepository.findById(targetCoachId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", targetCoachId));
+        Coach coach = coachRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", currentUserId));
 
         TrainingPlan plan = new TrainingPlan();
         plan.setMember(member);
@@ -154,7 +150,7 @@ public class TrainingPlanService {
         return toDto(savedPlan, savedItems);
     }
 
-    /** Thêm một bài tập vào giáo án chưa hủy/hoàn thành (chỉ HLV sở hữu hoặc quản lý). */
+    /** Thêm một bài tập vào giáo án chưa hủy/hoàn thành (chỉ HLV sở hữu). */
     public TrainingPlanDto addItem(Long planId, TrainingPlanItemCreateDto itemDto, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
@@ -324,7 +320,7 @@ public class TrainingPlanService {
 
     /**
      * Hội viên có được xem giáo án HLV soạn hay không (spec 2026-11-09): hội viên hạng Silver không thấy giáo án
-     * (HLV vẫn có thể tạo và giáo án sẽ hiện ngay khi hội viên lên Gold hoặc Platinum). Hội viên không có gói hiệu lực
+     * (giáo án đã có từ trước sẽ hiện lại ngay khi hội viên lên Gold hoặc Platinum; HLV không soạn mới cho hạng Silver). Hội viên không có gói hiệu lực
      * giữ nguyên hành vi cũ, còn gói trải nghiệm áp dụng theo hạng Gold.
      */
     boolean memberMaySeePlans(Long memberId) {
@@ -417,19 +413,17 @@ public class TrainingPlanService {
                 .toList();
     }
 
-    /** Quản lý được sửa mọi giáo án; HLV chỉ sửa giáo án của mình (giáo án chưa giao thuộc quản lý). */
+    /** Chỉ HLV sở hữu giáo án được sửa; quản lý chỉ xem. */
     private void verifyCoachOwnership(TrainingPlan plan, Long currentUserId, String currentUserRole) {
-        if (isManager(currentUserRole)) {
-            return;
+        if (!isCoach(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
+                    "Only coaches can modify training plans");
         }
         Long planCoachId = plan.getCoach() != null ? plan.getCoach().getUserId() : null;
         if (currentUserId != null && currentUserId.equals(planCoachId)) {
             return;
         }
-        if (isCoach(currentUserRole)) {
-            requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
-        }
-        // Giáo án chưa gán HLV thuộc quyền quản lý; giáo án đã gán thì chỉ HLV phụ trách giáo án đó được chỉnh sửa.
+        requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
         if (currentUserId == null || planCoachId == null || !currentUserId.equals(planCoachId)) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "You can only modify your own training plans");

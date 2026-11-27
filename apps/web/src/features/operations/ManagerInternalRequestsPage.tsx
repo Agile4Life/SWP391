@@ -1,17 +1,24 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from './staffI18n';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useInRouterContext, useLocation } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { ApiError } from '../../shared/api/client';
+import { getSupportInbox } from '../member/memberSupportApi';
 import {
   getAllStaffRequests,
   reviewStaffRequest,
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
+
+const StaffSupportChat = lazy(() =>
+  import('../chat/StaffSupportChat').then((module) => ({ default: module.StaffSupportChat })),
+);
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { isOverdueLeave } from './staffRequestDates';
 
@@ -41,7 +48,12 @@ const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }>
  */
 export function ManagerInternalRequestsPage() {
   const { t } = useStaffI18n();
+  const inRouter = useInRouterContext();
   const [confirm, confirmDialog] = useConfirm();
+  const [activeTab, setActiveTab] = useState<'internal' | 'complaints'>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'complaints' ? 'complaints' : 'internal',
+  );
+  const [complaintsUnread, setComplaintsUnread] = useState(0);
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage>('');
@@ -49,6 +61,7 @@ export function ManagerInternalRequestsPage() {
   // Bộ lọc
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
 
   // Hộp thoại duyệt đơn
   const [reviewTarget, setReviewTarget] = useState<StaffInternalRequestDto | null>(null);
@@ -73,6 +86,13 @@ export function ManagerInternalRequestsPage() {
 
   useEffect(() => {
     void loadData();
+    let active = true;
+    void getSupportInbox(0, '', false)
+      .then((res) => {
+        if (active) setComplaintsUnread(res.content.reduce((sum, item) => sum + (item.unreadCount ?? 0), 0));
+      })
+      .catch(() => {});
+    return () => { active = false; };
   }, [loadData]);
 
   // Số đơn đang chờ duyệt.
@@ -80,14 +100,16 @@ export function ManagerInternalRequestsPage() {
     return requests.filter((r) => r.status === 'PENDING').length;
   }, [requests]);
 
-  // Đơn sau khi lọc theo trạng thái và loại.
+  // Đơn sau khi lọc theo trạng thái, loại và nội dung tìm kiếm.
   const filteredRequests = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('vi');
     return requests.filter((r) => {
       const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
       const matchType = typeFilter === 'ALL' || r.requestType === typeFilter;
-      return matchStatus && matchType;
+      const matchSearch = !query || [r.userFullName, r.userEmail, r.title].some(value => value?.toLocaleLowerCase('vi').includes(query));
+      return matchStatus && matchType && matchSearch;
     });
-  }, [requests, statusFilter, typeFilter]);
+  }, [requests, statusFilter, typeFilter, search]);
 
   // Mở hộp duyệt đơn với ghi chú mặc định theo ngôn ngữ hiện tại.
   function handleOpenApprove(r: StaffInternalRequestDto) {
@@ -190,19 +212,66 @@ export function ManagerInternalRequestsPage() {
 
   return (
     <div data-i18n-managed className="portal-container">
+      {inRouter && <ComplaintsTabSync onOpen={() => setActiveTab('complaints')} />}
       <PageHeader
-        title={t("Duyệt đơn từ nội bộ")}
+        title={t('Đơn từ & Khiếu nại', 'Requests & Tickets')}
         actions={
-          <RefreshButton label={t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
+          activeTab === 'internal' ? (
+            <RefreshButton label={t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
+          ) : undefined
         }
       />
 
-      {/* Thanh bộ lọc và điều khiển */}
+      {/* Hai tab chính: Đơn từ nội bộ và Khiếu nại chuyển lên */}
+      <div className="portal-tabs" role="tablist" aria-label={t('Phân mục xử lý', 'Management sections')} style={{ marginBottom: 20 }}>
+        <button
+          data-i18n-managed
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'internal'}
+          className={`portal-tab ${activeTab === 'internal' ? 'active' : ''}`}
+          onClick={() => setActiveTab('internal')}
+        >
+          <span>{t('Đơn từ nội bộ', 'Internal requests')}</span>
+          {pendingCount > 0 && (
+            <span data-i18n-managed className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {pendingCount}
+            </span>
+          )}
+        </button>
+        <button
+          data-i18n-managed
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'complaints'}
+          className={`portal-tab ${activeTab === 'complaints' ? 'active' : ''}`}
+          onClick={() => setActiveTab('complaints')}
+        >
+          <span>{t('Khiếu nại chuyển lên', 'Escalated tickets')}</span>
+          {complaintsUnread > 0 && (
+            <span data-i18n-managed className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {complaintsUnread}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'complaints' ? (
+        <Suspense fallback={<LoadingSkeleton label={t('Đang tải khiếu nại…', 'Loading tickets…')} count={4} />}>
+          <StaffSupportChat
+            manager
+            split
+            onBack={() => setActiveTab('internal')}
+            onUnreadCountChange={setComplaintsUnread}
+          />
+        </Suspense>
+      ) : (
+        <>
+          {/* Thanh bộ lọc và điều khiển */}
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          justifyContent: 'space-between',
           alignItems: 'center',
           gap: 16,
           background: 'var(--portal-surface)',
@@ -212,6 +281,15 @@ export function ManagerInternalRequestsPage() {
           marginBottom: 24,
         }}
       >
+        <input
+          type="search"
+          className="portal-input"
+          aria-label={t('Tìm đơn nội bộ', 'Search internal requests')}
+          placeholder={t('Tìm nhân sự hoặc tiêu đề', 'Search staff or subject')}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{ flex: '1 1 240px', minWidth: 180, maxWidth: 320 }}
+        />
         {/* Các tab trạng thái */}
         <div className="portal-tabs" role="tablist" aria-label={t("Lọc trạng thái đơn nội bộ", "Filter internal request status")} style={{ marginBottom: 0 }}>
           {[
@@ -242,7 +320,7 @@ export function ManagerInternalRequestsPage() {
         </div>
 
         {/* Bộ lọc loại đơn */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
           <label htmlFor="manager-request-type-filter" style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</label>
           <Select
             id="manager-request-type-filter"
@@ -304,7 +382,7 @@ export function ManagerInternalRequestsPage() {
               : t("Không có đơn từ nào cần xử lý")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
             {requests.length > 0
-              ? t('Hãy thử chọn trạng thái hoặc loại đơn khác.', 'Try choosing a different status or request type.')
+              ? t('Hãy thử từ khóa, trạng thái hoặc loại đơn khác.', 'Try a different search, status or request type.')
               : t("Không có đơn từ cần duyệt.")}</span>
         </div>
       ) : (
@@ -619,8 +697,23 @@ export function ManagerInternalRequestsPage() {
           </form>
         </Modal>
       )}
+        </>
+      )}
       {confirmDialog}
     </div>
   );
+}
+
+/** Đồng bộ khi điều hướng tới /manager/requests?tab=complaints từ thông báo. */
+function ComplaintsTabSync({ onOpen }: { onOpen: () => void }) {
+  const location = useLocation();
+  const onOpenRef = useRef(onOpen);
+  useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'complaints') {
+      onOpenRef.current();
+    }
+  }, [location.key, location.search]);
+  return null;
 }
 

@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, ApiError, type UserSession } from '../../shared/api/client';
 import { useCurrentUser } from '../../shared/api/useCurrentUser';
 import { StatusMark } from '../../shared/ui/StatusMark';
+import { PasswordInput } from './PasswordInput';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { loginSchema, isValidEmailAddress, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from './authValidation';
 import { loadGoogleIdentity } from './loadGoogleIdentity';
@@ -716,29 +717,14 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             </div>
 
             <div className="portal-form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="portal-label" htmlFor="login-password" style={{ margin: 0 }}>
-                  {sourceText("Mật Khẩu")}</label>
-                <button
-                  type="button"
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '0.75rem',
-                    color: 'var(--fit-muted)',
-                    cursor: 'pointer',
-                    padding: 0,
-                  }}
-                >
-                  {showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}
-                </button>
-              </div>
-              <input
+              <label className="portal-label" htmlFor="login-password">
+                {sourceText("Mật Khẩu")}</label>
+              <PasswordInput
                 id="login-password"
-                type={showPassword ? 'text' : 'password'}
-                className="portal-input"
+                visible={showPassword}
+                onToggle={() => setShowPassword(!showPassword)}
+                showLabel={sourceText('Hiện mật khẩu')}
+                hideLabel={sourceText('Ẩn mật khẩu')}
                 placeholder={sourceText("Nhập mật khẩu")}
                 autoComplete="current-password"
                 value={password}
@@ -890,31 +876,16 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             />
           </div>
           <div className="portal-form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label className="portal-label" htmlFor="reset-new-password-input" style={{ margin: 0 }}>
-                {sourceText('Mật khẩu mới')}
-              </label>
-              <button
-                type="button"
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '0.75rem',
-                  color: 'var(--fit-muted)',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-              >
-                {showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}
-              </button>
-            </div>
-            <input
+            <label className="portal-label" htmlFor="reset-new-password-input">
+              {sourceText('Mật khẩu mới')}
+            </label>
+            <PasswordInput
               id="reset-new-password-input"
-              type={showPassword ? 'text' : 'password'}
+              visible={showPassword}
+              onToggle={() => setShowPassword(!showPassword)}
+              showLabel={sourceText('Hiện mật khẩu')}
+              hideLabel={sourceText('Ẩn mật khẩu')}
               autoComplete="new-password"
-              className="portal-input"
               placeholder={sourceText(PASSWORD_RULE_HINT)}
               value={resetNewPassword}
               onChange={(e) => setResetNewPassword(e.target.value)}

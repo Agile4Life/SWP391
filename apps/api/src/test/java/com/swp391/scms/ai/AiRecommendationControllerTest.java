@@ -322,8 +322,11 @@ class AiRecommendationControllerTest {
         txService.generateRecommendation(10L, "healthy");
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate");
 
+        Coach txCoach = new Coach();
+        txCoach.setUserId(1L);
+        when(coachRepository.findById(1L)).thenReturn(Optional.of(txCoach));
         txActiveDuringAi.set(true);
-        txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), 1L, "CENTER_MANAGER");
+        txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), 1L, "COACH");
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate in generateWorkoutPlan");
     }
 
@@ -342,6 +345,10 @@ class AiRecommendationControllerTest {
         var currentPlan = new com.swp391.scms.coaching.entity.TrainingPlan();
         ReflectionTestUtils.setField(currentPlan, "id", 5L);
         currentPlan.setGoal("Giảm mỡ 4 tuần");
+        Coach planCoach = new Coach();
+        planCoach.setUserId(1L);
+        currentPlan.setCoach(planCoach);
+        when(coachRepository.findById(1L)).thenReturn(Optional.of(planCoach));
         when(plans.findByMemberUserIdAndStatusOrderByCreatedAtDesc(10L, "active")).thenReturn(List.of(currentPlan));
         var currentItem = new com.swp391.scms.coaching.entity.TrainingPlanItem();
         currentItem.setDayOfWeek(1);
@@ -375,7 +382,7 @@ class AiRecommendationControllerTest {
         ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
         ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
 
-        var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), 1L, "CENTER_MANAGER");
+        var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), 1L, "COACH");
 
         assertTrue(prompts.get(0).contains("7 = Chủ nhật"));
         assertFalse(prompts.get(0).contains("THIẾT BỊ SẴN CÓ"));
@@ -516,9 +523,7 @@ class AiRecommendationControllerTest {
         ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
         ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
 
-        AiWorkoutPlanRequest managerReq = objectMapper.readValue(
-                "{\"member_id\":10,\"coach_id\":20,\"duration_weeks\":6}", AiWorkoutPlanRequest.class);
-        service.generateWorkoutPlan(managerReq, 1L, "CENTER_MANAGER");
+        service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), 20L, "COACH");
 
         String userPrompt = prompts.get(0);
         assertTrue(userPrompt.contains("Strength & Conditioning"), "Prompt should include target coach specialization");
@@ -526,10 +531,10 @@ class AiRecommendationControllerTest {
         assertFalse(userPrompt.contains("Yoga phục hồi buổi sáng"), "Prompt must not inherit another coach's plan");
     }
 
-    /** Kiểm thử: quản lý được áp dụng gợi ý AI còn HLV khác bị chặn. */
+    /** Kiểm thử: chỉ HLV sở hữu gợi ý được áp dụng; quản lý và HLV khác bị chặn, giáo án luôn tạo dưới tên HLV gọi. */
     @Test
-    @DisplayName("Manager apply uses log coach or explicit coach_id instead of manager userId, and blocks cross-coach apply")
-    void shouldAllowManagerApplyAndBlockOtherCoachApply() throws Exception {
+    @DisplayName("Only the owning coach applies a recommendation; managers and other coaches are forbidden")
+    void shouldOnlyLetOwningCoachApply() {
         Member member = new Member();
         member.setUserId(10L);
         Coach logCoach = new Coach();
@@ -542,35 +547,18 @@ class AiRecommendationControllerTest {
         log1.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
         when(recommendationLogRepository.findById(77L)).thenReturn(Optional.of(log1));
 
-        AiRecommendationLog log2 = new AiRecommendationLog();
-        ReflectionTestUtils.setField(log2, "id", 78L);
-        log2.setMember(member);
-        log2.setCoach(logCoach);
-        log2.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
-        when(recommendationLogRepository.findById(78L)).thenReturn(Optional.of(log2));
-
-        var capturedCoachIds = new java.util.ArrayList<Long>();
-        when(trainingPlanService.createPlan(any(TrainingPlanCreateDto.class), eq(1L), eq("CENTER_MANAGER")))
-                .thenAnswer(inv -> {
-                    TrainingPlanCreateDto dto = inv.getArgument(0);
-                    capturedCoachIds.add(dto.getCoachId());
-                    TrainingPlanDto created = new TrainingPlanDto();
-                    created.setId(301L);
-                    return created;
-                });
-
-        recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER");
-        AiApplyRecommendationRequest explicitCoachReq = objectMapper.readValue(
-                "{\"coach_id\":25}", AiApplyRecommendationRequest.class);
-        recommendationService.applyRecommendation(78L, explicitCoachReq, 1L, "CENTER_MANAGER");
-
-        assertEquals(List.of(20L, 25L), capturedCoachIds);
-
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER"));
         assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
                 () -> recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 21L, "COACH"));
+
+        TrainingPlanDto created = new TrainingPlanDto();
+        created.setId(301L);
+        when(trainingPlanService.createPlan(any(TrainingPlanCreateDto.class), eq(20L), eq("COACH"))).thenReturn(created);
+        assertEquals(301L, recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 20L, "COACH").getId());
     }
 
-    /** Kiểm thử P1-BE-47: fail-closed khi thiếu hồ sơ HLV (không cho giả mạo coachId), chặn HLV chiếm log của manager và chặn áp dụng trùng 409. */
+    /** Kiểm thử P1-BE-47: fail-closed khi thiếu hồ sơ HLV, chặn quản lý sinh gợi ý, chặn HLV chiếm log không có HLV và chặn áp dụng trùng 409. */
     @Test
     @DisplayName("Fail-closed when coach profile missing, blocks coach from hijacking manager log, and rejects duplicate apply with 409")
     void shouldEnforceFailClosedCoachAuthAndRejectDuplicateApply() throws Exception {
@@ -579,10 +567,11 @@ class AiRecommendationControllerTest {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.empty());
 
-        AiWorkoutPlanRequest spoofedCoachReq = objectMapper.readValue(
-                "{\"member_id\":10,\"coach_id\":99,\"duration_weeks\":4}", AiWorkoutPlanRequest.class);
         assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
-                () -> recommendationService.generateWorkoutPlan(spoofedCoachReq, 20L, "COACH"));
+                () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L, "COACH"));
+        // Quản lý không còn sinh gợi ý giáo án (không có hồ sơ HLV).
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 1L, "CENTER_MANAGER"));
 
         // Manager-created recommendation without coach (logCoachId == null): coach must be forbidden
         AiRecommendationLog managerLog = new AiRecommendationLog();
@@ -609,7 +598,7 @@ class AiRecommendationControllerTest {
 
         assertThrows(com.swp391.scms.common.exception.ConflictException.class,
                 () -> recommendationService.applyRecommendation(91L, new AiApplyRecommendationRequest(), 20L, "COACH"));
-        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
                 () -> recommendationService.applyRecommendation(91L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER"));
     }
 

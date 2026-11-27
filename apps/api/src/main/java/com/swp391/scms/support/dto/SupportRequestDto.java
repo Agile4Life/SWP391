@@ -22,17 +22,23 @@ public record SupportRequestDto(
     String escalationReason,
     String lastMessage,
     LocalDateTime lastMessageAt,
-    Long unreadCount
+    Long unreadCount,
+    String lastMessageSenderName,
+    Boolean lastMessageMine
 ) {
     public SupportRequestDto(Long id, Long memberId, String memberName, Long assignedTo, String assignedToName,
             String subject, String description, String status, LocalDateTime createdAt, LocalDateTime resolvedAt,
             LocalDateTime escalatedAt, String escalatedByName, String escalationReason) {
         this(id, memberId, memberName, assignedTo, assignedToName, subject, description, status, createdAt,
-                resolvedAt, escalatedAt, escalatedByName, escalationReason, null, null, null);
+                resolvedAt, escalatedAt, escalatedByName, escalationReason, null, null, null, null, null);
     }
     public SupportRequestDto withInbox(String preview, LocalDateTime at, long count) {
+        return withInbox(preview, at, count, null, null);
+    }
+    public SupportRequestDto withInbox(String preview, LocalDateTime at, long count, String senderName, Boolean mine) {
         return new SupportRequestDto(id, memberId, memberName, assignedTo, assignedToName, subject, description,
-                status, createdAt, resolvedAt, escalatedAt, escalatedByName, escalationReason, preview, at, count);
+                status, createdAt, resolvedAt, escalatedAt, escalatedByName, escalationReason, preview, at, count,
+                senderName, mine);
     }
     /** Constructor không có thông tin chuyển lên quản lý. */
     public SupportRequestDto(Long id, Long memberId, String memberName, Long assignedTo, String assignedToName,

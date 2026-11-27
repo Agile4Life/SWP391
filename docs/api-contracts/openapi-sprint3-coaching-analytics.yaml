@@ -5,6 +5,9 @@ info:
   description: >
     OpenAPI contract for Training Plans (SCRUM-116), AI Workout Recommendations (SCRUM-117),
     Session Evaluations (SCRUM-119), and Class Utilization Reports (SCRUM-120).
+    Training plan writes (create, add item, update, activate, re-apply, delete) and AI generate/apply
+    are COACH-only; the plan is always owned by the signed-in coach and `coach_id` is no longer accepted.
+    CENTER_MANAGER keeps read-only access (list, detail, completions, AI recommendation history).
 paths:
   # Exercise create/add DTOs accept restSeconds/rest_seconds (integer >= 0, nullable).
   # All plan/item responses include restSeconds. Historic null values stay null.
@@ -28,11 +31,13 @@ paths:
         '200':
           description: Training plans retrieved successfully
     post:
-      summary: Create a new draft training plan (SCRUM-116)
+      summary: Create a training plan for the signed-in coach (COACH only, SCRUM-116)
       tags: [Coaching]
       responses:
         '201':
           description: Training plan created successfully
+        '403':
+          description: FORBIDDEN (caller is not a coach), PT_SESSION_REQUIRED or PLAN_TIER_REQUIRED (member needs an active Gold/Platinum package)
   /api/v1/coaching/training-plans/my:
     get:
       summary: Retrieve active training plans for current member (SCRUM-116, SCRUM-129)
@@ -42,7 +47,7 @@ paths:
           description: Active training plans retrieved successfully
   /api/v1/coaching/training-plans/{id}/items:
     post:
-      summary: Add an exercise item to a draft training plan (SCRUM-116)
+      summary: Add an exercise item to a draft training plan (owner Coach only, SCRUM-116)
       tags: [Coaching]
       parameters:
         - in: path
@@ -56,7 +61,7 @@ paths:
           description: Exercise item added successfully
   /api/v1/coaching/training-plans/{id}:
     put:
-      summary: Update header and existing exercises of a draft or active plan (owner Coach or CENTER_MANAGER)
+      summary: Update header and existing exercises of a draft or active plan (owner Coach only)
       tags: [Coaching]
       parameters:
         - in: path
@@ -91,10 +96,10 @@ paths:
       responses:
         '200': { description: Training plan updated successfully }
         '400': { description: INVALID_DATE_RANGE }
-        '403': { description: Plan belongs to another Coach }
+        '403': { description: Plan belongs to another Coach, or caller is not a coach }
         '409': { description: INVALID_PLAN_STATUS - completed or cancelled plan }
     delete:
-      summary: Delete a draft or withdraw an active plan (owner Coach or CENTER_MANAGER)
+      summary: Delete a draft or withdraw an active plan (owner Coach only)
       tags: [Coaching]
       parameters:
         - in: path
@@ -103,12 +108,12 @@ paths:
           schema: { type: integer, format: int64 }
       responses:
         '200': { description: 'Draft removed; active plan becomes cancelled and is no longer shown to the member. Existing exercises/completion history are retained for active plans. Repeated withdrawal is idempotent.' }
-        '403': { description: Plan belongs to another Coach }
+        '403': { description: Plan belongs to another Coach, or caller is not a coach }
         '404': { description: Plan not found }
         '409': { description: INVALID_PLAN_STATUS - completed plans cannot be deleted }
   /api/v1/coaching/training-plans/{id}/activate:
     put:
-      summary: Activate a draft training plan and archive older active plans (SCRUM-116)
+      summary: Activate a draft training plan and archive older active plans (owner Coach only, SCRUM-116)
       tags: [Coaching]
       parameters:
         - in: path
@@ -122,7 +127,7 @@ paths:
           description: Training plan activated successfully. Each member–coach pair has one active plan, so the other active plan the same coach gave this member becomes `superseded` (history); plans from the member's other coaches stay active.
   /api/v1/coaching/training-plans/{id}/reapply:
     put:
-      summary: Re-apply a plan from history as the member's active plan
+      summary: Re-apply a plan from history as the member's active plan (owner Coach only)
       description: |
         Only plans with status `superseded` can be re-applied. The plan becomes `active` and the plan the same coach
         had active for the same member becomes `superseded`; plans from the member's other coaches are not touched. When the plan's end date is already in the past it gets a new window
@@ -135,12 +140,12 @@ paths:
           schema: { type: integer, format: int64 }
       responses:
         '200': { description: Plan is active again; previous active plan moved to history }
-        '403': { description: Plan belongs to another Coach }
+        '403': { description: Plan belongs to another Coach, or caller is not a coach }
         '404': { description: Plan not found }
         '409': { description: INVALID_PLAN_STATUS - plan is not in history }
   /api/v1/ai/generate-workout-plan:
     post:
-      summary: Generate AI workout recommendation from member health metrics (SCRUM-117)
+      summary: Generate AI workout recommendation from member health metrics (COACH only, SCRUM-117)
       tags: [AI Coaching]
       requestBody:
         required: true
@@ -151,7 +156,6 @@ paths:
               required: [member_id]
               properties:
                 member_id: { type: integer, format: int64 }
-                coach_id: { type: integer, format: int64, description: Optional responsible coach ID when called by CENTER_MANAGER }
                 additional_requirements: { type: string, maxLength: 1000 }
                 duration_weeks: { type: integer, minimum: 1, maximum: 52 }
       responses:
@@ -165,7 +169,7 @@ paths:
           description: AI_RECOMMEND_RATE_LIMITED - too many AI workout generation requests
   /api/v1/ai/recommendations/{id}/apply:
     post:
-      summary: Apply AI workout recommendation into a training plan (SCRUM-117)
+      summary: Apply the caller's own AI workout recommendation into a training plan (COACH only, SCRUM-117)
       tags: [AI Coaching]
       parameters:
         - in: path
@@ -181,7 +185,6 @@ paths:
             schema:
               type: object
               properties:
-                coach_id: { type: integer, format: int64, description: Optional target coach ID when applied by CENTER_MANAGER }
                 start_date: { type: string, format: date }
                 end_date: { type: string, format: date }
                 goal: { type: string, maxLength: 255 }

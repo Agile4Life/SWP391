@@ -18,9 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Locale;
 import java.util.Set;
 
-/** Hộp thư và mốc đã đọc riêng của từng lễ tân; không thay đổi quy trình xử lý phiếu. */
+/** Hộp thư và mốc đã đọc riêng của từng nhân sự xử lý khiếu nại (lễ tân, quản lý); không thay đổi quy trình xử lý phiếu. */
 @Service
 public class SupportInboxService {
+    private static final Set<String> INBOX_ROLES = Set.of("RECEPTIONIST", "CENTER_MANAGER");
     private final SupportRequestService access;
     private final SupportRequestRepository tickets;
     private final SupportRequestReadRepository reads;
@@ -37,8 +38,8 @@ public class SupportInboxService {
         this.mapper = mapper;
     }
 
-    private User requireReceptionist(Long userId, String role) {
-        if (!"RECEPTIONIST".equals(role)) {
+    private User requireStaffActor(Long userId, String role) {
+        if (role == null || !INBOX_ROLES.contains(role)) {
             throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
         }
         return access.requireActor(userId, role);
@@ -47,19 +48,41 @@ public class SupportInboxService {
     @Transactional(readOnly = true)
     public Page<SupportRequestDto> inbox(Long userId, String role, String status,
                                          boolean unreadOnly, Pageable pageable) {
-        requireReceptionist(userId, role);
+        return inbox(userId, role, status, unreadOnly, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SupportRequestDto> inbox(Long userId, String role, String status,
+                                         boolean unreadOnly, String search, Pageable pageable) {
+        requireStaffActor(userId, role);
         String normalized = status == null || status.isBlank() ? null : status.trim().toLowerCase(Locale.ROOT);
         if (normalized != null && !Set.of("open", "in_progress", "resolved", "closed").contains(normalized)) {
             throw new BadRequestException("INVALID_SUPPORT_STATUS", "validation.support.status.invalid", null, null);
         }
         // Sắp xếp toàn bộ hộp thư tại DB trước phân trang, không nhận sort riêng từ client.
         Pageable ordered = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        return tickets.findReceptionistInbox(normalized, unreadOnly, userId, ordered).map(ticket -> {
+        String query = search == null ? "" : search.trim();
+        Page<SupportRequest> page = !query.isEmpty()
+                ? tickets.searchInbox(normalized, unreadOnly, "CENTER_MANAGER".equals(role), userId, query, ordered)
+                : "CENTER_MANAGER".equals(role)
+                ? tickets.findInbox(normalized, unreadOnly, true, userId, ordered)
+                : tickets.findReceptionistInbox(normalized, unreadOnly, userId, ordered);
+        return page.map(ticket -> {
             var latest = messages.findFirstBySupportRequestIdOrderByCreatedAtDescIdDesc(ticket.getId());
+            String senderName = latest.map(m -> {
+                User sender = m.getSender();
+                if (sender == null) return null;
+                return sender.getFullName() != null && !sender.getFullName().isBlank()
+                        ? sender.getFullName()
+                        : sender.getUsername();
+            }).orElse(null);
+            boolean mine = latest.map(m -> m.getSender() != null && userId.equals(m.getSender().getId())).orElse(false);
             return mapper.toDto(ticket).withInbox(
                     latest.map(SupportRequestMessage::getMessage).orElse(ticket.getDescription()),
                     latest.map(SupportRequestMessage::getCreatedAt).orElse(ticket.getCreatedAt()),
-                    unread(ticket.getId(), userId));
+                    unread(ticket.getId(), userId),
+                    senderName,
+                    mine);
         });
     }
 
@@ -73,7 +96,7 @@ public class SupportInboxService {
 
     @Transactional
     public SupportReadResultDto markRead(Long ticketId, Long userId, String role, Long cursor) {
-        User user = requireReceptionist(userId, role);
+        User user = requireStaffActor(userId, role);
         access.requireTicket(ticketId, userId, role);
         // Dùng cùng khóa phiếu với gửi tin: tạo/cập nhật biên nhận được tuần tự hóa.
         SupportRequest ticket = tickets.findByIdForUpdate(ticketId)

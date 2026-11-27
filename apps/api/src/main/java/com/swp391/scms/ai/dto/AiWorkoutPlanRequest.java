@@ -13,9 +13,6 @@ public class AiWorkoutPlanRequest {
     @NotNull(message = "{validation.ai.member_id.not_null}")
     private Long memberId;
 
-    @JsonAlias("coach_id")
-    private Long coachId;
-
     @JsonAlias({"additional_requirements", "prompt", "coach_notes", "coachNotes", "requirements"})
     @Size(max = 1000, message = "{validation.ai.requirements.size}")
     private String additionalRequirements;
@@ -39,10 +36,6 @@ public class AiWorkoutPlanRequest {
     public Long getMemberId() { return memberId; }
     /** Gán giá trị mới cho trường memberId. */
     public void setMemberId(Long memberId) { this.memberId = memberId; }
-    /** Lấy giá trị trường coachId. */
-    public Long getCoachId() { return coachId; }
-    /** Gán giá trị mới cho trường coachId. */
-    public void setCoachId(Long coachId) { this.coachId = coachId; }
     /** Lấy giá trị trường additionalRequirements. */
     public String getAdditionalRequirements() { return additionalRequirements; }
     /** Gán giá trị mới cho trường additionalRequirements. */

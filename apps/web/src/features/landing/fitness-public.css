@@ -539,6 +539,40 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-auth .portal-input:hover:not(:disabled) { border-color: rgb(var(--sol-accent-rgb) / .5); }
 .fit-auth .portal-input:is(:focus, :focus-visible), .fit-site :is(input, select, textarea):is(:focus, :focus-visible) { outline: none; outline-offset: 0; border-color: var(--fit-salmon); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .18); }
 .fit-auth .portal-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.fit-auth .fit-password-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.fit-auth .fit-password-input { padding-inline-end: 46px; }
+.fit-auth .fit-password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  bottom: 0;
+  margin-block: auto;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fit-muted);
+  cursor: pointer;
+  padding: 0;
+  transform: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.fit-auth .fit-password-toggle:is(:hover, :active, :focus-visible) {
+  transform: none;
+}
+.fit-auth .fit-password-toggle:hover:not(:disabled) {
+  color: var(--sol-accent-text);
+  background: rgb(var(--sol-accent-rgb) / .1);
+}
+.fit-auth .fit-password-toggle:focus-visible {
+  outline: 2px solid var(--fit-salmon);
+  outline-offset: 2px;
+}
 .fit-auth .portal-label small { font-size: 12px; color: var(--fit-muted); font-weight: 400; }
 .fit-auth .luxury-login-submit-btn { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 30px; border: none; color: #2b201b; background: var(--fit-salmon); padding: 12px 20px; font-size: 13px; font-weight: 700; letter-spacing: .035em; margin-top: 24px; }
 .fit-auth .luxury-login-submit-btn:hover:not(:disabled) { background: var(--sol-accent-hover); color: #2b201b; transform: translateY(-2px); }

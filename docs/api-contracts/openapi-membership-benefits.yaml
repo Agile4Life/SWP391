@@ -77,7 +77,7 @@ paths:
   /coaching/training-plans/my:
     get:
       summary: The member's active training plans
-      description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
+      description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches cannot create new plans for Silver members (403 PLAN_TIER_REQUIRED); existing plans reappear after an upgrade. Managers only view plans.
       responses:
         '200': { description: Plans (empty for Silver) }
   /coach-bookings/my:

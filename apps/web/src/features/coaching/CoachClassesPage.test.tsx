@@ -308,6 +308,42 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(dialog.querySelector('a[href="/coach/attendance/77"]')).not.toBeNull();
   });
 
+  it('renders take attendance link for PT 1:1 session in modal', async () => {
+    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
+      {
+        id: 42,
+        memberName: 'Khoa Hội Viên',
+        bookingDate: currentMondayStr,
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+      },
+    ] as never);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>
+      );
+    });
+
+    const ptBlock = host.querySelector<HTMLButtonElement>('.mcal__event--mine')!;
+    expect(ptBlock).not.toBeNull();
+    await act(async () => ptBlock.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Buổi kèm riêng 1:1');
+    expect(dialog.textContent).toContain('Khoa Hội Viên');
+    const attendanceLink = dialog.querySelector<HTMLAnchorElement>('[data-testid="pt-attendance-btn"]')!;
+    expect(attendanceLink).not.toBeNull();
+    expect(attendanceLink.textContent).toContain('Điểm danh buổi này');
+    expect(attendanceLink.getAttribute('href')).toContain('/coach/pt-attendance?date=');
+    expect(attendanceLink.getAttribute('href')).toContain('search=Khoa');
+  });
+
   it('P1-FE-45 & P2-FE-64: hides attendance link for cancelled class sessions and marks ended PT sessions as past', async () => {
     // 10:00 giờ Việt Nam Thứ Ba (2026-11-24): buổi PT Thứ Hai (2026-11-23) đã kết thúc -> tone past.
     vi.setSystemTime(new Date('2026-11-24T03:00:00Z'));

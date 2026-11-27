@@ -48,7 +48,10 @@ it('opens as a chat with category chips and no ticket form when the member has n
   await render();
   expect(host.querySelector('#support-subject')).toBeNull();
   expect(host.querySelector('#support-description')).toBeNull();
-  expect(host.textContent).toContain('Lễ tân sẽ phản hồi ngay tại đây');
+  expect(host.textContent).toContain('Gửi yêu cầu tới lễ tân và theo dõi phản hồi');
+  expect(host.textContent).toContain('Yêu cầu mới');
+  expect(button('Yêu cầu mới')).toBeNull();
+  expect(button('Phiếu của tôi')).not.toBeNull();
   expect([...host.querySelectorAll('[role="radio"]')].map(chip => chip.textContent)).toEqual(['Gói tập', 'Thiết bị', 'Lịch học', 'Khác']);
   expect(host.querySelector('[role="radio"][aria-checked="true"]')?.textContent).toBe('Gói tập');
 });
@@ -246,6 +249,33 @@ it('P2-FE-80: disables "Tải thêm phiếu" while appending and guards SupportT
   expect(host.querySelectorAll('[data-support-ticket]')).toHaveLength(2);
 });
 
+it('subscribes to member-wide realtime updates even when selectedId is null (new request or ticket list)', async () => {
+  vi.mocked(supportApi.getMySupportTickets)
+    .mockResolvedValueOnce({ content: [], totalPages: 0 })
+    .mockResolvedValueOnce({ content: [{ ...ticket, id: 12, status: 'resolved' }], totalPages: 1 });
+  await render();
+
+  const memberInboxSub = vi.mocked(subscribeSupport).mock.calls.find(call => call[2] === undefined);
+  expect(memberInboxSub).toBeDefined();
+
+  await act(async () => { memberInboxSub![0](); await new Promise(resolve => setTimeout(resolve, 120)); });
+  await act(async () => button('Phiếu của tôi').click());
+  expect(host.querySelector('[data-support-ticket="12"]')).not.toBeNull();
+  expect(host.textContent).toContain('Đã giải quyết');
+});
+
+it('jumps directly to the requested ticketId from notification URL even if it is not on page 0', async () => {
+  const olderTicket = { ...ticket, id: 99, subject: '[Thiết bị] Phiếu cũ từ thông báo', description: 'Nội dung cũ' };
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 2 });
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(olderTicket);
+  vi.mocked(supportApi.getSupportMessages).mockResolvedValue([]);
+
+  await act(async () => root.render(<MemberSupportChat onBack={() => {}} ticketId={99} />));
+  await vi.waitFor(() => expect(supportApi.getSupportTicket).toHaveBeenCalledWith(99));
+  await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar')?.textContent).toContain('Phiếu cũ từ thông báo'));
+  expect(supportApi.getSupportMessages).toHaveBeenCalledWith(99);
+});
+
 it('shows a retry button in the reconnecting banner and resubscribes on click', async () => {
   vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 1 });
   let onState!: (state: 'connecting' | 'connected' | 'reconnecting' | 'disabled') => void;
@@ -254,7 +284,9 @@ it('shows a retry button in the reconnecting banner and resubscribes on click', 
     return () => {};
   });
   await render();
-  await vi.waitFor(() => expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(1));
+  // Hộp thư hội viên (không ticketId) và phiếu đang chọn đều subscribe; nút Thử lại chỉ dựng lại kết nối của phiếu.
+  await vi.waitFor(() => expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(2));
+  const callsBeforeRetry = vi.mocked(subscribeSupport).mock.calls.length;
 
   await act(async () => { onState('reconnecting'); });
   const banner = host.querySelector('.support-chat__connection')!;
@@ -266,6 +298,6 @@ it('shows a retry button in the reconnecting banner and resubscribes on click', 
   expect(retryBtn.textContent).toBe('Retry');
 
   await act(async () => { retryBtn.click(); });
-  expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(callsBeforeRetry + 1);
   expect(host.querySelector('.support-chat__connection')).toBeNull();
 });

@@ -228,11 +228,16 @@ export function CreateClassOrSessionModal({
     [selectedSlotCode],
   );
 
-  const currentAvailabilityKey = `${disciplineId}|${startDate}|${endDate}|${sortedDaysKey}|${selectedSlot.number}`;
+  const scheduleKey = `${disciplineId}|${startDate}|${endDate}|${sortedDaysKey}`;
+  const currentAvailabilityKey = `${scheduleKey}|${selectedSlot.number}`;
   const availability =
     availabilityState && availabilityState.key === currentAvailabilityKey
       ? availabilityState.data
       : null;
+  // Trạng thái 5 slot chỉ phụ thuộc lịch (không phụ thuộc slot đang chọn): giữ kết quả cũ trên màn hình
+  // trong lúc đổi slot để lưới và ô tóm tắt không nháy/nhảy chiều cao.
+  const scheduleAvailability =
+    availabilityState && availabilityState.key.startsWith(`${scheduleKey}|`) ? availabilityState.data : null;
   const isAvailabilityStale = Boolean(
     availabilityState && availabilityState.key !== currentAvailabilityKey,
   );
@@ -552,10 +557,10 @@ export function CreateClassOrSessionModal({
   };
 
   const findSlotAvailability = (slot: ScheduleSlot): SlotAvailabilityDto | undefined =>
-    availability?.slots.find((item) => item.code === slot.code || item.slotNumber === slot.number);
+    scheduleAvailability?.slots.find((item) => item.code === slot.code || item.slotNumber === slot.number);
 
   const renderSlotStatus = (slot: ScheduleSlot): { text: string; unavailable: boolean } => {
-    if (checkingAvailability) {
+    if (checkingAvailability && !scheduleAvailability) {
       return {
         text: t('Đang kiểm tra lịch trống...', 'Checking availability...'),
         unavailable: false,
@@ -613,6 +618,17 @@ export function CreateClassOrSessionModal({
   };
 
   const selectedSlotInfo = findSlotAvailability(selectedSlot);
+  const summaryAvailability = scheduleAvailability;
+  // Kết quả chính xác cho slot hiện tại nếu đã có; trong lúc tải lại thì suy ra từ trạng thái slot của lịch.
+  const summarySlotAvailable = availability
+    ? availability.selectedSlotAvailable
+    : Boolean(selectedSlotInfo?.available);
+  const summaryIsError = Boolean(
+    availabilityError
+      || step2LocalError
+      || (summaryAvailability && (!summaryAvailability.validSchedule || !summarySlotAvailable)),
+  );
+  const summaryIsOk = Boolean(summaryAvailability && summaryAvailability.validSchedule && summarySlotAvailable);
   const parsedPrice = Math.max(0, Number(price) || 0);
   const levelLabel =
     level === 'beginner'
@@ -904,7 +920,6 @@ export function CreateClassOrSessionModal({
                         // Re-clicking the active slot must not wipe results: the check effect won't re-run.
                         if (active) return;
                         setSelectedSlotCode(slot.code);
-                        setAvailabilityState(null);
                         setAvailabilityError(null);
                         setError(null);
                       }}
@@ -920,24 +935,11 @@ export function CreateClassOrSessionModal({
 
             <div
               data-testid="wizard-schedule-summary"
-              role={
-                availabilityError ||
-                step2LocalError ||
-                (availability && (!availability.validSchedule || !availability.selectedSlotAvailable))
-                  ? 'alert'
-                  : 'status'
-              }
-              className={`class-wizard__summary${
-                availabilityError ||
-                step2LocalError ||
-                (availability && (!availability.validSchedule || !availability.selectedSlotAvailable))
-                  ? ' is-error'
-                  : availability && availability.validSchedule && availability.selectedSlotAvailable
-                    ? ' is-ok'
-                    : ''
-              }`}
+              aria-busy={checkingAvailability || undefined}
+              role={summaryIsError ? 'alert' : 'status'}
+              className={`class-wizard__summary${summaryIsError ? ' is-error' : summaryIsOk ? ' is-ok' : ''}`}
             >
-              {checkingAvailability ? (
+              {checkingAvailability && !summaryAvailability ? (
                 <span>
                   {t(
                     'Đang kiểm tra lịch trống cho 5 Slot, phòng tập và HLV...',
@@ -958,10 +960,10 @@ export function CreateClassOrSessionModal({
                 </div>
               ) : step2LocalError ? (
                 <span>{step2LocalError}</span>
-              ) : availability ? (
-                !availability.validSchedule || availability.sessionCount <= 0 ? (
+              ) : summaryAvailability ? (
+                !summaryAvailability.validSchedule || summaryAvailability.sessionCount <= 0 ? (
                   <span>
-                    {availability.scheduleErrorMessage ||
+                    {summaryAvailability.scheduleErrorMessage ||
                       t(
                         'Khoảng ngày và các thứ đã chọn không tạo ra buổi học hợp lệ.',
                         'The selected date range and weekdays do not generate any valid sessions.',
@@ -971,11 +973,11 @@ export function CreateClassOrSessionModal({
                   <>
                     <strong>
                       {t(
-                        `Sẽ tạo ${availability.sessionCount} buổi học · ${formatCenterDate(availability.firstSessionDate)} – ${formatCenterDate(availability.lastSessionDate)}`,
-                        `Will create ${availability.sessionCount} ${availability.sessionCount === 1 ? 'session' : 'sessions'} · ${formatCenterDate(availability.firstSessionDate)} – ${formatCenterDate(availability.lastSessionDate)}`,
+                        `Sẽ tạo ${summaryAvailability.sessionCount} buổi học · ${formatCenterDate(summaryAvailability.firstSessionDate)} – ${formatCenterDate(summaryAvailability.lastSessionDate)}`,
+                        `Will create ${summaryAvailability.sessionCount} ${summaryAvailability.sessionCount === 1 ? 'session' : 'sessions'} · ${formatCenterDate(summaryAvailability.firstSessionDate)} – ${formatCenterDate(summaryAvailability.lastSessionDate)}`,
                       )}
                     </strong>
-                    {availability.selectedSlotAvailable ? (
+                    {summarySlotAvailable ? (
                       <span className="class-wizard__summary-sub">
                         {`${selectedSlot.label} (${selectedSlot.rangeLabel}) · ${t(
                           `${selectedSlotInfo?.availableRoomCount ?? resolvedRooms.filter((r) => r.available).length} phòng trống · ${selectedSlotInfo?.availableCoachCount ?? resolvedCoaches.filter((c) => c.available).length} HLV sẵn sàng`,
@@ -984,7 +986,7 @@ export function CreateClassOrSessionModal({
                       </span>
                     ) : (
                       <span>
-                        {availability.selectedSlotConflictReason ||
+                        {availability?.selectedSlotConflictReason ||
                           selectedSlotInfo?.conflictReason ||
                           t(
                             'Slot này đang có xung đột lịch. Vui lòng chọn slot hoặc khung ngày khác.',
@@ -1687,6 +1689,7 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
       ?? findScheduleSlot(session.startTime);
     return matched?.code ?? SCHEDULE_SLOTS[0].code;
   });
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1706,6 +1709,7 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
         sessionDate: date,
         startTime: selectedSlot.startApi,
         endTime: selectedSlot.endApi,
+        reason: reason.trim() || undefined,
       });
       onSuccess(t('Đã dời lịch buổi học và gửi thông báo tới học viên, HLV.', 'Session rescheduled and notifications sent.'));
     } catch (err) {
@@ -1738,6 +1742,19 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
             onChange={setSelectedSlotCode}
             disabled={busy}
             ariaLabel={t('Chọn khung giờ mới trong 5 Slot cố định', 'Select a new fixed time slot')}
+          />
+        </div>
+        <div className="portal-form-group">
+          <label className="portal-label" htmlFor="resch-reason">{t('Lý do dời lịch', 'Reschedule reason')}</label>
+          <textarea
+            id="resch-reason"
+            className="portal-textarea"
+            rows={3}
+            maxLength={500}
+            disabled={busy}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={t('Nhập lý do dời lịch để gửi thông báo tới học viên và HLV (tùy chọn)…', 'Enter a reason to notify members and coach (optional)…')}
           />
         </div>
         <div className="mcal__dialog-actions">

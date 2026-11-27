@@ -68,9 +68,30 @@ class SupportInboxServiceTest {
     }
 
     @Test
-    void rejectsNonReceptionist() {
-        assertThrows(ForbiddenException.class, () -> service.markRead(1L, 2L, "CENTER_MANAGER", 0L));
+    void rejectsNonInboxRoles() {
+        assertThrows(ForbiddenException.class, () -> service.markRead(1L, 2L, "MEMBER", 0L));
+        assertThrows(ForbiddenException.class, () -> service.markRead(1L, 2L, "COACH", 0L));
         verifyNoInteractions(access, tickets, reads, messages);
+    }
+
+    @Test
+    void managerInboxFiltersEscalatedTicketsOnly() {
+        when(access.requireActor(5L, "CENTER_MANAGER")).thenReturn(user);
+        when(tickets.findInbox("open", true, true, 5L, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(ticket), PageRequest.of(0, 20), 1));
+        when(messages.countIncomingAfter(1L, 0L)).thenReturn(1L);
+        var result = service.inbox(5L, "CENTER_MANAGER", "open", true, PageRequest.of(0, 20));
+        assertEquals(2, result.getContent().getFirst().unreadCount());
+        verify(tickets).findInbox("open", true, true, 5L, PageRequest.of(0, 20));
+    }
+
+    @Test
+    void managerSearchKeepsEscalationAndStatusFiltersBeforePagination() {
+        when(access.requireActor(5L, "CENTER_MANAGER")).thenReturn(user);
+        when(tickets.searchInbox("open", false, true, 5L, "An", PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of()));
+        assertTrue(service.inbox(5L, "CENTER_MANAGER", "open", false, " An ", PageRequest.of(0, 20)).isEmpty());
+        verify(tickets).searchInbox("open", false, true, 5L, "An", PageRequest.of(0, 20));
     }
 
     @Test

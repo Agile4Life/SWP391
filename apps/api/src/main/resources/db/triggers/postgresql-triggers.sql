@@ -824,13 +824,23 @@ FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
 -- SCRUM-128: vô hiệu hóa cache riêng tư theo transaction, không chứa dữ liệu phiếu hỗ trợ/tin nhắn.
 CREATE OR REPLACE FUNCTION scms_support_realtime_invalidation()
 RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
-DECLARE ticket_id bigint;
+DECLARE
+    ticket_id bigint;
+    owner_id bigint;
 BEGIN
     IF to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NULL THEN RETURN NEW; END IF;
-    IF TG_TABLE_NAME = 'support_requests' THEN ticket_id := NEW.id;
-    ELSE ticket_id := NEW.support_request_id; END IF;
+    IF TG_TABLE_NAME = 'support_requests' THEN
+        ticket_id := NEW.id;
+        owner_id := NEW.member_id;
+    ELSE
+        ticket_id := NEW.support_request_id;
+        SELECT sr.member_id INTO owner_id FROM support_requests sr WHERE sr.id = ticket_id;
+    END IF;
     PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:support:ticket:' || ticket_id::text, true);
     PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:support:inbox', true);
+    IF owner_id IS NOT NULL THEN
+        PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:support:member:' || owner_id::text, true);
+    END IF;
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
     RAISE WARNING 'Support invalidation unavailable (SQLSTATE %)', SQLSTATE;

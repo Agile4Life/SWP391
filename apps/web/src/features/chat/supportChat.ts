@@ -3,6 +3,9 @@ import { sourceMessage } from '../../shared/i18n';
 import type { ChatError } from './chatMessages';
 import type { SupportMessage, SupportTicket } from '../member/memberSupportApi';
 
+/** Sự kiện cửa sổ báo tổng số phiếu hỗ trợ chưa đọc thay đổi. */
+export const SUPPORT_UNREAD_EVENT = 'scms:support-unread';
+
 /**
  * Hỗ trợ & Khiếu nại chạy trên cùng mô hình hội thoại với Tin nhắn: mỗi phiếu là một cuộc trò chuyện giữa hội viên và lễ tân.
  * Phân loại vẫn được lưu ở đầu tiêu đề phiếu (`[Gói tập] …`) để lễ tân/quản lý lọc và đọc như trước.
@@ -62,9 +65,18 @@ export function uniqueMessages(messages: SupportMessage[]): SupportMessage[] {
   return [...new Map(messages.map(message => [message.id, message])).values()];
 }
 
-/** Lỗi hiển thị của phiếu hỗ trợ: giữ ApiError, nếu không dùng câu dự phòng song ngữ. */
+/** Lỗi hiển thị của phiếu hỗ trợ: lọc bỏ gợi ý thanh toán khi timeout, giữ ApiError khác hoặc dùng câu dự phòng song ngữ. */
 export function supportError(cause: unknown): ChatError {
-  return cause instanceof ApiError ? cause : sourceMessage('Không thể hoàn tất yêu cầu. Vui lòng thử lại.', 'Unable to complete the request. Please try again.');
+  if (cause instanceof ApiError) {
+    if (cause.code === 'TIMEOUT') {
+      return sourceMessage(
+        'Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại.',
+        'The server took too long to respond. Check your connection and try again.',
+      );
+    }
+    return cause;
+  }
+  return sourceMessage('Không thể hoàn tất yêu cầu. Vui lòng thử lại.', 'Unable to complete the request. Please try again.');
 }
 
 /** Lỗi 403 hoặc 404 nghĩa là không còn quyền truy cập phiếu. */

@@ -18,9 +18,6 @@ public class TrainingPlanCreateDto {
     @NotNull(message = "{validation.coaching.member_id.not_null}")
     private Long memberId;
 
-    @JsonAlias("coach_id")
-    private Long coachId;
-
     @JsonAlias("class_id")
     private Long classId;
 
@@ -58,10 +55,6 @@ public class TrainingPlanCreateDto {
     public Long getMemberId() { return memberId; }
     /** Gán giá trị mới cho trường memberId. */
     public void setMemberId(Long memberId) { this.memberId = memberId; }
-    /** Lấy giá trị trường coachId. */
-    public Long getCoachId() { return coachId; }
-    /** Gán giá trị mới cho trường coachId. */
-    public void setCoachId(Long coachId) { this.coachId = coachId; }
     /** Lấy giá trị trường classId. */
     public Long getClassId() { return classId; }
     /** Gán giá trị mới cho trường classId. */

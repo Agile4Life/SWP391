@@ -18,10 +18,9 @@ export interface WorkoutExerciseItem {
   orderIndex?: number;
 }
 
-/** Dữ liệu yêu cầu AI sinh giáo án: học viên, HLV, yêu cầu thêm và số tuần. */
+/** Dữ liệu yêu cầu AI sinh giáo án: học viên, yêu cầu thêm và số tuần (HLV lấy từ phiên đăng nhập). */
 export interface GenerateWorkoutPlanPayload {
   memberId: number;
-  coachId?: number;
   additionalRequirements?: string;
   durationWeeks?: number;
 }
@@ -41,13 +40,11 @@ export interface AiWorkoutPlanResult {
 }
 
 /**
- * Dữ liệu lưu giáo án: học viên, HLV (quản lý bắt buộc), tiêu đề, mục tiêu, khoảng ngày, bài tập, trạng thái và
- * nguồn AI.
+ * Dữ liệu lưu giáo án: học viên, tiêu đề, mục tiêu, khoảng ngày, bài tập, trạng thái và nguồn AI (HLV lấy từ phiên
+ * đăng nhập).
  */
 export interface TrainingPlanPayload {
   memberId: number;
-  /** Bắt buộc khi Manager soạn giáo án; Coach luôn dùng danh tính của chính mình. */
-  coachId?: number;
   title: string;
   goal: string;
   startDate: string;
@@ -68,13 +65,6 @@ export interface MemberOption {
   healthNotes?: string;
   fitnessLevel?: string;
   canViewWorkoutPlan?: boolean;
-}
-
-/** HLV có thể chọn khi quản lý soạn giáo án. */
-export interface CoachOption {
-  id: number;
-  fullName: string;
-  email?: string;
 }
 
 /** Một bài tập của giáo án đã lưu (kèm id). */
@@ -121,12 +111,6 @@ export const aiApi = {
    */
   getCoachMembers: (): Promise<MemberOption[]> => apiFetch<MemberOption[]>('/coaching/members'),
 
-  /** Huấn luyện viên đang hoạt động để Manager chọn người phụ trách giáo án. */
-  getActiveCoaches: async (): Promise<CoachOption[]> => {
-    const coaches = await apiFetch<CoachOption[]>('/classes/coaches');
-    return Array.isArray(coaches) ? coaches : [];
-  },
-
   /** Lịch sử gợi ý giáo án AI đã tạo cho học viên (mới nhất trước). */
   getMemberRecommendations: (memberId: number): Promise<AiWorkoutPlanResult[]> =>
     apiFetch<AiWorkoutPlanResult[]>(`/ai/recommendations/member/${memberId}`),
@@ -140,7 +124,6 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify({
         member_id: payload.memberId,
-        ...(payload.coachId != null ? { coach_id: payload.coachId } : {}),
         additional_requirements: payload.additionalRequirements || '',
         duration_weeks: payload.durationWeeks || 4,
       }),
@@ -162,7 +145,6 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify({
         member_id: payload.memberId,
-        ...(payload.coachId != null ? { coach_id: payload.coachId } : {}),
         title: payload.title,
         goal: payload.goal,
         start_date: payload.startDate,

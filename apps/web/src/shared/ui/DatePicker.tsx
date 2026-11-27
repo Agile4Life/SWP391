@@ -9,12 +9,14 @@ export interface DatePickerProps {
   name?: string;
   value: string; // YYYY-MM-DD
   // Gọi lại theo dạng sự kiện giả { target: { value } } để dùng thay thẻ input gốc.
-  onChange: (e: { target: { value: string } }) => void;
+  onChange?: (e: { target: { value: string } }) => void;
   min?: string; // YYYY-MM-DD
   max?: string; // YYYY-MM-DD
   disabled?: boolean;
   required?: boolean;
   placeholder?: string;
+  /** Chỉ tắt dấu hôm nay khi màn hình cần phân biệt rõ với ngày người dùng đã chọn. */
+  highlightToday?: boolean;
   className?: string;
   style?: React.CSSProperties;
   'data-field'?: string;
@@ -64,12 +66,13 @@ export function DatePicker({
   id,
   name,
   value,
-  onChange,
+  onChange = () => {},
   min,
   max,
   disabled = false,
   required = false,
   placeholder,
+  highlightToday = true,
   className = '',
   style,
   'data-field': dataField,
@@ -559,7 +562,7 @@ export function DatePicker({
                 'ldp-day-cell',
                 d.isCurrentMonth ? 'is-current-month' : 'is-other-month',
                 d.isSelected ? 'is-selected' : '',
-                d.isToday ? 'is-today' : '',
+                d.isToday && highlightToday ? 'is-today' : '',
                 d.isDisabled ? 'is-disabled' : '',
               ]
                 .filter(Boolean)

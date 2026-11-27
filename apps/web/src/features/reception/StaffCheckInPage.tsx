@@ -1,4 +1,4 @@
-import { useStaffI18n, staffMessage, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, getCurrentUser } from '../../shared/api/client';
@@ -26,13 +26,9 @@ const isCheckinGranted = (status?: string | null): boolean => {
   return normalized === 'GRANTED' || normalized === 'SUCCESS';
 };
 
-/**
- * Màn check-in/out của lễ tân: chế độ `in` thì quét thẻ hội viên và hiện QR cổng cho hội viên tự quét vào;
- * chế độ `out` thì hiện QR cổng để ra và danh sách lượt còn ở trong trung tâm.
- */
-export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) {
+/** Quầy Check-in: quét thẻ hội viên, QR cổng và lịch sử ra/vào; không có thao tác Check-out thủ công. */
+export function StaffCheckInPage() {
   const { t } = useStaffI18n();
-  const checkingOut = mode === 'out';
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
@@ -46,9 +42,6 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
   const [isScanning, setIsScanning] = useState(false);
   const scanInFlight = useRef(false);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
-  const checkoutBusy = useRef(false);
-  const [historyView, setHistoryView] = useState<'inside' | 'recent'>('inside');
 
   const [currentResult, setCurrentResult] = useState<CheckinDto | null>(null);
   const [denialMessage, setDenialMessage] = useState<StaffMessage | null>(null);
@@ -158,47 +151,26 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     void executeScan(scanCode);
   };
 
-  // Check-out một lượt và cập nhật dòng tương ứng trong danh sách.
-  const handleCheckout = async (checkinId: number) => {
-    if (checkoutBusy.current) return;
-    checkoutBusy.current = true;
-    setCheckingOutId(checkinId);
-    try {
-      const updated = await checkinApi.checkout(checkinId);
-      setRecentCheckins((prev) => prev.map((item) => (item.id === checkinId ? updated : item)));
-      if (currentResult?.id === checkinId) {
-        setCurrentResult(updated);
-      }
-      notify(staffMessage('Đã ghi nhận hội viên checkout thành công.', 'Member checkout recorded successfully.'), 'success');
-    } catch (err: unknown) {
-      notify(errorMessage(err, 'Check-out thất bại.'), 'error');
-    } finally {
-      checkoutBusy.current = false;
-      setCheckingOutId(null);
-    }
-  };
-
   const isGranted = isCheckinGranted(currentResult?.status);
-  const openVisits = recentCheckins.filter((record) => isCheckinGranted(record.status) && !record.checkOutTime);
-  const visibleVisits = checkingOut && historyView === 'inside' ? openVisits : recentCheckins.slice(0, 10);
+  const visibleVisits = recentCheckins.slice(0, 10);
 
   return (
     <div data-i18n-managed className="portal-container checkin-page">
       <PageHeader
-        title={checkingOut ? t('Check-out') : t('Check-in')}
+        title={t('Check-in')}
         actions={
           <RefreshButton label={t("Làm mới nhật ký")} onClick={() => void loadHistory()} disabled={loadingHistory} />
         }
       />
 
       <div className="checkin-layout">
-        {/* Thẻ bên trái: trình quét thẻ hội viên + QR cổng để check-in, hoặc chỉ QR cổng để check-out */}
+        {/* Thẻ bên trái: trình quét thẻ hội viên và QR cổng để check-in */}
         <div className="portal-card">
-          {!checkingOut && <div className="portal-card-header">
+          <div className="portal-card-header">
             <h2 className="portal-card-title">{t("Quét mã hội viên")}</h2>
-          </div>}
+          </div>
 
-          {!checkingOut && <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
+          <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
             <div>
               <label className="portal-label" htmlFor="checkin-qr-input">
                 {t("Mã QR hội viên")}</label>
@@ -226,25 +198,22 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
               </div>
               {scanError && <p id="checkin-qr-error" className="form-error" role="alert">{t(scanError)}</p>}
             </div>
-          </form>}
+          </form>
 
-          {!checkingOut && (
+          <div style={{ marginBottom: '24px' }}>
+            <button type="button" className="btn-secondary" aria-expanded={cameraOpen} onClick={() => setCameraOpen((open) => !open)}>
+              {cameraOpen ? t('Đóng camera') : t('Quét QR thẻ hội viên bằng camera')}
+            </button>
+            {cameraOpen && (
+              <QrCameraScanner
+                onScan={(code) => void executeScan(code)}
+                disabled={isScanning}
+                hint={t("Đưa mã QR trên thẻ hội viên vào khung. Bấm “Quét lại” cho người kế tiếp.")}
+              />
+            )}
+          </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <button type="button" className="btn-secondary" aria-expanded={cameraOpen} onClick={() => setCameraOpen((open) => !open)}>
-                {cameraOpen ? t('Đóng camera') : t('Quét QR thẻ hội viên bằng camera')}
-              </button>
-              {cameraOpen && (
-                <QrCameraScanner
-                  onScan={(code) => void executeScan(code)}
-                  disabled={isScanning}
-                  hint={t("Đưa mã QR trên thẻ hội viên vào khung. Bấm “Quét lại” cho người kế tiếp.")}
-                />
-              )}
-            </div>
-          )}
-
-          <GateQrPanel purpose={checkingOut ? 'out' : 'in'} gateId={GATE_ID} />
+          <GateQrPanel gateId={GATE_ID} />
 
           {/* Phản hồi trực quan trạng thái mở/khóa cổng */}
           {currentResult && (
@@ -297,21 +266,11 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
           )}
         </div>
 
-        {/* Tách riêng các lượt đang ở trong trung tâm khỏi 10 bản ghi đối soát gần nhất. */}
+        {/* Nhật ký giữ nguyên giờ vào/ra Backend trả về cho 10 lượt gần nhất. */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">{checkingOut ? t("Theo dõi ra về hôm nay") : t("Lượt check-in gần đây")}</h2>
+            <h2 className="portal-card-title">{t("Lượt check-in gần đây")}</h2>
           </div>
-
-          {checkingOut && <div className="portal-tabs" role="tablist" aria-label={t("Danh sách ra vào")}>
-            <button type="button" role="tab" className={`portal-tab ${historyView === 'inside' ? 'active' : ''}`}
-              aria-selected={historyView === 'inside'} onClick={() => setHistoryView('inside')}>
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{t("Đang trong trung tâm (")}{openVisits.length})</span>
-            </button>
-            <button type="button" role="tab" className={`portal-tab ${historyView === 'recent' ? 'active' : ''}`}
-              aria-selected={historyView === 'recent'} onClick={() => setHistoryView('recent')}>
-              {t("10 lượt gần nhất")}</button>
-          </div>}
 
           {historyError && (
             <div data-i18n-managed
@@ -342,16 +301,13 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
             </div>
           ) : historyError && visibleVisits.length === 0 ? null : visibleVisits.length === 0 ? (
             <div data-i18n-managed style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }} data-testid="checkin-history-empty">
-              {checkingOut && historyView === 'inside'
-                ? t('Hiện không có hội viên trong trung tâm.')
-                : t('Chưa có lượt check-in nào được ghi nhận.')}
+              {t('Chưa có lượt check-in nào được ghi nhận.')}
             </div>
           ) : (
             <div data-i18n-managed className="portal-table-wrapper">
               <table className="portal-table">
                 <thead>
                   <tr>
-                    {checkingOut && <th className="checkin-actions">{t("Ra về")}</th>}
                     <th>{t("Hội viên")}</th>
                     <th>{t("Giờ vào / ra")}</th>
                     <th>{t("Cổng")}</th>
@@ -365,21 +321,6 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
                     const memberIdLabelEn = rec.memberId ? `Member #${rec.memberId}` : 'Unidentified';
                     return (
                       <tr data-i18n-managed key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
-                        {checkingOut && <td className="checkin-actions">
-                          {ok && !rec.checkOutTime ? (
-                            <button data-i18n-managed
-                              type="button"
-                              className="btn-secondary btn-sm"
-                              aria-label={t(`Ra về: ${rec.memberName || memberIdLabelVi}`, `Check out: ${rec.memberName || memberIdLabelEn}`)}
-                              disabled={checkingOutId !== null}
-                              onClick={() => void handleCheckout(rec.id)}
-                            >
-                              {checkingOutId === rec.id ? t('Đang ghi nhận...') : t('Ra về')}
-                            </button>
-                          ) : rec.checkOutTime ? (
-                            <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{t("Đã ra về")}</span>
-                          ) : '—'}
-                        </td>}
                         <td>
                           <div>{rec.memberName || t('Thẻ QR không xác định')}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
