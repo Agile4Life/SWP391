@@ -62,7 +62,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/staff/reception', label: 'Quầy lễ tân & check-in', icon: 'card', roles: ['STAFF'], tabs: [
     { to: '/staff/reception', label: 'Quầy lễ tân', en: 'Front desk' },
     { to: '/staff/check-in', label: 'Check-in', en: 'Check-in' },
-    { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
   ] },
   { to: '/staff/kyc', label: 'Duyệt hồ sơ & bảo lưu', icon: 'shield', roles: ['STAFF'], tabs: [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },

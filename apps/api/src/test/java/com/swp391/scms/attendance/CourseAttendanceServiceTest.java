@@ -38,6 +38,19 @@ class CourseAttendanceServiceTest {
     // 2026-11-09 20:00 (múi giờ Asia/Ho_Chi_Minh)
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private CourseAttendanceService service;
+    @Test
+    void gatePresenceRemainsAReadOnlyHintUsingStoredVisitEnd() {
+        var checkins = mock(com.swp391.scms.attendance.repository.CenterCheckinRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "checkins", checkins);
+        ClassSession session = session(1L, LocalDate.of(2026, 11, 9), LocalTime.of(17, 0), LocalTime.of(19, 30));
+        LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        LocalDateTime entered = start.minusHours(1);
+        when(checkins.findCoveringVisitStart(100L, start.minusHours(3), start, start.plusMinutes(150)))
+                .thenReturn(entered).thenReturn(null);
+        assertEquals(entered, service.gateCheckinFor(100L, session));
+        assertNull(service.gateCheckinFor(100L, session));
+        verifyNoInteractions(attendance, enrollments);
+    }
     private GymClass course;
     private Member member;
 

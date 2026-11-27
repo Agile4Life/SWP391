@@ -833,6 +833,20 @@ public class ClassService {
 
         ScheduleSlot.requireValid(request.startTime(), request.endTime());
 
+        if (session.getSessionDate() != null && session.getStartTime() != null) {
+            java.time.Instant sessionStart = LocalDateTime.of(session.getSessionDate(), session.getStartTime())
+                    .atZone(com.swp391.scms.common.CenterTime.ZONE)
+                    .toInstant();
+            java.time.Instant cutoff = sessionStart.minus(8, java.time.temporal.ChronoUnit.HOURS);
+            if (!clock.instant().isBefore(cutoff)) {
+                throw new BadRequestException(
+                        "SCHEDULING_RESCHEDULE_TOO_LATE",
+                        "error.scheduling.reschedule_too_late",
+                        new Object[]{8},
+                        "Sessions can only be rescheduled at least 8 hours before start time");
+            }
+        }
+
         SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
 
         Long disciplineId = gymClass.getDiscipline() != null ? gymClass.getDiscipline().getId() : null;
@@ -860,7 +874,7 @@ public class ClassService {
 
         ClassSession saved = sessions.saveAndFlush(session);
         ClassSession effective = saved != null ? saved : session;
-        notifySessionRescheduled(gymClass, effective, oldDate, oldStart, oldEnd);
+        notifySessionRescheduled(gymClass, effective, oldDate, oldStart, oldEnd, request.reason());
         return mapper.toDto(effective, countBooked(effective));
     }
 
@@ -1364,7 +1378,8 @@ public class ClassService {
                                           ClassSession session,
                                           LocalDate oldDate,
                                           LocalTime oldStart,
-                                          LocalTime oldEnd) {
+                                          LocalTime oldEnd,
+                                          String reason) {
         if (notificationService == null || gymClass == null || session == null) {
             return;
         }
@@ -1373,6 +1388,7 @@ public class ClassService {
         String oldRange = formatTime(oldStart) + " – " + formatTime(oldEnd);
         String newDateStr = session.getSessionDate() != null ? session.getSessionDate().format(CONFLICT_DATE_FORMAT) : "";
         String newRange = formatTime(session.getStartTime()) + " – " + formatTime(session.getEndTime());
+        String trimmedReason = reason != null ? reason.trim() : "";
         String title = msg("notifications.session.rescheduled.title");
 
         java.util.Set<Long> memberRecipients = new java.util.LinkedHashSet<>();
@@ -1395,12 +1411,16 @@ public class ClassService {
                 }
             }
         }
-        String memberBody = msg("notifications.session.rescheduled.body", className, oldDateStr, oldRange, newDateStr, newRange);
+        String memberBody = trimmedReason.isEmpty()
+                ? msg("notifications.session.rescheduled.body", className, oldDateStr, oldRange, newDateStr, newRange)
+                : msg("notifications.session.rescheduled.body_with_reason", className, oldDateStr, oldRange, newDateStr, newRange, trimmedReason);
         for (Long memberId : memberRecipients) {
             notificationService.send(memberId, title, memberBody, "schedule_change", "class_session", session.getId());
         }
         if (gymClass.getCoach() != null && gymClass.getCoach().getUserId() != null) {
-            String coachBody = msg("notifications.session.rescheduled.coach_body", className, oldDateStr, oldRange, newDateStr, newRange);
+            String coachBody = trimmedReason.isEmpty()
+                    ? msg("notifications.session.rescheduled.coach_body", className, oldDateStr, oldRange, newDateStr, newRange)
+                    : msg("notifications.session.rescheduled.coach_body_with_reason", className, oldDateStr, oldRange, newDateStr, newRange, trimmedReason);
             notificationService.send(gymClass.getCoach().getUserId(), title, coachBody, "schedule_change", "class_session", session.getId());
         }
     }

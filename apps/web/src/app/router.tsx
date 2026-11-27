@@ -171,8 +171,8 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/check-out',
-            // Trang /staff/check-out: tải lười StaffCheckOutPage.
-            lazy: async () => ({ Component: (await import('../features/reception/StaffCheckOutPage')).StaffCheckOutPage }),
+            // Link cũ vẫn đi qua RoleGuard lễ tân trước khi chuyển sang Check-in.
+            element: <Navigate to="/staff/check-in" replace />,
           },
           {
             path: '/staff/reception-history',

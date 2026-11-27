@@ -2,6 +2,8 @@
 
 Quyết định Manager: tab Khiếu nại chuyển lên có ô tìm theo tên hội viên hoặc chủ đề trước bộ lọc trạng thái; danh sách dùng các hàng liền nhau và khung trao đổi rõ ràng, đồng bộ theme portal. Tab Đơn từ nội bộ có ô tìm theo nhân sự hoặc tiêu đề trước bộ lọc trạng thái, kết hợp với lọc loại đơn.
 
+Quyết định Receptionist (27/11/2026): nhóm Quầy lễ tân chỉ còn hai tab Quầy lễ tân và Check-in. Bỏ UI Check-out thủ công, QR hướng dẫn ra về và các nút Ra về; route cũ `/staff/check-out` redirect có `replace` về `/staff/check-in` dưới RoleGuard hiện có, kể cả link notification cũ. Giữ lịch sử và giờ vào/ra Backend trả về. Thay đổi Frontend độc lập; chỉ triển khai sau Backend Auto Check-out 8 giờ của PR #232 được merge/deploy và xác minh trên VPS.
+
 Quyết định Manager: khi tạo khóa học thành công, hiển thị kết quả trong hộp thoại giữa màn hình; hộp thoại đóng bằng nút × hoặc Esc.
 
 Quyết định Hộp thoại / Popup toàn portal (27/11/2026 — **ghi đè** ngoại lệ giữ nút “Đóng” đơn lẻ ngày 14/11/2026 bên dưới): mọi popup/hộp thoại đã có nút `×` ở góc trên bên phải (như `<Modal>` với `.portal-dialog__close`) **không được đặt thêm nút “Đóng” / “Close” ở phía dưới**, kể cả khi hộp thoại chỉ có một nút ở chân (thông báo kết quả, cảnh báo không thể thực hiện, hồ sơ chi tiết, trạng thái đã thanh toán, kết quả sau khi hoàn tất thao tác). Nút `×` góc phải (cùng phím `Esc` / bấm nền mờ) là lối thoát duy nhất; hộp thoại biểu mẫu hoặc xác nhận có hành động chính vẫn giữ nút `Hủy` / nhãn phủ định cạnh nút xác nhận.
@@ -444,6 +446,8 @@ Quyết định Receptionist (25/11/2026): Dropdown gia hạn tại quầy: lự
 Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.
 
 KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
+
+KYC lễ tân (27/11/2026): popup ảnh tại `/staff/kyc` chỉ xem ảnh trong ứng dụng, bỏ hành động “Mở ảnh gốc” mở tab mới. Giữ phóng to/thu nhỏ, ảnh trước/sau, nút đóng, Escape và phục hồi focus. `DocumentImageLightbox` dùng chung vẫn giữ hành động mở ảnh gốc mặc định cho Quầy lễ tân; chỉ KYC đặt `showOriginalAction={false}`.
 
 Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nhận tiền mặt; hiển thị phương thức cố định, giữ giao dịch lịch sử khác phương thức.
 
