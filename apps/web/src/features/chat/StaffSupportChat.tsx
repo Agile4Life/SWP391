@@ -436,7 +436,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
     return (
       <div data-i18n-managed className={`support-split${selected !== null ? ' has-selection' : ''}`}>
         <div className="support-split__filterbar">
-          {manager && <input type="search" className="portal-input support-split__search" aria-label={t('Tìm khiếu nại', 'Search complaints')} placeholder={t('Tìm hội viên hoặc chủ đề', 'Search member or subject')} value={search} onChange={event => setSearch(event.target.value)} />}
+          {manager && <input type="search" className="portal-input support-split__search" aria-label={t('Tìm khiếu nại', 'Search complaints')} placeholder={t('Tìm hội viên', 'Search members')} value={search} onChange={event => setSearch(event.target.value)} />}
           <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo trạng thái', 'Filter by status')} style={{ marginBottom: 0 }}>
             {statusFilters.map((tab) => {
               const isActive = filter === tab.key;
@@ -472,7 +472,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
           {inboxPane}
           <div className="support-split__detail">
             {detailPane ? (
-              <div className="portal-card support-split__detail-card">
+              <div className="portal-card support-split__detail-card direct-chat">
                 {detailPane}
               </div>
             ) : (
