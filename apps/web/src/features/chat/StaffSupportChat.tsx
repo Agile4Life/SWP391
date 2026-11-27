@@ -267,6 +267,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false, split
   const statusFilters: Array<{ key: '' | Status; label: string }> = [
     { key: '', label: t('Tất cả', 'All') },
     { key: 'open', label: t('Đang chờ', 'Open') },
+    { key: 'in_progress', label: t('Đang xử lý', 'In progress') },
     { key: 'resolved', label: t('Đã giải quyết', 'Resolved') },
     { key: 'closed', label: t('Đã đóng', 'Closed') },
   ];

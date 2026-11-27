@@ -128,6 +128,13 @@ it('enables unread filter, latest message preview with sender, and mark-read for
   expect(button('Quay lại hộp thư')).toBeDefined();
 });
 
+it('filters escalated complaints by in-progress status', async () => {
+  await render({ manager: true, split: true });
+  await act(async () => button('Đang xử lý').click());
+  expect(api.getSupportInbox).toHaveBeenLastCalledWith(0, 'in_progress', false);
+  expect(button('Đang xử lý').getAttribute('aria-selected')).toBe('true');
+});
+
 it('searches manager complaints across pages while retaining the status filter', async () => {
   await render({ manager: true, split: true });
   await act(async () => button('Đang chờ').click());
