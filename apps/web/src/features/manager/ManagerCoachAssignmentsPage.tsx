@@ -79,6 +79,25 @@ function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssign
   return [...groups.values()];
 }
 
+const DETAIL_PAGE_SIZE = 5;
+
+function AssignmentSummary({ assignments }: { assignments: CoachAssignmentStudent[] }) {
+  const { t } = useStaffI18n();
+  return <div className="coach-student-assignments">
+    {(['CLASS', 'TRAINING_PLAN', 'PT_1_1'] as const).map(type => {
+      const items = assignments.filter(item => item.assignmentType === type);
+      if (!items.length) return null;
+      const count = type === 'PT_1_1' ? items.reduce((sum, item) => sum + (item.sessionCount ?? 1), 0) : items.length;
+      const label = type === 'CLASS' ? t('khóa học nhóm', 'group courses')
+        : type === 'TRAINING_PLAN' ? t('giáo án riêng', 'training plans') : t('buổi PT sắp tới', 'upcoming PT sessions');
+      return <span key={type}>{count} {label}</span>;
+    })}
+    {[...new Set(assignments.map(item => item.membershipIssue).filter(Boolean))].map(issue => (
+      <MembershipIssueTag key={issue} issue={issue} />
+    ))}
+  </div>;
+}
+
 /**
  * Màn phân công HLV (chỉ xem): học viên của từng HLV theo giáo án, PT 1:1, lớp nhóm; lọc/sắp xếp và xem hồ sơ.
  * Không có điều chuyển hay kết thúc: hội viên do HLV nào đảm nhận thì đi theo HLV đó đến hết.
@@ -108,7 +127,12 @@ export function ManagerCoachAssignmentsPage() {
 
   // Hộp thoại hồ sơ học viên
   const [detail, setDetail] = useState<{ student: CoachAssignmentStudent; assignments: CoachAssignmentStudent[] } | null>(null);
+  const [detailPage, setDetailPage] = useState(0);
   const selectedStudentDetail = detail?.student ?? null;
+  const openDetail = (student: CoachAssignmentStudent, assignments: CoachAssignmentStudent[]) => {
+    setDetailPage(0);
+    setDetail({ student, assignments });
+  };
 
   // Tải tổng quan phân công; chỉ kết quả của lần gọi mới nhất được dùng.
   const load = useCallback(async () => {
@@ -171,12 +195,13 @@ export function ManagerCoachAssignmentsPage() {
     [t],
   );
 
-  // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
+  // Một hàng cho mỗi cặp HLV và học viên.
   const flattenedStudents = useMemo(() => {
     if (!data?.coaches) return [];
     return data.coaches.flatMap((coach) =>
-      coach.students.map((student) => ({
-        ...student,
+      groupStudentsByMember(coach.students).map((group) => ({
+        ...group.assignments[0],
+        assignments: group.assignments,
         coachId: coach.coachId,
         coachName: coach.coachName,
       }))
@@ -345,37 +370,12 @@ export function ManagerCoachAssignmentsPage() {
                         </div>
                       </div>
 
-                      <div className="coach-student-assignments">
-                        {group.assignments.map((student) => (
-                          <div data-i18n-managed key={`${student.assignmentType}-${student.referenceId}`} className="coach-assignment-line">
-                            <span
-                              className={`coach-student-type-pill coach-student-type-pill--${
-                                student.assignmentType === 'PT_1_1'
-                                  ? 'pt'
-                                  : student.assignmentType === 'TRAINING_PLAN'
-                                  ? 'plan'
-                                  : 'class'
-                              }`}
-                            >
-                              {assignmentTypeLabel(student.assignmentType, student.assignmentTypeLabel)}
-                            </span>
-
-                            <div className="coach-student-detail">
-                              <div>{student.detail || null} <MembershipIssueTag issue={student.membershipIssue} /></div>
-                              {assignmentSchedule(student) && (
-                                <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
-                                  {assignmentSchedule(student)}
-                                </small>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <AssignmentSummary assignments={group.assignments} />
 
                       <button
                         type="button"
                         className="btn-secondary btn-sm coach-action-btn coach-profile-detail"
-                        onClick={() => setDetail({ student: group.assignments[0], assignments: group.assignments })}
+                        onClick={() => openDetail(group.assignments[0], group.assignments)}
                       >
                         {t("Chi tiết")}</button>
                     </div>
@@ -393,15 +393,13 @@ export function ManagerCoachAssignmentsPage() {
               <tr>
                 <th>{t("Học viên")}</th>
                 <th>{t("HLV phụ trách")}</th>
-                <th>{t("Hình thức")}</th>
-                <th>{t("Chi tiết & Mục tiêu")}</th>
-                <th>{t('Hết hạn giáo án / Buổi kế tiếp', 'Plan end / Next session')}</th>
+                <th>{t('Hình thức & số lượng', 'Assignment summary')}</th>
                 <th>{t("Hồ sơ", "Profile")}</th>
               </tr>
             </thead>
             <tbody>
               {flattenedStudents.map((item) => (
-                <tr data-i18n-managed key={`table-${item.assignmentType}-${item.referenceId}-${item.memberId}-${item.coachId}`}>
+                <tr data-i18n-managed key={`table-${item.memberId}-${item.coachId}`}>
                   <td>
                     <strong>{item.fullName}</strong>
                     <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
@@ -411,27 +409,13 @@ export function ManagerCoachAssignmentsPage() {
                   <td>
                     <strong>{item.coachName}</strong>
                   </td>
-                  <td>
-                    <span
-                      className={`coach-student-type-pill coach-student-type-pill--${
-                        item.assignmentType === 'PT_1_1'
-                          ? 'pt'
-                          : item.assignmentType === 'TRAINING_PLAN'
-                          ? 'plan'
-                          : 'class'
-                      }`}
-                    >
-                      {assignmentTypeLabel(item.assignmentType, item.assignmentTypeLabel)}
-                    </span>
-                  </td>
-                  <td>{item.detail || '—'} <MembershipIssueTag issue={item.membershipIssue} /></td>
-                  <td>{assignmentSchedule(item, true) || t('Chưa có thông tin', 'Not available')}</td>
+                  <td><AssignmentSummary assignments={item.assignments} /></td>
                   <td>
                     <div className="coach-student-actions">
                       <button
                         type="button"
                         className="btn-secondary btn-sm coach-action-btn"
-                        onClick={() => setDetail({ student: item, assignments: flattenedStudents.filter((s) => s.memberId === item.memberId && s.coachId === item.coachId) })}
+                        onClick={() => openDetail(item, item.assignments)}
                       >
                         {t("Chi tiết")}</button>
                     </div>
@@ -485,7 +469,7 @@ export function ManagerCoachAssignmentsPage() {
 
             <div>
               <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Hình thức & Lịch tập")}</small>
-              {(detail?.assignments ?? []).map((assignment) => (
+              {(detail?.assignments ?? []).slice(detailPage * DETAIL_PAGE_SIZE, (detailPage + 1) * DETAIL_PAGE_SIZE).map((assignment) => (
                 <div data-i18n-managed key={`${assignment.assignmentType}-${assignment.referenceId}`} style={{ marginTop: '0.25rem' }}>
                   <span
                     className={`coach-student-type-pill coach-student-type-pill--${
@@ -503,6 +487,11 @@ export function ManagerCoachAssignmentsPage() {
                   </span>
                 </div>
               ))}
+              {(detail?.assignments.length ?? 0) > DETAIL_PAGE_SIZE && <div className="coach-detail-pagination">
+                <button type="button" className="btn-secondary btn-sm" disabled={detailPage === 0} onClick={() => setDetailPage(page => page - 1)}>{t('Trước', 'Previous')}</button>
+                <span>{t('Trang', 'Page')} {detailPage + 1} / {Math.ceil((detail?.assignments.length ?? 0) / DETAIL_PAGE_SIZE)}</span>
+                <button type="button" className="btn-secondary btn-sm" disabled={(detailPage + 1) * DETAIL_PAGE_SIZE >= (detail?.assignments.length ?? 0)} onClick={() => setDetailPage(page => page + 1)}>{t('Tiếp', 'Next')}</button>
+              </div>}
             </div>
           </div>
         </Modal>
