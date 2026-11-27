@@ -662,7 +662,20 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     // Pick available Slot 2 -> availability updates and allows advancing to Step 3
     const slot2Btn = document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!;
     expect(slot2Btn.textContent).toContain('2 phòng · 1 HLV trống');
+    let releaseSlot2!: () => void;
+    vi.mocked(classesApi.checkRecurringAvailability).mockImplementationOnce((payload) =>
+      new Promise((resolve) => {
+        releaseSlot2 = () => resolve(buildAvailabilityResponse(payload));
+      }));
     await act(async () => slot2Btn.click());
+    // While re-checking the new slot, previous results stay on screen: no loading flash, no layout jump.
+    const pendingSummary = document.querySelector('[data-testid="wizard-schedule-summary"]')!;
+    expect(pendingSummary.getAttribute('aria-busy')).toBe('true');
+    expect(pendingSummary.textContent).toContain('Sẽ tạo 5 buổi học');
+    expect(pendingSummary.textContent).toContain('Slot 2');
+    expect(slot2Btn.textContent).toContain('2 phòng · 1 HLV trống');
+    expect(document.querySelector('dialog')?.textContent).not.toContain('Đang kiểm tra lịch trống');
+    await act(async () => releaseSlot2());
     await act(async () => { await Promise.resolve(); });
     expect(slot2Btn.getAttribute('aria-pressed')).toBe('true');
     expect(classesApi.checkRecurringAvailability).toHaveBeenLastCalledWith(
