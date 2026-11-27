@@ -9,7 +9,7 @@ Quyết định Receptionist — lịch sử bảo lưu (27/11/2026): `/staff/re
 
 Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
 
-Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình; thông báo thành công không có biểu tượng dấu tích, lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
+Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình, không có biểu tượng hình elip; lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
 
 Quyết định Manager: hủy hoặc dời buổi học thành công hiển thị hộp thoại giữa màn hình với tiêu đề “Thành công” và nội dung trong khung xanh không có biểu tượng; có thể đóng bằng nút × hoặc Esc. Kết quả tạo khóa học dùng cùng kiểu khung xanh.
 
