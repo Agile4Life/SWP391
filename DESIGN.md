@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định cảnh báo gia hạn Receptionist: lỗi overlap của kỳ đã bị loại không hiển thị như lỗi của kỳ đang chọn. Chỉ cảnh báo chung khi dữ liệu chuỗi thiếu hoặc lỗi; validation và lỗi API vẫn hiển thị cho thao tác hiện tại. Hướng dẫn dùng “Gói còn hạn và có thể gia hạn nối tiếp khi đủ điều kiện.” Đổi hội viên hoặc lựa chọn thanh toán phải xóa lỗi không còn liên quan; giữ nguyên kỳ cuối, ID và logic gia hạn/thanh toán.
+
 Quyết định Manager: danh sách duyệt yêu cầu hủy gói và hoàn tiền có ô tìm theo tên hội viên bên trái nút làm mới; bấm tiêu đề để thu gọn hoặc mở rộng danh sách. Số chờ duyệt vẫn phản ánh toàn bộ yêu cầu, không phụ thuộc tìm kiếm.
 
 Quyết định Manager: bấm tiêu đề Giao dịch gần đây để thu gọn hoặc mở rộng bảng; ô tìm kiếm giữ trên cùng và giữ từ khóa khi thu gọn.

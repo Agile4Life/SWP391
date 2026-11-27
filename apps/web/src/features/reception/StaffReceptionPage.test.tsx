@@ -672,7 +672,7 @@ it('hides conflicting history but keeps Gold renewable and blocks a forced Silve
   const stale = document.createElement('option'); stale.value = 'renew:40'; select.add(stale);
   expect(select.querySelector<HTMLOptionElement>('[value="renew:50"]')!.disabled).toBe(false);
   await chooseAndPay('renew:40');
-  expect(host.textContent).toContain('Không thể gia hạn gói SILVER 9 THÁNG vì trùng thời hạn với gói GOLD 9 THÁNG hiện tại. Vui lòng chọn gói hợp lệ.');
+  expect(host.textContent).toContain('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.');
   expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
   expect((select.closest('form')!.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
 });
@@ -941,4 +941,52 @@ it.each([
   await chooseAndPay('renew:50');
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it.each(['vi', 'en'] as const)('does not show a rejected Trial warning for an eligible Silver renewal in %s', async (language) => {
+  const { setLanguage } = await import('../../shared/i18n/language');
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
+  const silver = { ...runningGold, packageName: 'SILVER 6 MONTHS', endDate: '2027-05-25' };
+  const trial = { ...oldSilver, packageName: 'Trial', startDate: '2026-11-01', endDate: '2026-11-03' };
+  api.getActivePackages.mockResolvedValue([{ ...pkg, durationDays: 180 }, { ...pkg, id: 3, durationDays: 3 }]);
+  api.getRenewalCandidates.mockResolvedValue([trial, silver]);
+  await selectMember();
+  await act(async () => setLanguage(language));
+  try {
+    const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+    await act(async () => { select.value = 'renew:50'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(host.querySelector('[data-testid="renewal-options-warning"]')).toBeNull();
+    const hint = host.querySelector('[data-testid="reception-renew-only-hint"]')!.textContent!;
+    expect(hint).toContain(language === 'en' ? 'can be renewed consecutively' : 'có thể gia hạn nối tiếp');
+    expect(select.querySelector('[value="renew:50"]')).not.toBeNull();
+    expect(select.querySelector('[value="renew:40"]')).toBeNull();
+  } finally {
+    await act(async () => setLanguage('vi'));
+  }
+});
+it('clears the previous member payment error when selecting another member', async () => {
+  api.processPayment.mockRejectedValue(new Error('Previous payment error'));
+  await selectMember(); await chooseAndPay('buy:2');
+  expect(host.textContent).toContain('Previous payment error');
+  api.lookupMembers.mockResolvedValue([{ ...member, userId: 20 }]);
+  await selectMember();
+  expect(host.textContent).not.toContain('Previous payment error');
+});
+it('clears unrelated payment errors when changing the selected offer', async () => {
+  api.processPayment.mockRejectedValue(new Error('Previous payment error'));
+  api.getActivePackages.mockResolvedValue([pkg, { ...pkg, id: 3 }]);
+  await selectMember(); await chooseAndPay('buy:2');
+  expect(host.textContent).toContain('Previous payment error');
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select')!;
+  await act(async () => { select.value = 'buy:3'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(host.textContent).not.toContain('Previous payment error');
+});
+
+it('clears a previous payment error when the payment method is selected again', async () => {
+  api.processPayment.mockRejectedValue(new Error('Previous payment error'));
+  await selectMember(); await chooseAndPay('buy:2');
+  expect(host.textContent).toContain('Previous payment error');
+  const select = host.querySelector('#pos-method')!.parentElement!.querySelector('select')!;
+  await act(async () => { select.value = 'cash'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(host.textContent).not.toContain('Previous payment error');
 });

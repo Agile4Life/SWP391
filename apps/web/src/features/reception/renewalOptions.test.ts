@@ -17,7 +17,7 @@ it('offers only the linked tail regardless of response order or earlier end date
 
 it('keeps a single eligible period and an empty list without inventing an option', () => {
   expect(eligibleRenewalOptions([gold], packages, today).options).toEqual([gold]);
-  expect(eligibleRenewalOptions([], packages, today)).toEqual({ options: [], error: null });
+  expect(eligibleRenewalOptions([], packages, today)).toEqual({ options: [], chainWarning: null });
   expect(eligibleRenewalOptions([{ ...gold, status: 'cancelled' }], packages, today).options).toEqual([]);
   expect(eligibleRenewalOptions([gold], [], today).options).toEqual([]);
 });
@@ -40,7 +40,7 @@ it('hides branches, cycles, duplicate IDs and missing relationships with feedbac
   ]) {
     const result = eligibleRenewalOptions(history, packages, today);
     expect(result.options).toEqual([]);
-    expect(result.error).not.toBeNull();
+    expect(result.chainWarning).not.toBeNull();
   }
 });
 
@@ -48,13 +48,17 @@ it('does not let a broken unrelated chain erase a verified independent choice', 
   const broken = { ...silver, previousSubscriptionId: 999 };
   const result = eligibleRenewalOptions([gold, broken], packages, today);
   expect(result.options).toEqual([gold]);
-  expect(result.error).not.toBeNull();
+  expect(result.chainWarning).not.toBeNull();
+  expect(result.chainWarning).toMatchObject({
+    vi: expect.stringContaining('chuỗi gia hạn'),
+    en: expect.stringContaining('renewal chains'),
+  });
 });
 
 it('filters a tail rejected by existing overlap validation', () => {
   const result = eligibleRenewalOptions([gold, silver], packages, today);
   expect(result.options).toEqual([gold]);
-  expect(result.error).toMatchObject({ vi: expect.stringContaining('SILVER') });
+  expect(result.chainWarning).toBeNull();
 });
 
 it('keeps the current Gold renewal and explains the old Silver overlap using real names', () => {
