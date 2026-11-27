@@ -12,8 +12,6 @@ import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
 import { centerNowParts, formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
 
-/** Chế độ quét: vào hoặc ra. */
-type Mode = 'in' | 'out';
 const RANGES = [{ days: 1, label: 'Hôm nay' }, { days: 7, label: '7 ngày' }, { days: 30, label: '30 ngày' }];
 /** Lùi số ngày từ một ngày YYYY-MM-DD. */
 function subtractCenterDays(dateKey: string, offsetDays: number): string {
@@ -29,7 +27,6 @@ function subtractCenterDays(dateKey: string, offsetDays: number): string {
 export function MemberCheckInPage() {
   useLanguage();
   const plan = useActivePlan();
-  const [mode, setMode] = useState<Mode>('in');
   const [days, setDays] = useState(1);
   const [result, setResult] = useState<CheckinDto | null>(null);
   const [history, setHistory] = useState<CheckinDto[]>([]);
@@ -87,19 +84,12 @@ export function MemberCheckInPage() {
     }
   }, [plan, loadHistory]);
 
-  // Quét mã QR cổng: cần có mạng, đúng định dạng SOL:GATE:, rồi gửi check-in hoặc check-out.
+  // Quét mã QR cổng: cần có mạng, đúng định dạng SOL:GATE:, rồi gửi check-in.
   async function scan(code: string) {
     if (busy.current) return;
     setResult(null); setError('');
     if (!navigator.onLine) {
-      setError(
-        mode === 'out'
-          ? memberMessage(
-              'Bạn đang mất mạng. Kết nối lại rồi quét QR cổng để check-out.',
-              'You are offline. Reconnect and scan the gate QR code to check out.',
-            )
-          : memberMessage('Bạn đang mất mạng. Kết nối lại rồi quét QR cổng để check-in.'),
-      );
+      setError(memberMessage('Bạn đang mất mạng. Kết nối lại rồi quét QR cổng để check-in.'));
       return;
     }
     if (!code.startsWith('SOL:GATE:')) {
@@ -107,21 +97,16 @@ export function MemberCheckInPage() {
     }
     busy.current = true; setPending(true);
     try {
-      const response = mode === 'out' ? await memberCheckinApi.checkout(code) : await memberCheckinApi.scan(code);
+      const response = await memberCheckinApi.scan(code);
       if (!mounted.current) return;
       setResult(response); void loadHistory();
     } catch (reason) {
       if (mounted.current) {
-        setError(
-          mode === 'out'
-            ? memberError(reason, 'Check-out chưa được xác nhận. Vui lòng thử lại.', 'Check-out not confirmed. Please try again.')
-            : memberError(reason, 'Check-in chưa được xác nhận. Vui lòng thử lại.'),
-        );
+        setError(memberError(reason, 'Check-in chưa được xác nhận. Vui lòng thử lại.'));
       }
     } finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   const granted = result?.status.toUpperCase() === 'GRANTED';
-  const checkedOut = mode === 'out' && granted && !!result?.checkOutTime;
 
   if (plan === 'loading') {
     return <div data-i18n-managed className="portal-container">
@@ -140,40 +125,26 @@ export function MemberCheckInPage() {
   }
 
   return <div data-i18n-managed className="portal-container">
-    <PageHeader title={mode === 'out' ? memberText("Quét QR check-out") : memberText("Quét QR check-in")} />
+    <PageHeader title={memberText("Quét QR check-in")} />
     <div className="qr-checkin-layout">
       <div className="portal-card">
-        {!online && <p className="qr-checkin-error" role="alert">{mode === 'out'
-          ? memberText("Bạn đang mất mạng. Check-out cần kết nối với trung tâm.", "You are offline. Check-out requires a connection to the center.")
-          : memberText("Bạn đang mất mạng. Check-in cần kết nối với trung tâm.")}</p>}
-        {pending && <p role="status" aria-live="polite">{mode === 'out'
-          ? memberText("Đang xác nhận check-out…", "Confirming check-out…")
-          : memberText("Đang xác nhận check-in…")}</p>}
+        {!online && <p className="qr-checkin-error" role="alert">{memberText("Bạn đang mất mạng. Check-in cần kết nối với trung tâm.")}</p>}
+        {pending && <p role="status" aria-live="polite">{memberText("Đang xác nhận check-in…")}</p>}
         {error && <p className="qr-checkin-error" role="alert">{memberRenderMessage(error)}</p>}
         {result && <div role="status" aria-live="polite" className="qr-checkin-result" data-granted={granted}>
-          <h2>{checkedOut
-            ? memberText("Check-out thành công")
-            : granted
-              ? memberText("Check-in thành công")
-              : mode === 'out'
-                ? memberText("Chưa thể check-out", "Unable to check out")
-                : memberText("Chưa thể check-in")}</h2>
+          <h2>{granted ? memberText("Check-in thành công") : memberText("Chưa thể check-in")}</h2>
           <p>{granted ? `${result.memberName || memberText("Hội viên")} · ${result.gate || memberText("Cổng trung tâm")}` : result.denialReason || memberText("Vui lòng kiểm tra gói tập hoặc liên hệ lễ tân.")}</p>
-          {granted ? <p>{checkedOut && result?.checkOutTime ? memberText(`Giờ ra: ${formatCenterDateTime(result.checkOutTime)}`, `Check-out time: ${formatCenterDateTime(result.checkOutTime)}`) : memberText(`Giờ vào: ${formatCenterDateTime(result.checkInTime)}`, `Check-in time: ${formatCenterDateTime(result.checkInTime)}`)}</p> : <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}><Link className="btn-primary btn-sm" to="/member/packages">{memberText("Xem gói tập")}</Link><Link className="btn-secondary btn-sm" to="/member/card">{memberText("Kiểm tra thẻ hội viên")}</Link></div>}
+          {granted ? <p>{memberText(`Giờ vào: ${formatCenterDateTime(result.checkInTime)}`, `Check-in time: ${formatCenterDateTime(result.checkInTime)}`)}</p> : <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}><Link className="btn-primary btn-sm" to="/member/packages">{memberText("Xem gói tập")}</Link><Link className="btn-secondary btn-sm" to="/member/card">{memberText("Kiểm tra thẻ hội viên")}</Link></div>}
         </div>}
-        <div className="portal-switch" role="group" aria-label={memberText("Chế độ quét")} style={{ marginBottom: 12 }}>
-          <button type="button" aria-pressed={mode === 'in'} onClick={() => { setMode('in'); setResult(null); setError(''); }}>Check-in</button>
-          <button type="button" aria-pressed={mode === 'out'} onClick={() => { setMode('out'); setResult(null); setError(''); }}>Check-out</button>
-        </div>
         <QrCameraScanner onScan={(code) => void scan(code)} disabled={pending || !online} />
       </div>
       <div className="stack">
         <section data-i18n-managed className="portal-card">
-          <h2 className="portal-card-title">{mode === 'out' ? memberText("Trước khi ra về", "Before leaving") : memberText("Trước khi vào tập")}</h2>
+          <h2 className="portal-card-title">{memberText("Trước khi vào tập")}</h2>
           <ol className="qr-checkin-steps">
             <li>{memberText("Mở camera và cho phép quyền truy cập.")}</li>
             <li>{memberText("Quét mã QR cổng trên màn hình lễ tân.")}</li>
-            <li>{mode === 'out' ? memberText("Chờ xác nhận check-out thành công.", "Wait for check-out confirmation.") : memberText("Chờ xác nhận check-in thành công.")}</li>
+            <li>{memberText("Chờ xác nhận check-in thành công.")}</li>
           </ol>
           <Link className="btn-secondary" to="/member/card">{memberText("Mở thẻ hội viên")}</Link>
         </section>

@@ -36,9 +36,9 @@ class MemberInvoicePdfTest {
         try (var document = Loader.loadPDF(pdf)) {
             String text = new PDFTextStripper().getText(document);
             assertTrue(text.contains("INV-20261025-ABCDEF"));
-            assertTrue(text.contains("VAT: 20000.00 VND"));
-            assertTrue(text.contains("219000.00 VND"));
-            assertFalse(text.contains("220000.00 VND"));
+            assertTrue(text.contains("20.000 VND"));
+            assertTrue(text.contains("219.000 VND"));
+            assertFalse(text.contains("220.000 VND"));
             assertTrue(text.contains("không thay thế hóa đơn thuế ký số"));
         }
         verify(invoiceService).getMemberInvoiceByPaymentId(12L, 7L);
