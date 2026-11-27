@@ -98,7 +98,6 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     vi.spyOn(aiApi, 'saveTrainingPlan').mockResolvedValue({ id: 101, status: 'active' });
     vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([]);
     vi.spyOn(aiApi, 'getCoachMembers').mockResolvedValue(MEMBERS);
-    vi.spyOn(aiApi, 'getActiveCoaches').mockResolvedValue([{ id: 31, fullName: 'HLV Marcus Vance' }, { id: 32, fullName: 'HLV Elena Cruz' }]);
   });
 
   afterEach(async () => {
@@ -149,7 +148,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const saveButton = () => Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án')) as HTMLButtonElement | undefined;
 
-  it('denies access when user role is not COACH or MANAGER', async () => {
+  it('denies access when user role is not COACH', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({
@@ -427,28 +426,12 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('Thử lại');
   });
 
-  it('lets a manager pick the responsible coach and sends that coach id with the plan', async () => {
+  it('denies managers, who no longer author training plans', async () => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'mgr', name: 'Manager', identifier: 'mgr', role: 'MANAGER' }));
     await renderComponent();
-
-    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
-    const saveBtn = () => saveButton() as HTMLButtonElement;
-    expect(host.querySelector('#plan-coach-select')).not.toBeNull();
-
-    // Chưa chọn HLV thì quản lý không thể rời khỏi bước 1
-    await openStep(3);
+    expect(host.textContent).toContain('Truy cập bị từ chối');
     expect(saveButton()).toBeUndefined();
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('chọn huấn luyện viên');
-
-    await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
-    const option = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
-    await act(async () => { option.click(); });
-    await addManualExercise('Goblet Squat');
-    await openStep(3);
-    expect(saveBtn().disabled).toBe(false);
-
-    await act(async () => { saveBtn().click(); });
-    expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(expect.objectContaining({ memberId: 1, coachId: 32 }), true);
+    expect(aiApi.getCoachMembers).not.toHaveBeenCalled();
   });
 
   it('does not ask a coach to choose a coach and never sends coach id for them', async () => {
@@ -458,7 +441,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await openStep(3);
     const saveBtn = saveButton() as HTMLButtonElement;
     await act(async () => { saveBtn.click(); });
-    expect(vi.mocked(aiApi.saveTrainingPlan).mock.calls[0][0].coachId).toBeUndefined();
+    expect(vi.mocked(aiApi.saveTrainingPlan).mock.calls[0][0]).not.toHaveProperty('coachId');
   });
 
   it('enforces that endDate min constraint is set to startDate and startDate has no max constraint', async () => {
@@ -538,8 +521,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(localStorage.getItem('sol_coach_training_plans')).toBeNull();
   });
 
-  it('syncs AI duration weeks with endDate, forwards manager coachId, isolates AI results per member, and restores latest recommendation', async () => {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'mgr', name: 'Manager', identifier: 'mgr', role: 'MANAGER' }));
+  it('syncs AI duration weeks with endDate, isolates AI results per member, and restores latest recommendation', async () => {
     const restoreSpy = vi.spyOn(aiApi, 'getMemberRecommendations').mockResolvedValue([
       {
         ...mockAiResponse,
@@ -551,11 +533,6 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     ]);
 
     await renderComponent();
-
-    // Quản lý chọn HLV 32 trước
-    await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
-    const coachOpt = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
-    await act(async () => { coachOpt.click(); });
 
     const startInput = host.querySelector('input[name="plan-start-date"]') as HTMLInputElement;
     const initialStart = startInput.value;
@@ -590,7 +567,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     await clickBtn('Phân tích & Sinh giáo án bằng AI');
     expect(aiApi.generateWorkoutPlan).toHaveBeenCalledWith(
-      expect.objectContaining({ memberId: 1, coachId: 32, durationWeeks: 6 })
+      expect.objectContaining({ memberId: 1, durationWeeks: 6 })
     );
     expect(host.ownerDocument.body.textContent).toContain('Assisted Pull-up & Face Pull');
 
@@ -745,7 +722,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.ownerDocument.querySelector('#ai-member-select')?.textContent).not.toContain('...');
   });
 
-  it('P1-FE-49: surfaces server error details on save failure and distinguishes Coach block vs Manager override for Silver tier', async () => {
+  it('P1-FE-49: surfaces server error details on save failure and hides Silver-tier members from coaches', async () => {
     vi.mocked(aiApi.saveTrainingPlan).mockRejectedValueOnce(new Error('Hội viên cần có buổi PT 1:1 trước khi tạo giáo án'));
     await renderComponent();
     await addManualExercise('Lat Pulldown');

@@ -24,10 +24,6 @@
   align-items: flex-end;
 }
 
-.plan-meta-grid--manager {
-  grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr 110px;
-}
-
 .portal-v2 .plan-day-tabs {
   flex-wrap: nowrap;
   overflow-x: auto;

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** API giáo án tập luyện: HLV/quản lý tạo, sửa, kích hoạt, xóa; hội viên xem giáo án của mình. */
+/** API giáo án tập luyện: chỉ HLV tạo, sửa, kích hoạt, xóa; quản lý chỉ xem; hội viên xem giáo án của mình. */
 @Tag(name = "Coaching & Training Plans", description = "Quản lý kế hoạch huấn luyện và bài tập (SCRUM-116)")
 @RestController
 @RequestMapping({"/api/v1/coaching/training-plans", "/api/v1/training-plans"})
@@ -47,7 +47,7 @@ public class TrainingPlanController {
 
     /** POST: tạo giáo án nháp mới cho hội viên. */
     @Operation(summary = "Tạo giáo án huấn luyện mới", description = "Tạo giáo án ở trạng thái draft kèm danh sách bài tập theo thứ tự")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @PostMapping
     public ResponseEntity<ApiResponse<TrainingPlanDto>> createPlan(
             @Valid @RequestBody TrainingPlanCreateDto dto,
@@ -61,7 +61,7 @@ public class TrainingPlanController {
 
     /** POST /{id}/items: thêm một bài tập vào giáo án. */
     @Operation(summary = "Thêm bài tập vào giáo án", description = "Bổ sung bài tập mới theo thứ tự vào giáo án huấn luyện")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @PostMapping("/{id}/items")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> addItem(
             @PathVariable Long id,
@@ -76,7 +76,7 @@ public class TrainingPlanController {
 
     /** PUT /{id}/activate: kích hoạt giáo án để hội viên bắt đầu áp dụng. */
     @Operation(summary = "Phê duyệt kích hoạt giáo án", description = "HLV phê duyệt kích hoạt giáo án sang trạng thái active")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @PutMapping("/{id}/activate")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> activatePlan(
             @PathVariable Long id,
@@ -92,7 +92,7 @@ public class TrainingPlanController {
      * được dời ngày về hôm nay.
      */
     @Operation(summary = "Áp dụng lại giáo án trong lịch sử", description = "Đưa giáo án lịch sử (superseded) về trạng thái đang áp dụng; giáo án đang áp dụng của cùng HLV cho hội viên này chuyển thành lịch sử")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @PutMapping("/{id}/reapply")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> reapplyPlan(
             @PathVariable Long id,
@@ -142,7 +142,7 @@ public class TrainingPlanController {
 
     /** PUT /{id}: cập nhật thông tin và bài tập của giáo án. */
     @Operation(summary = "Cập nhật giáo án", description = "Sửa mục tiêu, thời gian và bài tập của giáo án nháp hoặc đang hoạt động")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> updatePlan(
             @PathVariable Long id,
@@ -156,7 +156,7 @@ public class TrainingPlanController {
 
     /** DELETE /{id}: xóa giáo án. */
     @Operation(summary = "Xóa hoặc ngừng áp dụng giáo án", description = "Bản nháp được xóa; giáo án active chuyển cancelled để giữ lịch sử tập")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PreAuthorize("hasRole('COACH')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deletePlan(
             @PathVariable Long id,

@@ -253,7 +253,7 @@ class TrainingPlanServiceTest {
 
     /** Kiểm thử: hội viên Silver không thấy kế hoạch tập. */
     @Test
-    @DisplayName("Silver members do not see plans; Gold and Platinum do; the coach can still create them")
+    @DisplayName("Silver members do not see plans; Gold and Platinum do; staff can still view them")
     void silverMembersDoNotSeeTrainingPlans() {
         com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions =
                 org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
@@ -271,7 +271,7 @@ class TrainingPlanServiceTest {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("SILVER")));
         assertTrue(service.getMyActivePlans(10L).isEmpty());
         assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 10L, "MEMBER"));
-        // Huấn luyện viên vẫn giữ quyền truy cập để giáo án sẵn sàng khi hội viên nâng cấp gói.
+        // Quản lý vẫn xem được giáo án đã có; giáo án hiện lại khi hội viên nâng cấp gói.
         assertDoesNotThrow(() -> service.getPlanById(100L, 20L, "CENTER_MANAGER"));
 
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("GOLD")));
@@ -431,6 +431,20 @@ class TrainingPlanServiceTest {
         }
     }
 
+
+ /** Quản lý không còn soạn/sửa giáo án (đã bỏ phân công): tạo, sửa, kích hoạt, xóa đều bị chặn. */
+ @Test void managerCannotCreateOrModifyPlans() {
+  var dto = new com.swp391.scms.coaching.dto.TrainingPlanCreateDto();
+  dto.setMemberId(10L);dto.setStartDate(LocalDate.of(2026,11,4));dto.setEndDate(LocalDate.of(2026,11,10));
+  Member member=new Member();member.setUserId(10L);when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+  assertThrows(ForbiddenException.class,()->service.createPlan(dto,1L,"CENTER_MANAGER"));
+  TrainingPlan plan=new TrainingPlan();ReflectionTestUtils.setField(plan,"id",100L);plan.setMember(member);plan.setStatus("active");
+  when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+  assertThrows(ForbiddenException.class,()->service.activatePlan(100L,1L,"CENTER_MANAGER"));
+  assertThrows(ForbiddenException.class,()->service.deletePlan(100L,1L,"CENTER_MANAGER"));
+  verify(trainingPlanRepository,never()).save(any());
+  verify(trainingPlanRepository,never()).delete(any());
+ }
 
  @Test void rejectsCreatingPlanWithoutRegisteredPtSession() {
   var dto = new com.swp391.scms.coaching.dto.TrainingPlanCreateDto();

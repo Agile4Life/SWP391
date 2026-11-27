@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** API gợi ý giáo án bằng AI (/api/v1/ai) cho HLV và quản lý trung tâm. */
+/** API gợi ý giáo án bằng AI (/api/v1/ai): HLV tạo/áp dụng gợi ý; quản lý chỉ xem lịch sử gợi ý. */
 @Tag(name = "AI Workout Recommendation", description = "Động cơ AI phân tích thể trạng và gợi ý giáo án bài tập cá nhân hóa (SCRUM-117)")
 @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
 @RestController
@@ -49,6 +49,7 @@ public class AiRecommendationController {
 
     /** POST /generate-workout-plan: AI đề xuất giáo án cho hội viên dựa trên hồ sơ và yêu cầu thêm. */
     @Operation(summary = "AI gợi ý giáo án bài tập cá nhân hóa", description = "Phân tích mục tiêu, trình độ, lưu ý sức khỏe và giáo án hiện tại của hội viên để sinh giáo án JSON và lưu vết ai_recommendation_logs")
+    @PreAuthorize("hasRole('COACH')")
     @PostMapping({"/generate-workout-plan", "/recommend", "/recommendations"})
     public ResponseEntity<ApiResponse<AiWorkoutPlanResponse>> generateWorkoutPlan(
             @Valid @RequestBody AiWorkoutPlanRequest request,
@@ -64,6 +65,7 @@ public class AiRecommendationController {
      * kích hoạt ngay).
      */
     @Operation(summary = "Áp dụng gợi ý AI vào giáo án huấn luyện", description = "Tự động tạo giáo án trong training_plans với is_ai_generated = true và cập nhật is_applied = true")
+    @PreAuthorize("hasRole('COACH')")
     @PostMapping("/recommendations/{id}/apply")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> applyRecommendation(
             @PathVariable Long id,

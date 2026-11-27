@@ -16,7 +16,6 @@ import { addIsoDays } from './coachTimetable';
 import { coachingError } from './coachingApi';
 import {
   aiApi,
-  type CoachOption,
   type MemberOption,
   type WorkoutExerciseItem,
   type AiWorkoutPlanResult,
@@ -55,8 +54,8 @@ function parseOptionalNumber(raw: string): number | null {
 }
 
 /**
- * Trình soạn giáo án nhiều bước cho HLV/quản lý: chọn học viên và thông tin chung, soạn bài tập (thủ công hoặc
- * gợi ý AI), xem lại rồi lưu và kích hoạt; quản lý phải chọn HLV phụ trách.
+ * Trình soạn giáo án nhiều bước cho HLV: chọn học viên và thông tin chung, soạn bài tập (thủ công hoặc
+ * gợi ý AI), xem lại rồi lưu và kích hoạt.
  */
 /** Bỏ dấu tiếng Việt để tìm kiếm không dấu / có dấu đều khớp. */
 const removeAccents = (str: string) =>
@@ -90,13 +89,8 @@ export function CoachTrainingPlanPage() {
   const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
-  // Phân quyền theo vai trò: chỉ HLV và quản lý được dùng màn này.
-  const hasAccess = useMemo(() => {
-    if (!currentUser) return false;
-    return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
-  }, [currentUser]);
-
-  const isManager = currentUser?.role === 'MANAGER';
+  // Phân quyền theo vai trò: chỉ HLV soạn giáo án (quản lý không còn soạn hộ).
+  const hasAccess = currentUser?.role === 'COACH';
 
   // Danh sách học viên thật (không có dữ liệu mẫu) và thông tin tổng quan giáo án
   const [members, setMembers] = useState<MemberOption[]>([]);
@@ -120,9 +114,7 @@ export function CoachTrainingPlanPage() {
   });
 
   // Chỉ học viên đăng ký 1:1 / đủ điều kiện tạo giáo án mới xuất hiện trong thanh tìm kiếm để soạn giáo án
-  const eligibleMembers = useMemo(() => {
-    return isManager ? members : members.filter((m) => m.canViewWorkoutPlan !== false);
-  }, [members, isManager]);
+  const eligibleMembers = useMemo(() => members.filter((m) => m.canViewWorkoutPlan !== false), [members]);
 
   // Kiểm tra xem người dùng có đang gõ từ khóa tìm kiếm hay chỉ mới bấm vào thanh search
   const isSearchQueryActive = useMemo(() => {
@@ -191,9 +183,6 @@ export function CoachTrainingPlanPage() {
     saveRecentMemberId(m.id);
     setRecentMemberIds((prev) => [m.id, ...prev.filter((id) => id !== m.id)].slice(0, 10));
   };
-  // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
-  const [coaches, setCoaches] = useState<CoachOption[]>([]);
-  const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [planGoal, setPlanGoal] = useState('');
 
   // Ngày hôm nay theo giờ trung tâm.
@@ -273,23 +262,18 @@ export function CoachTrainingPlanPage() {
     let active = true;
     setMembersLoading(true);
     setMembersError('');
-    const loadCoaches = isManager ? aiApi.getActiveCoaches() : Promise.resolve<CoachOption[]>([]);
-    if (!isManager) {
-      void getProfile()
-        .then((profile) => {
-          if (active && Number.isInteger(profile?.userId) && profile.userId > 0) {
-            setCoachProfileId(profile.userId);
-          }
-        })
-        .catch(() => {
-          // Giữ fallback nếu không lấy được hồ sơ số.
-        });
-    }
-    void Promise.all([aiApi.getCoachMembers(), loadCoaches]).then(([loaded, loadedCoaches]) => {
+    void getProfile()
+      .then((profile) => {
+        if (active && Number.isInteger(profile?.userId) && profile.userId > 0) {
+          setCoachProfileId(profile.userId);
+        }
+      })
+      .catch(() => {
+        // Giữ fallback nếu không lấy được hồ sơ số.
+      });
+    void aiApi.getCoachMembers().then((loaded) => {
       if (!active) return;
       setMembers(loaded);
-      setCoaches(loadedCoaches);
-      setSelectedCoachId((prev) => (loadedCoaches.some((c) => c.id === prev) ? prev : null));
       setSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : null));
       setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0]?.id ?? null));
     }).catch(() => {
@@ -304,7 +288,7 @@ export function CoachTrainingPlanPage() {
     return () => {
       active = false;
     };
-  }, [hasAccess, isManager, membersAttempt]);
+  }, [hasAccess, membersAttempt]);
 
   // Định dạng nhãn trình độ tập luyện song ngữ, không hiển thị enum thô.
   const formatFitnessLevel = (level?: string | null): string => {
@@ -322,9 +306,8 @@ export function CoachTrainingPlanPage() {
     return trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed;
   };
 
-  // Lấy ID số của HLV phụ trách (Quản lý lấy HLV đã chọn; HLV lấy userId từ /profile).
+  // Lấy ID số của HLV đang đăng nhập từ /profile.
   const resolveCoachId = async (): Promise<number | null> => {
-    if (isManager) return selectedCoachId;
     if (coachProfileId != null) return coachProfileId;
     try {
       const profile = await getProfile();
@@ -431,7 +414,6 @@ export function CoachTrainingPlanPage() {
     try {
       const res = await aiApi.generateWorkoutPlan({
         memberId: targetMemberId,
-        coachId: isManager && selectedCoachId != null ? selectedCoachId : undefined,
         additionalRequirements: aiCoachPrompt,
         durationWeeks: weeks,
       });
@@ -569,13 +551,13 @@ export function CoachTrainingPlanPage() {
         }))
       );
 
-      // Chuyển sang ngày đầu tiên có bài tập và mở thẳng Bước 2 để HLV tinh chỉnh (trừ khi Quản lý chưa chọn HLV)
+      // Chuyển sang ngày đầu tiên có bài tập và mở thẳng Bước 2 để HLV tinh chỉnh
       if (aiResult.items[0]?.dayOfWeek) {
         setActiveDay(aiResult.items[0].dayOfWeek);
       }
 
       setIsAiModalOpen(false);
-      if (!(isManager && selectedCoachId == null) && !(startDate && nextEndDate && nextEndDate < startDate)) {
+      if (!(startDate && nextEndDate && nextEndDate < startDate)) {
         setPlanError(null);
         setStep(2);
       }
@@ -588,22 +570,21 @@ export function CoachTrainingPlanPage() {
 
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
-  // Mở khóa lại nút Lưu khi HLV chỉnh sửa nội dung giáo án hoặc chuyển sang học viên/HLV khác.
+  // Mở khóa lại nút Lưu khi HLV chỉnh sửa nội dung giáo án hoặc chuyển sang học viên khác.
   useEffect(() => {
     setLastSavedTime(null);
     setSavedPlanLink(false);
-  }, [selectedMemberId, selectedCoachId, planGoal, startDate, endDate, exercises]);
+  }, [selectedMemberId, planGoal, startDate, endDate, exercises]);
 
-  const coachBlockedByTier = Boolean(!isManager && selectedMember?.canViewWorkoutPlan === false);
+  const coachBlockedByTier = selectedMember?.canViewWorkoutPlan === false;
 
-  // Bước 1 phải hợp lệ trước khi đi tiếp: có học viên, có mục tiêu, đủ ngày bắt đầu/kết thúc hợp lệ và (Quản lý) đã chọn HLV phụ trách.
+  // Bước 1 phải hợp lệ trước khi đi tiếp: có học viên, có mục tiêu, đủ ngày bắt đầu/kết thúc hợp lệ.
   const planInfoError = (): StaffMessage | null =>
     !selectedMember ? staffMessage('Vui lòng chọn học viên thụ hưởng.', 'Please select a beneficiary member.')
       : !planGoal.trim() ? staffMessage('Vui lòng nhập mục tiêu giáo án.', 'Please enter a training plan goal.')
         : !startDate || !endDate ? staffMessage('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.', 'Please select both start and end dates.')
           : endDate < startDate ? staffMessage('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.', 'End date must be on or after the start date.')
-            : isManager && selectedCoachId == null ? staffMessage('Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.', 'Managers must select an assigned coach before saving a plan.')
-              : null;
+            : null;
   // Chuyển bước; sang bước sau phải qua kiểm tra thông tin chung, lỗi thì quay về bước 1.
   const goToStep = (next: PlanStep) => {
     if (next > 1) {
@@ -629,7 +610,6 @@ export function CoachTrainingPlanPage() {
             : !startDate || !endDate ? staffMessage('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.', 'Please select both start and end dates.')
               : endDate < startDate ? staffMessage('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.', 'End date must be on or after the start date.')
                 : !selectedMember ? staffMessage('Chưa xác minh được học viên. Tải lại danh sách.', 'Could not verify the member. Please reload the list.')
-                  : isManager && selectedCoachId == null ? staffMessage('Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.', 'Managers must select an assigned coach before saving a plan.')
                     : coachBlockedByTier ? staffMessage(
                       'Học viên đang dùng gói Silver nên huấn luyện viên không thể tạo giáo án cá nhân (yêu cầu gói Gold hoặc Platinum).',
                       'This member is on the Silver plan, so coaches cannot create a personal plan (requires Gold or Platinum).',
@@ -660,7 +640,6 @@ export function CoachTrainingPlanPage() {
       await aiApi.saveTrainingPlan(
         {
           memberId: selectedMember.id,
-          coachId: isManager ? selectedCoachId ?? undefined : undefined,
           title: trimmedGoal,
           goal: trimmedGoal,
           startDate,
@@ -704,8 +683,7 @@ export function CoachTrainingPlanPage() {
           </div>
           <h2 style={{ color: 'var(--portal-danger)', marginBottom: '8px' }}>{t("Truy cập bị từ chối", "Access denied")}</h2>
           <p style={{ color: 'var(--portal-muted)', maxWidth: '500px', margin: '0 auto' }}>
-            {t("Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản ", "The training plan workspace is only available to ")}<strong>{t("Huấn luyện viên", "Coaches")}</strong> {t("hoặc", "or")}{' '}
-            <strong>{t("Quản lý", "Managers")}</strong>.
+            {t("Bàn làm việc thiết kế giáo án chỉ dành cho tài khoản ", "The training plan workspace is only available to ")}<strong>{t("Huấn luyện viên", "Coaches")}</strong>.
           </p>
         </div>
       </div>
@@ -786,7 +764,7 @@ export function CoachTrainingPlanPage() {
             {t("Tổng số: ")}<strong>{exercises.length} {t(" động tác")}</strong> {t(" được thiết lập trong tuần")}</span>
         </div>
 
-        <div className={`plan-meta-grid ${isManager ? 'plan-meta-grid--manager' : ''}`}>
+        <div className="plan-meta-grid">
           <div>
             <label className="portal-label" htmlFor="plan-goal-input">
               {t("Mục tiêu giáo án", "Training plan goal")}</label>
@@ -956,21 +934,6 @@ export function CoachTrainingPlanPage() {
             )}
           </div>
 
-          {isManager && <div>
-            <label className="portal-label" htmlFor="plan-coach-select">
-              {t("Huấn luyện viên phụ trách")}</label>
-            <Select
-              id="plan-coach-select"
-              className="portal-select"
-              value={selectedCoachId == null ? '' : String(selectedCoachId)}
-              onChange={(e) => setSelectedCoachId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">{coaches.length === 0 ? t('Chưa có huấn luyện viên hoạt động') : t('— Chọn huấn luyện viên —')}</option>
-              {coaches.map((c) => (
-                <option data-i18n-managed key={c.id} value={String(c.id)}>{c.fullName}</option>
-              ))}
-            </Select>
-          </div>}
 
           <div>
             <label className="portal-label" htmlFor="plan-start-date">
@@ -1039,26 +1002,6 @@ export function CoachTrainingPlanPage() {
             {t("Lưu ý sức khỏe: ")}<strong>{selectedMember?.healthNotes?.trim() || t('Bình thường')}</strong>
           </div>
         </div>
-
-        {isManager && selectedMember?.canViewWorkoutPlan === false && (
-          <div
-            role="note"
-            style={{
-              marginTop: '12px',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              border: '1px solid var(--portal-border-strong)',
-              background: 'var(--portal-raised)',
-              color: 'var(--portal-muted)',
-              fontSize: '0.82rem',
-            }}
-          >
-            {t(
-              'Lưu ý gói tập (quyền Quản lý): Học viên đang dùng gói Silver nên chưa xem được giáo án bài tập trên cổng Hội viên. Quản lý vẫn có thể lưu giáo án nội bộ để huấn luyện viên theo dõi.',
-              'Membership note (Manager override): This member is on the Silver plan and cannot view workout plans in the Member portal yet. Managers can still save the plan internally for coach tracking.',
-            )}
-          </div>
-        )}
       </div>}
 
       {/* Bước 2: bài tập theo ngày */}
@@ -1296,7 +1239,6 @@ export function CoachTrainingPlanPage() {
         <div className="kv-list">
           <div className="kv-row"><span>{t("Mục tiêu giáo án", "Training plan goal")}</span><strong>{planGoal}</strong></div>
           <div className="kv-row"><span>{t("Học viên thụ hưởng")}</span><strong>{selectedMember?.fullName ?? '—'} ({selectedMember?.memberCode ?? '—'})</strong></div>
-          {isManager && <div className="kv-row"><span>{t("Huấn luyện viên phụ trách")}</span><strong>{coaches.find((c) => c.id === selectedCoachId)?.fullName ?? '—'}</strong></div>}
           <div className="kv-row"><span>{t("Thời gian áp dụng")}</span><strong>{formatCenterDate(startDate)} → {formatCenterDate(endDate)}</strong></div>
           <div className="kv-row"><span>{t("Lưu ý sức khỏe")}</span><strong>{selectedMember?.healthNotes || t('Bình thường')}</strong></div>
         </div>
@@ -1321,13 +1263,11 @@ export function CoachTrainingPlanPage() {
             type="button"
             className="btn-primary"
             onClick={() => void handleSavePlan()}
-            disabled={isSaving || Boolean(lastSavedTime) || (isManager && selectedCoachId == null) || coachBlockedByTier}
+            disabled={isSaving || Boolean(lastSavedTime) || coachBlockedByTier}
             title={
-              isManager && selectedCoachId == null
-                ? t('Chọn huấn luyện viên phụ trách để lưu')
-                : coachBlockedByTier
-                  ? t('Học viên gói Silver chưa đủ điều kiện tạo giáo án cá nhân từ huấn luyện viên.', 'Silver-tier members are not eligible for coach-created personal plans.')
-                  : undefined
+              coachBlockedByTier
+                ? t('Học viên gói Silver chưa đủ điều kiện tạo giáo án cá nhân từ huấn luyện viên.', 'Silver-tier members are not eligible for coach-created personal plans.')
+                : undefined
             }
           >
             {isSaving ? t('Đang lưu...') : lastSavedTime ? t('Đã lưu & Kích hoạt thành công', 'Saved & activated successfully') : t('Lưu & Kích hoạt giáo án')}
@@ -1400,26 +1340,6 @@ export function CoachTrainingPlanPage() {
                 </div>
               </div>
             </div>
-
-            {isManager && aiSelectedMember.canViewWorkoutPlan === false && (
-              <div
-                role="note"
-                style={{
-                  marginBottom: '14px',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--portal-border-strong)',
-                  background: 'var(--portal-raised)',
-                  color: 'var(--portal-muted)',
-                  fontSize: '0.82rem',
-                }}
-              >
-                {t(
-                  'Lưu ý gói tập (quyền Quản lý): Học viên đang dùng gói Silver nên chưa xem được giáo án bài tập trên cổng Hội viên. Quản lý vẫn có thể lưu giáo án nội bộ để huấn luyện viên theo dõi.',
-                  'Membership note (Manager override): This member is on the Silver plan and cannot view workout plans in the Member portal yet. Managers can still save the plan internally for coach tracking.',
-                )}
-              </div>
-            )}
 
             {/* Lưu ý y tế & Tiền sử chấn thương */}
             {aiSelectedMember.healthNotes?.trim() && (
