@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../../shared/ui/Modal';
 import { useI18n } from '../../../shared/i18n';
-import { formatCenterDate } from '../../../shared/lib/centerTime';
+import { formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { formatSlotLabel } from '../../schedule/slots';
 import { disciplineAccentColor } from '../../schedule/timetable';
@@ -33,6 +33,7 @@ export function ClassSessionDetailModal({
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [studentsError, setStudentsError] = useState<string | null>(null);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [openedAt] = useState(() => Date.now());
 
   useEffect(() => {
     let alive = true;
@@ -61,6 +62,10 @@ export function ClassSessionDetailModal({
     : (session.bookedCount ?? students.length);
   const accent = disciplineAccentColor(session.disciplineId ?? parentClass?.disciplineId ?? disciplineName);
   const isScheduled = session.status === 'scheduled';
+  const sessionStart = parseCenterTime(`${session.sessionDate}T${session.startTime}`);
+  const rescheduleTooLate = isScheduled
+    && sessionStart !== null
+    && openedAt >= sessionStart.getTime() - 8 * 60 * 60 * 1000;
 
   const statusLabel = session.status === 'cancelled'
     ? t('Đã hủy', 'Cancelled')
@@ -194,6 +199,12 @@ export function ClassSessionDetailModal({
         </Modal>
       )}
 
+      {rescheduleTooLate && (
+        <p role="note" className="portal-alert portal-alert--info" style={{ marginTop: 14, marginBottom: 0 }}>
+          {t('Chỉ có thể dời lịch trước giờ bắt đầu buổi học tối thiểu 8 giờ.', 'Sessions can only be rescheduled at least 8 hours before start time.')}
+        </p>
+      )}
+
       {hasActions && (
         <div className="mcal__dialog-actions" style={{ marginTop: 18 }}>
           {parentClass && onEditClass && (
@@ -202,7 +213,13 @@ export function ClassSessionDetailModal({
             </button>
           )}
           {isScheduled && (
-            <button type="button" className="btn-secondary" onClick={() => onReschedule(session)}>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={rescheduleTooLate}
+              title={rescheduleTooLate ? t('Chỉ có thể dời lịch trước giờ bắt đầu buổi học tối thiểu 8 giờ.', 'Sessions can only be rescheduled at least 8 hours before start time.') : undefined}
+              onClick={() => onReschedule(session)}
+            >
               {t('Dời lịch', 'Reschedule')}
             </button>
           )}

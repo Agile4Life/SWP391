@@ -833,6 +833,20 @@ public class ClassService {
 
         ScheduleSlot.requireValid(request.startTime(), request.endTime());
 
+        if (session.getSessionDate() != null && session.getStartTime() != null) {
+            java.time.Instant sessionStart = LocalDateTime.of(session.getSessionDate(), session.getStartTime())
+                    .atZone(com.swp391.scms.common.CenterTime.ZONE)
+                    .toInstant();
+            java.time.Instant cutoff = sessionStart.minus(8, java.time.temporal.ChronoUnit.HOURS);
+            if (!clock.instant().isBefore(cutoff)) {
+                throw new BadRequestException(
+                        "SCHEDULING_RESCHEDULE_TOO_LATE",
+                        "error.scheduling.reschedule_too_late",
+                        new Object[]{8},
+                        "Sessions can only be rescheduled at least 8 hours before start time");
+            }
+        }
+
         SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
 
         Long disciplineId = gymClass.getDiscipline() != null ? gymClass.getDiscipline().getId() : null;

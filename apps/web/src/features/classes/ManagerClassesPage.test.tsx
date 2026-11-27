@@ -990,43 +990,67 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
   });
 
   it('reschedules a session by selecting one of the 5 fixed slots', async () => {
-    vi.mocked(classesApi.rescheduleSession).mockResolvedValue({
-      id: 503,
-      classId: 3,
-      sessionDate: today,
-      startTime: '15:15:00',
-      endTime: '17:45:00',
-      status: 'scheduled',
-    });
-    await renderPage('Lịch theo bộ môn');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(`${today}T08:00:00+07:00`));
+    try {
+      vi.mocked(classesApi.rescheduleSession).mockResolvedValue({
+        id: 503,
+        classId: 3,
+        sessionDate: today,
+        startTime: '15:15:00',
+        endTime: '17:45:00',
+        status: 'scheduled',
+      });
+      await renderPage('Lịch theo bộ môn');
 
-    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
-    await act(async () => { await Promise.resolve(); });
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
+      await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+      await act(async () => { await Promise.resolve(); });
 
-    const rescheduleBtn = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Dời lịch')!;
-    await act(async () => rescheduleBtn.click());
+      const rescheduleBtn = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Dời lịch')!;
+      expect(rescheduleBtn.disabled).toBe(false);
+      await act(async () => rescheduleBtn.click());
 
-    expect(document.querySelectorAll('[data-testid^="slot-option-"]')).toHaveLength(5);
-    expect(document.querySelector<HTMLButtonElement>('[data-testid="slot-option-5"]')?.getAttribute('aria-pressed')).toBe('true');
+      expect(document.querySelectorAll('[data-testid^="slot-option-"]')).toHaveLength(5);
+      expect(document.querySelector<HTMLButtonElement>('[data-testid="slot-option-5"]')?.getAttribute('aria-pressed')).toBe('true');
 
-    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-4"]')!.click());
-    const reasonInput = document.querySelector<HTMLTextAreaElement>('#resch-reason')!;
-    expect(reasonInput).not.toBeNull();
-    await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
-      setter.call(reasonInput, 'Bảo trì phòng tập');
-      reasonInput.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    const form = document.querySelector<HTMLFormElement>('dialog form')!;
-    await act(async () => {
-      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    });
-    await act(async () => { await Promise.resolve(); });
+      await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-4"]')!.click());
+      const reasonInput = document.querySelector<HTMLTextAreaElement>('#resch-reason')!;
+      expect(reasonInput).not.toBeNull();
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+        setter.call(reasonInput, 'Bảo trì phòng tập');
+        reasonInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      const form = document.querySelector<HTMLFormElement>('dialog form')!;
+      await act(async () => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+      await act(async () => { await Promise.resolve(); });
 
-    expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00', reason: 'Bảo trì phòng tập' }),
-    );
+      expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
+        expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00', reason: 'Bảo trì phòng tập' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('disables Reschedule button within 8 hours before session start time', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(`${today}T11:00:00+07:00`));
+    try {
+      await renderPage('Lịch theo bộ môn');
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
+      await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+      await act(async () => { await Promise.resolve(); });
+
+      const rescheduleBtn = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Dời lịch')!;
+      expect(rescheduleBtn.disabled).toBe(true);
+      expect(document.querySelector('dialog')?.textContent).toContain('tối thiểu 8 giờ');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('P0-01: keeps Step 4 review open after clicking Step 3 Next with distinct non-submit button nodes until explicit Step 4 click', async () => {
